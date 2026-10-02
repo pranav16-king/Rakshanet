@@ -1,0 +1,182 @@
+{
+  ".agents/rules/graphify.md": {
+    "mtime": 1790922894.2381706,
+    "seen": 1790923233.927065,
+    "ast_hash": "a0e4d192b9e2e17256124dbfc8e24e6a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/frontend-design/SKILL.md": {
+    "mtime": 1790922103.1501894,
+    "seen": 1790923233.927065,
+    "ast_hash": "9dab6b03d40b3a94a97a70bc65cf00f5",
+    "semantic_hash": ""
+  },
+  ".agents/skills/graphify/SKILL.md": {
+    "mtime": 1790922894.2290623,
+    "seen": 1790923233.927065,
+    "ast_hash": "b62ef33ed17cc71aae20f3ff9ce1a943",
+    "semantic_hash": ""
+  },
+  ".agents/skills/graphify/references/add-watch.md": {
+    "mtime": 1790922872.6474128,
+    "seen": 1790923233.927065,
+    "ast_hash": "c1f65eb4102ad515149303c7f296b718",
+    "semantic_hash": ""
+  },
+  ".agents/skills/graphify/references/exports.md": {
+    "mtime": 1790922872.6494603,
+    "seen": 1790923233.927065,
+    "ast_hash": "9da2a2152e60a22f07f05fed5158f287",
+    "semantic_hash": ""
+  },
+  ".agents/skills/graphify/references/extraction-spec.md": {
+    "mtime": 1790922872.6504767,
+    "seen": 1790923233.927065,
+    "ast_hash": "42fef56a01698118f7fd722acdadea34",
+    "semantic_hash": ""
+  },
+  ".agents/skills/graphify/references/github-and-merge.md": {
+    "mtime": 1790922872.6524997,
+    "seen": 1790923233.927065,
+    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/graphify/references/hooks.md": {
+    "mtime": 1790922872.6545208,
+    "seen": 1790923233.927065,
+    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
+    "semantic_hash": ""
+  },
+  ".agents/skills/graphify/references/query.md": {
+    "mtime": 1790922872.6555204,
+    "seen": 1790923233.927065,
+    "ast_hash": "3c46f8ad006874260614ed8657d02307",
+    "semantic_hash": ""
+  },
+  ".agents/skills/graphify/references/transcribe.md": {
+    "mtime": 1790922872.6578422,
+    "seen": 1790923233.927065,
+    "ast_hash": "67b6a5fa6c0974e18f60db9f8932fbd8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/graphify/references/update.md": {
+    "mtime": 1790922872.658849,
+    "seen": 1790923233.927065,
+    "ast_hash": "9378bd03d56baaf78bd738ab3848f142",
+    "semantic_hash": ""
+  },
+  ".agents/skills/signalrescue-design/SKILL.md": {
+    "mtime": 1790922103.1555438,
+    "seen": 1790923233.927065,
+    "ast_hash": "d1db32d53dbdaa9132e7931b2b9d6233",
+    "semantic_hash": ""
+  },
+  ".agents/workflows/graphify.md": {
+    "mtime": 1790922894.2401876,
+    "seen": 1790923233.927065,
+    "ast_hash": "a831cf3669f1e6ab85d8a80ebe655f99",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1790926468.630075,
+    "seen": 1790926492.9734187,
+    "ast_hash": "26c9b93c274fffc3f8a09d6b2f735068",
+    "semantic_hash": ""
+  },
+  "design.md": {
+    "mtime": 1790922103.1477213,
+    "seen": 1790923233.927065,
+    "ast_hash": "a4b29dd2d25dc368c7b43413989a5858",
+    "semantic_hash": ""
+  },
+  "docs/features.md": {
+    "mtime": 1790923222.029371,
+    "seen": 1790923233.927065,
+    "ast_hash": "053d5fd3266f2c3be42722a7b0aa9fc2",
+    "semantic_hash": ""
+  },
+  "docs/idea.md": {
+    "mtime": 1790922217.2709363,
+    "seen": 1790923233.927065,
+    "ast_hash": "172e653f061c8a4a3ac92da82af7118f",
+    "semantic_hash": ""
+  },
+  "rakshanet_logo.png": {
+    "mtime": 1790922334.0372512,
+    "seen": 1790923233.927065,
+    "ast_hash": "fd8af2aa2bb0f4e76b765fcedeb6a1ba",
+    "semantic_hash": ""
+  },
+  "docs/competitor-analysis.md": {
+    "mtime": 1790923925.6883798,
+    "seen": 1790923950.9374547,
+    "ast_hash": "d746d3e9c3c19d891ae7124e13e6307e",
+    "semantic_hash": ""
+  },
+  "docs/problem-statement-and-impact.md": {
+    "mtime": 1790924268.464845,
+    "seen": 1790924293.1558585,
+    "ast_hash": "4b5f8fb7e5f35760de607963f98a86fe",
+    "semantic_hash": ""
+  },
+  "generate_charts.py": {
+    "mtime": 1790925759.7299047,
+    "seen": 1790926208.1194775,
+    "ast_hash": "fc87c180aec3b359eea3d97d6f032b2d",
+    "semantic_hash": ""
+  },
+  "generate_dossier_pdf.py": {
+    "mtime": 1790925759.731933,
+    "seen": 1790926208.1194775,
+    "ast_hash": "fc473bfdd847a96f32421b25ec8da43e",
+    "semantic_hash": ""
+  },
+  "RakshaNet_Comprehensive_System_Dossier.pdf": {
+    "mtime": 1790925025.9212155,
+    "seen": 1790925062.7351842,
+    "ast_hash": "ed5573313971ab3a64da7c5f65b06982",
+    "semantic_hash": ""
+  },
+  "docs/RakshaNet_Comprehensive_System_Dossier.pdf": {
+    "mtime": 1790925040.8619988,
+    "seen": 1790925062.7351842,
+    "ast_hash": "ed5573313971ab3a64da7c5f65b06982",
+    "semantic_hash": ""
+  },
+  "docs/assets/figures/fig1_nepal_disaster_metrics.png": {
+    "mtime": 1790924507.916219,
+    "seen": 1790924644.5259502,
+    "ast_hash": "34a9572b853f73f920b40eceb384012f",
+    "semantic_hash": ""
+  },
+  "docs/assets/figures/fig2_communication_gap_anomaly.png": {
+    "mtime": 1790924508.5400813,
+    "seen": 1790924644.5259502,
+    "ast_hash": "a774d0477cb64859f4dd40b54d2be7fd",
+    "semantic_hash": ""
+  },
+  "docs/assets/figures/fig3_competitor_comparison_matrix.png": {
+    "mtime": 1790924509.2398348,
+    "seen": 1790924644.5259502,
+    "ast_hash": "985e599b75f0fc43af53fd90fd887da1",
+    "semantic_hash": ""
+  },
+  "docs/assets/figures/fig4_adoption_impact_model.png": {
+    "mtime": 1790924509.9595726,
+    "seen": 1790924644.5259502,
+    "ast_hash": "ac6c92397f239117674c83cef5b3296b",
+    "semantic_hash": ""
+  },
+  "ui.png": {
+    "mtime": 1790925412.5978081,
+    "seen": 1790926208.1194775,
+    "ast_hash": "85b764edd6ffb78a8769eeb6b4a92daa",
+    "semantic_hash": ""
+  },
+  "docs/assets/ui.png": {
+    "mtime": 1790925412.5978081,
+    "seen": 1790926492.9734187,
+    "ast_hash": "85b764edd6ffb78a8769eeb6b4a92daa",
+    "semantic_hash": ""
+  }
+}
