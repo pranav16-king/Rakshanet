@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/message_envelope.dart';
 import '../models/chat_message.dart';
 import 'database_service.dart';
+import 'bluetooth_radio_service.dart';
 
 /// Actions taken by MeshEngine when processing incoming packets
 enum RelayAction {
@@ -62,6 +64,8 @@ class MeshEngine extends ChangeNotifier {
   MeshEngine._internal();
 
   final DatabaseService _dbService = DatabaseService();
+  final BluetoothRadioService _radioService = BluetoothRadioService();
+  StreamSubscription<Uint8List>? _radioSubscription;
 
   // Deduplication structures (Bloom filter + in-memory Set)
   final BloomFilter _bloomFilter = BloomFilter();
@@ -90,7 +94,19 @@ class MeshEngine extends ChangeNotifier {
     if (_isInitialized) return;
     _isInitialized = true;
 
-    // 1. Warm deduplication filter with existing messages from SQLite
+    // 1. Hook physical Bluetooth radio incoming stream
+    _radioSubscription = _radioService.incomingPayloadStream.listen((rawBytes) async {
+      try {
+        final jsonStr = utf8.decode(rawBytes);
+        final jsonMap = jsonDecode(jsonStr) as Map<String, dynamic>;
+        final envelope = MessageEnvelope.fromJson(jsonMap);
+        await receivePacket(envelope);
+      } catch (e) {
+        debugPrint('[MeshEngine] Malformed RF packet dropped: $e');
+      }
+    });
+
+    // 2. Warm deduplication filter with existing messages from SQLite
     try {
       final existingMessages = await _dbService.getAllMessages();
       for (final msg in existingMessages) {
@@ -98,7 +114,7 @@ class MeshEngine extends ChangeNotifier {
         _bloomFilter.add(msg.id);
       }
 
-      // 2. Outbox Queue Manager Recovery: restore pending messages
+      // 3. Outbox Queue Manager Recovery: restore pending messages
       final pendingMessages = await _dbService.getPendingOutboxMessages();
       for (final p in pendingMessages) {
         final env = MessageEnvelope(
@@ -207,6 +223,14 @@ class MeshEngine extends ChangeNotifier {
       status: 'FORWARDED',
     );
 
+    // Physically re-broadcast forwarded packet over Bluetooth RF airwaves
+    try {
+      final relayedTo = await _radioService.broadcastJson(forwardedEnvelope.toJson());
+      debugPrint('[MeshEngine] Relayed ${forwardedEnvelope.uuid} to $relayedTo Bluetooth peer(s)');
+    } catch (e) {
+      debugPrint('[MeshEngine] Radio relay broadcast error: $e');
+    }
+
     _relayedMessagesCount++;
     _envelopeController.add(forwardedEnvelope);
     notifyListeners();
@@ -241,8 +265,17 @@ class MeshEngine extends ChangeNotifier {
           status: 'QUEUED',
         );
 
-        // Step 2: Simulate BLE local broadcast attempt (0.5s delay)
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Step 2: Physically broadcast envelope over Bluetooth RF airwaves
+        int peerCount = 0;
+        try {
+          peerCount = await _radioService.broadcastJson(envelope.toJson());
+          debugPrint('[MeshEngine] Outbox RF broadcast: ${envelope.uuid} pushed to $peerCount physical peer(s)');
+        } catch (e) {
+          debugPrint('[MeshEngine] Outbox RF broadcast exception: $e');
+        }
+
+        // Brief delay for radio transceiver stabilization
+        await Future.delayed(const Duration(milliseconds: 300));
         await _dbService.updateMessageStatus(
           messageId: envelope.uuid,
           status: 'SENT_NEARBY',
@@ -424,6 +457,7 @@ class MeshEngine extends ChangeNotifier {
 
   @override
   void dispose() {
+    _radioSubscription?.cancel();
     _envelopeController.close();
     _statusUpdateController.close();
     super.dispose();

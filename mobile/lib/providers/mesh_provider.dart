@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/mesh_device.dart';
 import '../database/app_database.dart';
+import '../services/bluetooth_radio_service.dart';
+import '../services/database_service.dart';
 
 enum RadioMode {
   normal,
@@ -10,6 +12,9 @@ enum RadioMode {
 }
 
 class MeshProvider extends ChangeNotifier {
+  final BluetoothRadioService _radioService = BluetoothRadioService();
+  StreamSubscription<List<MeshDevice>>? _peerSubscription;
+
   int _connectedPeerCount = 12; // Matches mockup Screen 3 & Screen 13
   RadioMode _radioMode = RadioMode.normal;
   bool _isScanning = false;
@@ -17,12 +22,14 @@ class MeshProvider extends ChangeNotifier {
   Timer? _scanTimer;
 
   final List<MeshDevice> _nearbyDevices = [];
+  final List<MeshDevice> _physicalPeers = [];
 
   int get connectedPeerCount => _connectedPeerCount;
   RadioMode get radioMode => _radioMode;
   bool get isScanning => _isScanning;
   bool get isMeshActive => _isMeshActive;
   List<MeshDevice> get nearbyDevices => List.unmodifiable(_nearbyDevices);
+  List<MeshDevice> get physicalPeers => List.unmodifiable(_physicalPeers);
 
   String get radioModeLabel {
     switch (_radioMode) {
@@ -37,6 +44,36 @@ class MeshProvider extends ChangeNotifier {
 
   MeshProvider() {
     _seedInitialDevices();
+    _initRadioListener();
+  }
+
+  void _initRadioListener() {
+    _peerSubscription = _radioService.peerUpdateStream.listen((realPeers) {
+      _onPhysicalPeersUpdated(realPeers);
+    });
+  }
+
+  void _onPhysicalPeersUpdated(List<MeshDevice> realPeers) {
+    _physicalPeers.clear();
+    _physicalPeers.addAll(realPeers);
+
+    if (realPeers.isNotEmpty) {
+      // Real physical peers take priority at the top of the nearby radar
+      for (final peer in realPeers) {
+        final existingIdx = _nearbyDevices.indexWhere((d) => d.id == peer.id);
+        if (existingIdx >= 0) {
+          _nearbyDevices[existingIdx] = peer;
+        } else {
+          _nearbyDevices.insert(0, peer);
+        }
+        AppDatabase.instance.saveNearbyDevice(peer);
+      }
+      _connectedPeerCount = realPeers.length;
+    } else {
+      _connectedPeerCount = _nearbyDevices.length;
+    }
+
+    notifyListeners();
   }
 
   void _seedInitialDevices() {
@@ -114,17 +151,24 @@ class MeshProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void startScan() {
+  void startScan() async {
     if (_isScanning) return;
     _isScanning = true;
     notifyListeners();
 
-    // Simulate finding / refreshing peers
+    // Trigger physical Bluetooth radio scanning
+    try {
+      await _radioService.startDiscovery(
+        deviceId: DatabaseService.myDeviceId,
+        displayName: DatabaseService.myDisplayName,
+      );
+    } catch (e) {
+      debugPrint('[MeshProvider] Physical scan error: $e');
+    }
+
     _scanTimer?.cancel();
-    _scanTimer = Timer(const Duration(seconds: 4), () {
+    _scanTimer = Timer(const Duration(seconds: 5), () {
       _isScanning = false;
-      // Occasionally fluctuate count between 11 and 14 to simulate dynamic mesh
-      _connectedPeerCount = 12;
       notifyListeners();
     });
   }
@@ -142,7 +186,7 @@ class MeshProvider extends ChangeNotifier {
     } else {
       _nearbyDevices.add(device);
     }
-    _connectedPeerCount = _nearbyDevices.length + 7; // accounts for multi-hop mesh nodes
+    _connectedPeerCount = _nearbyDevices.length;
     notifyListeners();
     AppDatabase.instance.saveNearbyDevice(device);
   }
@@ -150,6 +194,7 @@ class MeshProvider extends ChangeNotifier {
   @override
   void dispose() {
     _scanTimer?.cancel();
+    _peerSubscription?.cancel();
     super.dispose();
   }
 }
