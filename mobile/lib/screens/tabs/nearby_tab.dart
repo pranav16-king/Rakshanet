@@ -188,7 +188,7 @@ class NearbyTab extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTokens.beaconTeal.withOpacity(0.15),
+                        color: AppTokens.beaconTeal.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(AppTokens.radiusXs),
                       ),
                       child: Text(

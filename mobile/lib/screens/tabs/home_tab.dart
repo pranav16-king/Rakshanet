@@ -195,7 +195,7 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                         height: AppTokens.sosHomeSize + 28,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppTokens.sosRed.withOpacity(0.15 * pulseScale),
+                          color: AppTokens.sosRed.withValues(alpha: 0.15 * pulseScale),
                         ),
                       ),
 
@@ -206,7 +206,7 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                         child: CircularProgressIndicator(
                           value: _holdProgress,
                           strokeWidth: 5,
-                          backgroundColor: AppTokens.sosRed.withOpacity(0.3),
+                          backgroundColor: AppTokens.sosRed.withValues(alpha: 0.3),
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             AppTokens.signalYellow,
                           ),
@@ -229,7 +229,7 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTokens.sosRed.withOpacity(0.4),
+                              color: AppTokens.sosRed.withValues(alpha: 0.4),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -342,7 +342,7 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(AppTokens.radiusSm),
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -364,7 +364,7 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: textColor.withOpacity(0.7),
+                    color: textColor.withValues(alpha: 0.7),
                     fontSize: 12,
                     height: 1.2,
                   ),

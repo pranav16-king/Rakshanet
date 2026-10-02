@@ -156,7 +156,7 @@ class _AiHelpTabState extends State<AiHelpTab> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: _suggestions.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (context, index) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final chipText = _suggestions[index];
               return ActionChip(

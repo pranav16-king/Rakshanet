@@ -61,7 +61,7 @@ class MapTab extends StatelessWidget {
               border: Border.all(color: borderColor, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -73,7 +73,7 @@ class MapTab extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppTokens.sosRed.withOpacity(0.15),
+                    color: AppTokens.sosRed.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -130,7 +130,7 @@ class MapTab extends StatelessWidget {
         border: Border.all(color: const Color(0xFF334155)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 6,
           ),
         ],
@@ -149,7 +149,7 @@ class _OfflineMapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // Grid lines for topological map feel
     final gridPaint = Paint()
-      ..color = const Color(0xFF1E293B).withOpacity(0.4)
+      ..color = const Color(0xFF1E293B).withValues(alpha: 0.4)
       ..strokeWidth = 1.0;
 
     for (double x = 0; x < size.width; x += 40) {
@@ -161,7 +161,7 @@ class _OfflineMapPainter extends CustomPainter {
 
     // River contour line
     final riverPaint = Paint()
-      ..color = const Color(0xFF0284C7).withOpacity(0.5)
+      ..color = const Color(0xFF0284C7).withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8.0;
 
@@ -176,7 +176,7 @@ class _OfflineMapPainter extends CustomPainter {
     canvas.drawPath(path, riverPaint);
 
     // Peer cluster (center circle)
-    final clusterFill = Paint()..color = const Color(0xFF0E8A94).withOpacity(0.35);
+    final clusterFill = Paint()..color = const Color(0xFF0E8A94).withValues(alpha: 0.35);
     final clusterBorder = Paint()
       ..color = const Color(0xFF3CC6D0)
       ..style = PaintingStyle.stroke
@@ -202,7 +202,7 @@ class _OfflineMapPainter extends CustomPainter {
   void _drawMarker(Canvas canvas, Offset pos, Color color, String label) {
     // Pulse ring
     final ring = Paint()
-      ..color = color.withOpacity(0.3)
+      ..color = color.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
     canvas.drawCircle(pos, 16, ring);

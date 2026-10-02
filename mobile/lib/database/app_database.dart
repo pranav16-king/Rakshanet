@@ -73,17 +73,36 @@ class AppDatabase {
 
       _db = await openDatabase(
         path,
-        version: 1,
+        version: 2,
         onCreate: (db, version) async {
           await _createTables(db);
           await _seedInitialData(db);
         },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          await _upgradeTables(db);
+        },
       );
+      await _upgradeTables(_db!);
       _isInMemory = false;
       debugPrint('[AppDatabase] Native SQLite connected at $path');
     } catch (e) {
       debugPrint('[AppDatabase] Native SQLite driver unavailable ($e). Switching to in-memory fallback.');
       _activateInMemoryFallback();
+    }
+  }
+
+  Future<void> _upgradeTables(Database db) async {
+    final cols = [
+      'people_helped INTEGER DEFAULT 0',
+      'messages_relayed INTEGER DEFAULT 0',
+      'sos_forwarded INTEGER DEFAULT 0',
+      'missing_found INTEGER DEFAULT 0',
+      'age INTEGER',
+    ];
+    for (final col in cols) {
+      try {
+        await db.execute('ALTER TABLE user_profile ADD COLUMN $col');
+      } catch (_) {}
     }
   }
 
@@ -106,6 +125,10 @@ class AppDatabase {
         language TEXT DEFAULT 'en',
         is_registered INTEGER DEFAULT 0,
         age INTEGER,
+        people_helped INTEGER DEFAULT 0,
+        messages_relayed INTEGER DEFAULT 0,
+        sos_forwarded INTEGER DEFAULT 0,
+        missing_found INTEGER DEFAULT 0,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       )
@@ -311,7 +334,20 @@ class AppDatabase {
   }) async {
     await ensureInitialized();
     if (!_isInMemory && _db != null) {
-      return await _db!.insert(table, values, conflictAlgorithm: conflictAlgorithm);
+      try {
+        return await _db!.insert(table, values, conflictAlgorithm: conflictAlgorithm);
+      } catch (e) {
+        debugPrint('[AppDatabase] Warning: insert into $table failed ($e). Attempting sanitized column insert.');
+        try {
+          final info = await _db!.rawQuery('PRAGMA table_info($table)');
+          final cols = info.map((r) => r['name'] as String).toSet();
+          final sanitized = Map<String, dynamic>.from(values)
+            ..removeWhere((k, _) => !cols.contains(k));
+          return await _db!.insert(table, sanitized, conflictAlgorithm: conflictAlgorithm);
+        } catch (e2) {
+          debugPrint('[AppDatabase] Secondary insert fallback failed: $e2');
+        }
+      }
     }
 
     final tableList = _memoryTables[table] ??= [];

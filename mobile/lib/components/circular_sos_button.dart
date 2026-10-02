@@ -60,13 +60,13 @@ class _CircularSosButtonState extends State<CircularSosButton>
               color: AppTokens.sosRed,
               boxShadow: [
                 BoxShadow(
-                  color: AppTokens.sosRed.withOpacity(0.4),
+                  color: AppTokens.sosRed.withValues(alpha: 0.4),
                   blurRadius: 24,
                   spreadRadius: 4,
                 ),
               ],
               border: Border.all(
-                color: Colors.white.withOpacity(0.4),
+                color: Colors.white.withValues(alpha: 0.4),
                 width: 4,
               ),
             ),

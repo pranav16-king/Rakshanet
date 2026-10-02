@@ -92,10 +92,19 @@ class ProfileProvider extends ChangeNotifier {
     _isRegistered = true;
 
     // Save-Before-Send: Persist to SQLite & SharedPreferences
-    await AppDatabase.instance.saveUserProfile(newProfile);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefRegisteredKey, true);
-    await prefs.setString(_prefUserIdKey, newProfile.id);
+    try {
+      await AppDatabase.instance.saveUserProfile(newProfile);
+    } catch (e) {
+      debugPrint('[ProfileProvider] Error saving user profile to SQLite: $e');
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefRegisteredKey, true);
+      await prefs.setString(_prefUserIdKey, newProfile.id);
+    } catch (e) {
+      debugPrint('[ProfileProvider] Error saving to SharedPreferences: $e');
+    }
 
     _isLoading = false;
     notifyListeners();

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_tokens.dart';
+import '../shell/main_shell.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -15,15 +16,29 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController(text: 'Amit Sharma');
   final _phoneCtrl = TextEditingController(text: '+91 98765 43210');
-  final _bloodCtrl = TextEditingController(text: 'O+');
   final _notesCtrl = TextEditingController(text: 'First-aid certified');
+  String _selectedBloodGroup = 'O+';
+  String _selectedLanguage = 'English';
   bool _isSubmitting = false;
+
+  final List<String> _bloodGroups = [
+    'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', 'Unknown'
+  ];
+
+  final List<String> _languages = [
+    'English',
+    'Hindi (हिन्दी)',
+    'Marathi (मराठी)',
+    'Bengali (বাংলা)',
+    'Tamil (தமிழ்)',
+    'Telugu (తెలుగు)',
+    'Gujarati (ગુજરાતી)',
+  ];
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
-    _bloodCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -32,18 +47,29 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
-    final profileProvider = context.read<ProfileProvider>();
 
-    await profileProvider.registerUser(
-      name: _nameCtrl.text.trim(),
-      phone: _phoneCtrl.text.trim(),
-      bloodGroup: _bloodCtrl.text.trim(),
-      medicalNotes: _notesCtrl.text.trim(),
-    );
-
-    if (mounted) {
-      setState(() => _isSubmitting = false);
-      Navigator.of(context).pushReplacementNamed('/main');
+    try {
+      final profileProvider = context.read<ProfileProvider>();
+      await profileProvider.registerUser(
+        name: _nameCtrl.text.trim().isEmpty ? 'Amit Sharma' : _nameCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim().isEmpty ? '+91 98765 43210' : _phoneCtrl.text.trim(),
+        bloodGroup: _selectedBloodGroup,
+        medicalNotes: _notesCtrl.text.trim(),
+        preferredLanguage: _selectedLanguage,
+      );
+    } catch (e) {
+      debugPrint('[ProfileSetupScreen] Error saving profile: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (_, _, _) => const MainShell(),
+            transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+      }
     }
   }
 
@@ -66,24 +92,38 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // App Icon / Beacon Symbol
+                  // RakshaNet Official Logo with Glowing Beacon Aura
                   Center(
                     child: Container(
-                      width: 72,
-                      height: 72,
+                      width: 96,
+                      height: 96,
                       decoration: BoxDecoration(
-                        color: AppTokens.signalYellow.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppTokens.signalYellow,
-                          width: 2,
-                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTokens.signalYellow.withValues(alpha: 0.35),
+                            blurRadius: 24,
+                            spreadRadius: 4,
+                          ),
+                          BoxShadow(
+                            color: AppTokens.beaconTeal.withValues(alpha: 0.25),
+                            blurRadius: 16,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.radar_rounded,
-                          color: AppTokens.signalYellow,
-                          size: 38,
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/rakshanet_logo.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            color: AppTokens.signalYellow.withValues(alpha: 0.15),
+                            child: const Icon(
+                              Icons.radar_rounded,
+                              color: AppTokens.signalYellow,
+                              size: 48,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -113,7 +153,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
                   // Profile Input Card
                   Container(
@@ -124,68 +164,157 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       border: Border.all(color: borderColor, width: 1),
                     ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Name
                         TextFormField(
                           controller: _nameCtrl,
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Full Name / Volunteer Handle',
+                            labelStyle: TextStyle(color: textMuted),
                             hintText: 'e.g. Amit Sharma',
-                            prefixIcon: const Icon(Icons.person_outline),
+                            hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.6)),
+                            prefixIcon: const Icon(Icons.person_outline, color: AppTokens.signalYellow),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: const BorderSide(color: AppTokens.signalYellow, width: 2),
                             ),
                           ),
                           validator: (v) =>
                               (v == null || v.trim().isEmpty) ? 'Please enter your name' : null,
                         ),
                         const SizedBox(height: 16),
+
+                        // Emergency Phone
                         TextFormField(
                           controller: _phoneCtrl,
                           keyboardType: TextInputType.phone,
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Emergency Contact Phone',
+                            labelStyle: TextStyle(color: textMuted),
                             hintText: 'e.g. +91 98765 43210',
-                            prefixIcon: const Icon(Icons.phone_outlined),
+                            hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.6)),
+                            prefixIcon: const Icon(Icons.phone_outlined, color: AppTokens.beaconTeal),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: const BorderSide(color: AppTokens.signalYellow, width: 2),
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
+
+                        // Blood Group & Medical Notes Row
                         Row(
                           children: [
+                            // Blood Group Dropdown
                             Expanded(
                               flex: 2,
-                              child: TextFormField(
-                                controller: _bloodCtrl,
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _selectedBloodGroup,
+                                dropdownColor: surfaceColor,
+                                style: TextStyle(color: textColor),
                                 decoration: InputDecoration(
-                                  labelText: 'Blood Group',
-                                  hintText: 'O+',
-                                  prefixIcon: const Icon(Icons.bloodtype_outlined),
+                                  labelText: 'Blood',
+                                  labelStyle: TextStyle(color: textMuted),
+                                  prefixIcon: const Icon(Icons.bloodtype_outlined, color: AppTokens.sosRed),
                                   border: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppTokens.radiusSm),
+                                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                                    borderSide: BorderSide(color: borderColor),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                                    borderSide: BorderSide(color: borderColor),
                                   ),
                                 ),
+                                items: _bloodGroups.map((bg) {
+                                  return DropdownMenuItem<String>(
+                                    value: bg,
+                                    child: Text(bg, style: TextStyle(color: textColor)),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedBloodGroup = val);
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
+
+                            // Medical Notes
                             Expanded(
                               flex: 3,
                               child: TextFormField(
                                 controller: _notesCtrl,
+                                style: TextStyle(color: textColor),
                                 decoration: InputDecoration(
                                   labelText: 'Medical Notes',
-                                  hintText: 'No allergies',
-                                  prefixIcon: const Icon(Icons.medical_information_outlined),
+                                  labelStyle: TextStyle(color: textMuted),
+                                  hintText: 'First-aid cert',
+                                  hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.6)),
+                                  prefixIcon: const Icon(Icons.medical_information_outlined, color: AppTokens.darkInfo),
                                   border: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppTokens.radiusSm),
+                                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                                    borderSide: BorderSide(color: borderColor),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                                    borderSide: BorderSide(color: borderColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                                    borderSide: const BorderSide(color: AppTokens.signalYellow, width: 2),
                                   ),
                                 ),
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Language Selector
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedLanguage,
+                          dropdownColor: surfaceColor,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Preferred Language',
+                            labelStyle: TextStyle(color: textMuted),
+                            prefixIcon: const Icon(Icons.language_rounded, color: AppTokens.darkWarning),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                          ),
+                          items: _languages.map((lang) {
+                            return DropdownMenuItem<String>(
+                              value: lang,
+                              child: Text(lang, style: TextStyle(color: textColor)),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedLanguage = val);
+                          },
                         ),
                       ],
                     ),
@@ -206,12 +335,20 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         ),
                       ),
                       child: _isSubmitting
-                          ? const CircularProgressIndicator(color: AppTokens.lightOnPrimary)
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppTokens.lightOnPrimary,
+                              ),
+                            )
                           : const Text(
                               'Join Mesh & Continue',
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
+                                color: AppTokens.lightOnPrimary,
                               ),
                             ),
                     ),

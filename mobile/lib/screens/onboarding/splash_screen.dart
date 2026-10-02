@@ -150,27 +150,36 @@ class _SplashScreenState extends State<SplashScreen>
                             },
                           ),
                           Container(
-                            width: 80,
-                            height: 80,
+                            width: 130,
+                            height: 130,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [AppTokens.signalYellow, Color(0xFFFFA000)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTokens.signalYellow.withValues(alpha: 0.5),
-                                  blurRadius: 20,
+                                  color: AppTokens.beaconTeal.withValues(alpha: 0.45),
+                                  blurRadius: 28,
+                                  spreadRadius: 6,
+                                ),
+                                BoxShadow(
+                                  color: AppTokens.signalYellow.withValues(alpha: 0.35),
+                                  blurRadius: 18,
                                   spreadRadius: 2,
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              Icons.radar_rounded,
-                              size: 46,
-                              color: AppTokens.nightNavy,
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/images/rakshanet_logo.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Container(
+                                  color: AppTokens.nightNavy,
+                                  child: const Icon(
+                                    Icons.radar_rounded,
+                                    size: 54,
+                                    color: AppTokens.signalYellow,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],

@@ -32,7 +32,7 @@ class ChatBubble extends StatelessWidget {
           color: bgColor,
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           border: Border.all(
-            color: isMe ? AppTokens.signalYellow.withOpacity(0.4) : AppTokens.darkBorder,
+            color: isMe ? AppTokens.signalYellow.withValues(alpha: 0.4) : AppTokens.darkBorder,
           ),
         ),
         child: Column(

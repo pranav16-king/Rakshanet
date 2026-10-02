@@ -101,33 +101,38 @@ class OnboardingScreen extends StatelessWidget {
                             ),
                           ),
 
-                          // Middle Signal Pulse Waves
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.podcasts_rounded,
-                                color: AppTokens.signalYellow,
-                                size: 36,
+                          // Middle Official Logo
+                          Center(
+                            child: Container(
+                              width: 76,
+                              height: 76,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTokens.signalYellow.withValues(alpha: 0.4),
+                                    blurRadius: 16,
+                                    spreadRadius: 2,
+                                  ),
+                                  BoxShadow(
+                                    color: AppTokens.beaconTeal.withValues(alpha: 0.3),
+                                    blurRadius: 12,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppTokens.signalYellow.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-                                  border: Border.all(color: AppTokens.signalYellow.withValues(alpha: 0.5)),
-                                ),
-                                child: const Text(
-                                  'Offline Mesh',
-                                  style: TextStyle(
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/images/rakshanet_logo.png',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(
+                                    Icons.podcasts_rounded,
                                     color: AppTokens.signalYellow,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
+                                    size: 36,
                                   ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
 
                           // Right Device

@@ -145,14 +145,22 @@ class HomeScreen extends StatelessWidget {
         elevation: 0,
         title: Row(
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: AppTokens.signalYellow,
-                shape: BoxShape.circle,
+            ClipOval(
+              child: Image.asset(
+                'assets/images/rakshanet_logo.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: AppTokens.signalYellow,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.radar_rounded, color: AppTokens.nightNavy, size: 20),
+                ),
               ),
-              child: const Icon(Icons.radar_rounded, color: AppTokens.nightNavy, size: 20),
             ),
             const SizedBox(width: 10),
             const Text(
