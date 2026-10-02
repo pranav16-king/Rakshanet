@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" modified="2026-10-02T12:35:00.000Z" agent="Antigravity" version="22.1.18" type="device">
+  <diagram id="RakshaNet-Architecture" name="RakshaNet System Architecture & Wireframes">
+    <mxGraphModel dx="2400" dy="1800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3400" pageHeight="2200" background="#0B1220" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- HEADER BANNER -->
+        <mxCell id="hdr_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#162036;strokeColor=#FFD21F;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="3320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="hdr_title" value="&lt;b style=&quot;font-size: 26px; color: #FFD21F;&quot;&gt;RAKSHANET (SIGNALRESCUE AI) — COMPLETE SYSTEM ARCHITECTURE &amp; WIREFRAME SPECIFICATION&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size: 14px; color: #EEF2F8;&quot;&gt;Decentralized Offline BLE Mesh Network • Delay-Tolerant Networking (DTN) • Flutter 13-Screen Mobile Suite • FastAPI + React Command Center&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="35" width="3280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- SECTION 1: END-TO-END MULTI-TIER SYSTEM ARCHITECTURE -->
+        <mxCell id="sec1_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111A2C;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="150" width="1050" height="1980" as="geometry" />
+        </mxCell>
+        <mxCell id="sec1_title" value="&lt;b style=&quot;font-size: 20px; color: #FFD21F;&quot;&gt;1. MULTI-TIER SYSTEM ARCHITECTURE&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="165" width="400" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- TIER 1: FLUTTER MOBILE NODE -->
+        <mxCell id="t1_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#162036;strokeColor=#3CC6D0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="210" width="1010" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="t1_label" value="&lt;b style=&quot;font-size: 16px; color: #3CC6D0;&quot;&gt;TIER 1: DISCONNECTED MOBILE MESH NODE (FLUTTER / DART)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="80" y="220" width="600" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- UI Sub-layer -->
+        <mxCell id="layer_ui" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#FFD21F;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="255" width="970" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="layer_ui_lbl" value="&lt;b style=&quot;color: #FFD21F;&quot;&gt;13-Screen Hi-Vis UI Layer (Strict Tokens &amp; Radii)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="90" y="260" width="400" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="u1" value="1. Splash" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="90" y="285" width="120" height="30" as="geometry" /></mxCell>
+        <mxCell id="u2" value="2. Onboarding" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="220" y="285" width="120" height="30" as="geometry" /></mxCell>
+        <mxCell id="u2b" value="2b. Profile Gate*" style="rounded=1;fillColor=#D92D20;strokeColor=#FFFFFF;fontColor=#FFFFFF;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="350" y="285" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="u3" value="3. SOS Home (Hold)" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="490" y="285" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="u4" value="4. Report Incident" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="630" y="285" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="u5" value="5. Offline Chat" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="770" y="285" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="u6" value="6. Live Map" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="910" y="285" width="120" height="30" as="geometry" /></mxCell>
+        <mxCell id="u7" value="7. AI Assist" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="90" y="325" width="120" height="30" as="geometry" /></mxCell>
+        <mxCell id="u8" value="8. Missing Person" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="220" y="325" width="120" height="30" as="geometry" /></mxCell>
+        <mxCell id="u9" value="9. Shelters" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="350" y="325" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="u10" value="10. My Messages" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="490" y="325" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="u11" value="11. Safety Tools" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="630" y="325" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="u12" value="12. Settings" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="770" y="325" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="u13" value="13. Profile (KPIs)" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=11;" vertex="1" parent="1"><mxGeometry x="910" y="325" width="120" height="30" as="geometry" /></mxCell>
+
+        <!-- State Providers Layer -->
+        <mxCell id="layer_prov" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#3CC6D0;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="380" width="970" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="layer_prov_lbl" value="&lt;b style=&quot;color: #3CC6D0;&quot;&gt;State Management Layer (Provider / ChangeNotifier)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="90" y="385" width="400" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pr1" value="ProfileProvider&#xa;Registration &amp; ID gate" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="90" y="410" width="170" height="45" as="geometry" /></mxCell>
+        <mxCell id="pr2" value="ThemeProvider&#xa;Dark / HiVis / OLED Black" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="280" y="410" width="170" height="45" as="geometry" /></mxCell>
+        <mxCell id="pr3" value="MeshProvider&#xa;12 Peers / RSSI / Scan" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="470" y="410" width="170" height="45" as="geometry" /></mxCell>
+        <mxCell id="pr4" value="ChatProvider&#xa;Conversations / Sync Outbox" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="660" y="410" width="170" height="45" as="geometry" /></mxCell>
+        <mxCell id="pr5" value="EmergencyProvider&#xa;SOS &amp; Incident Dispatch" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="850" y="410" width="180" height="45" as="geometry" /></mxCell>
+
+        <!-- DTN Mesh Engine & Domain Services -->
+        <mxCell id="layer_engine" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#FF5A4E;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="480" width="970" height="145" as="geometry" />
+        </mxCell>
+        <mxCell id="layer_eng_lbl" value="&lt;b style=&quot;color: #FF5A4E;&quot;&gt;DTN Mesh Engine &amp; Domain Protocol Services (Kabootar / MeshChat Inspired)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="90" y="485" width="550" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="eng1" value="&lt;b&gt;Save-Before-Send Guarantee&lt;/b&gt;&#xa;Writes message to SQLite&#xa;with status='SAVED' before radio attempt" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="90" y="515" width="220" height="95" as="geometry" /></mxCell>
+        <mxCell id="eng2" value="&lt;b&gt;Envelope Builder (DTN)&lt;/b&gt;&#xa;Message ID (UUID)&#xa;Origin ID &amp; Timestamp&#xa;TTL (default 5) | Hop Count (0)&#xa;Payload &amp; SHA256 Checksum" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="330" y="515" width="220" height="95" as="geometry" /></mxCell>
+        <mxCell id="eng3" value="&lt;b&gt;Deduplication &amp; Loop Guard&lt;/b&gt;&#xa;Bloom Filter + SQLite check.&#xa;If seen -&amp;gt; Drop silently.&#xa;Prevents infinite routing storms." style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="570" y="515" width="220" height="95" as="geometry" /></mxCell>
+        <mxCell id="eng4" value="&lt;b&gt;Epidemic Store-and-Forward&lt;/b&gt;&#xa;TTL Decrement (TTL - 1)&#xa;If TTL &amp;lt;= 1: Keep local, HALT retransmission.&#xa;Hop count increment (+1)&#xa;Periodic opportunistic peer push" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="810" y="515" width="220" height="95" as="geometry" /></mxCell>
+
+        <!-- SQLite Persistence Layer -->
+        <mxCell id="layer_db" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#4CD08A;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="640" width="970" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="layer_db_lbl" value="&lt;b style=&quot;color: #4CD08A;&quot;&gt;Local Persistence Layer (SQLite Database - app_database.db)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="90" y="645" width="450" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="db1" value="user_profile&#xa;(id, name, blood, phone)" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#162036;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=9;" vertex="1" parent="1"><mxGeometry x="90" y="670" width="140" height="45" as="geometry" /></mxCell>
+        <mxCell id="db2" value="messages &amp; outbox&#xa;(id, status, ttl, hops)" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#162036;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=9;" vertex="1" parent="1"><mxGeometry x="250" y="670" width="140" height="45" as="geometry" /></mxCell>
+        <mxCell id="db3" value="nearby_devices&#xa;(id, rssi, last_seen)" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#162036;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=9;" vertex="1" parent="1"><mxGeometry x="410" y="670" width="140" height="45" as="geometry" /></mxCell>
+        <mxCell id="db4" value="emergency_reports&#xa;(id, type, coords, ts)" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#162036;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=9;" vertex="1" parent="1"><mxGeometry x="570" y="670" width="140" height="45" as="geometry" /></mxCell>
+        <mxCell id="db5" value="shelters &amp; resources&#xa;(id, name, cap, open)" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#162036;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=9;" vertex="1" parent="1"><mxGeometry x="730" y="670" width="140" height="45" as="geometry" /></mxCell>
+        <mxCell id="db6" value="missing_persons&#xa;(id, name, age, last_seen)" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#162036;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=9;" vertex="1" parent="1"><mxGeometry x="890" y="670" width="140" height="45" as="geometry" /></mxCell>
+
+        <!-- Radio & Hardware Layer -->
+        <mxCell id="layer_hw" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#FFA033;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="740" width="970" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="layer_hw_lbl" value="&lt;b style=&quot;color: #FFA033;&quot;&gt;Hardware &amp; Transceivers Layer (Zero Internet Dependency)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="90" y="745" width="450" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="hw1" value="&lt;b&gt;BLE GATT Server&lt;/b&gt;&#xa;Duty-cycled advertising (200ms)&#xa;Service UUID: 0xFD6F / Raksha" style="rounded=1;fillColor=#162036;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="90" y="770" width="220" height="45" as="geometry" /></mxCell>
+        <mxCell id="hw2" value="&lt;b&gt;BLE GATT Client&lt;/b&gt;&#xa;Continuous background scanner&#xa;RSSI proximity band estimator" style="rounded=1;fillColor=#162036;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="330" y="770" width="220" height="45" as="geometry" /></mxCell>
+        <mxCell id="hw3" value="&lt;b&gt;Wi-Fi Direct / Nearby&lt;/b&gt;&#xa;High bandwidth fallback&#xa;Batch chunk sync for media" style="rounded=1;fillColor=#162036;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="570" y="770" width="220" height="45" as="geometry" /></mxCell>
+        <mxCell id="hw4" value="&lt;b&gt;OLED Black Controller&lt;/b&gt;&#xa;Turns off AMOLED subpixels&#xa;Cuts screen battery consumption by 62%" style="rounded=1;fillColor=#162036;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="810" y="770" width="220" height="45" as="geometry" /></mxCell>
+
+        <!-- Vertical Flow Arrow from Tier 1 to Tier 2 -->
+        <mxCell id="flow_t1_t2" value="BLE Opportunistic Radio Transmission (No Cellular Needed)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FFD21F;strokeWidth=3;fontColor=#FFD21F;fontSize=12;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="layer_hw" target="t2_box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- TIER 2: DECENTRALIZED 4-PHONE 3-HOP RELAY SIMULATION -->
+        <mxCell id="t2_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#162036;strokeColor=#FFD21F;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="990" width="1010" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="t2_label" value="&lt;b style=&quot;font-size: 16px; color: #FFD21F;&quot;&gt;TIER 2: MULTI-HOP DELAY-TOLERANT MESH TOPOLOGY (EPIDEMIC ROUTING)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1000" width="650" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Phone A -->
+        <mxCell id="ph_a" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#D92D20;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1040" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="ph_a_lbl" value="&lt;b style=&quot;color: #D92D20;&quot;&gt;PHONE A (Victim / Trapped)&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color: #EEF2F8; font-size: 11px;&quot;&gt;• Status: No Internet, No Cell&lt;br/&gt;• Creates SOS Beacon &lt;b&gt;MSG-001&lt;/b&gt;&lt;br/&gt;• Saved to SQLite locally&lt;br/&gt;&lt;b style=&quot;color: #FFD21F;&quot;&gt;• TTL = 5 | Hop Count = 0&lt;/b&gt;&lt;br/&gt;• Broadcasts BLE payload&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1050" width="180" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Hop A -> B -->
+        <mxCell id="hop_ab" value="BLE Hop 1&#xa;Range: ~80m" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#3CC6D0;strokeWidth=2;fontColor=#3CC6D0;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ph_a" target="ph_b">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Phone B -->
+        <mxCell id="ph_b" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#3CC6D0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1040" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="ph_b_lbl" value="&lt;b style=&quot;color: #3CC6D0;&quot;&gt;PHONE B (Pedestrian Relay)&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color: #EEF2F8; font-size: 11px;&quot;&gt;• Dedup check: Not in cache&lt;br/&gt;• Store-and-forward into SQLite&lt;br/&gt;&lt;b style=&quot;color: #FFD21F;&quot;&gt;• Decrement TTL = 4&lt;br/&gt;• Increment Hops = 1&lt;/b&gt;&lt;br/&gt;• Physical movement carries packet&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="350" y="1050" width="180" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Hop B -> C -->
+        <mxCell id="hop_bc" value="BLE Hop 2&#xa;Store-&amp;-Forward" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#3CC6D0;strokeWidth=2;fontColor=#3CC6D0;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ph_b" target="ph_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Phone C -->
+        <mxCell id="ph_c" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#3CC6D0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="600" y="1040" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="ph_c_lbl" value="&lt;b style=&quot;color: #3CC6D0;&quot;&gt;PHONE C (Shelter Volunteer)&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color: #EEF2F8; font-size: 11px;&quot;&gt;• Receives MSG-001 from Phone B&lt;br/&gt;• Displays in Community Chat&lt;br/&gt;&lt;b style=&quot;color: #FFD21F;&quot;&gt;• Decrement TTL = 3&lt;br/&gt;• Increment Hops = 2&lt;/b&gt;&lt;br/&gt;• Relays to outbound vehicles&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="610" y="1050" width="180" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Hop C -> D -->
+        <mxCell id="hop_cd" value="BLE Hop 3&#xa;Border Node" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#3CC6D0;strokeWidth=2;fontColor=#3CC6D0;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ph_c" target="ph_d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Phone D -->
+        <mxCell id="ph_d" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#4CD08A;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="860" y="1040" width="190" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="ph_d_lbl" value="&lt;b style=&quot;color: #4CD08A;&quot;&gt;PHONE D (Highway Node)&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color: #EEF2F8; font-size: 11px;&quot;&gt;• Receives MSG-001&lt;br/&gt;&lt;b style=&quot;color: #FFD21F;&quot;&gt;• TTL = 2 | Hops = 3&lt;/b&gt;&lt;br/&gt;• Enters range of Rescue Vehicle&lt;br/&gt;• High-speed sync triggered&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="870" y="1050" width="170" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Flow T2 -> T3 -->
+        <mxCell id="flow_t2_t3" value="Uplink Encounter (Vehicle BLE Gateway Ingestion)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FFD21F;strokeWidth=3;fontColor=#FFD21F;fontSize=12;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="t2_box" target="t3_box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- TIER 3: FIELD RESCUE GATEWAY -->
+        <mxCell id="t3_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#162036;strokeColor=#FFA033;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1300" width="1010" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="t3_label" value="&lt;b style=&quot;font-size: 16px; color: #FFA033;&quot;&gt;TIER 3: FIELD EDGE GATEWAY / RESCUE CONVOY GATEWAY NODE&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1310" width="600" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="gw_ble" value="&lt;b&gt;Long-Range BLE Sink&lt;/b&gt;&#xa;High-gain omnidirectional antenna&#xa;Ingests batch envelopes&#xa;Issues multi-hop ACKs" style="rounded=1;fillColor=#0E1627;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="90" y="1345" width="280" height="140" as="geometry" /></mxCell>
+        <mxCell id="gw_dtn" value="&lt;b&gt;DTN Edge Buffer Store&lt;/b&gt;&#xa;Persistent SQLite / RocksDB&#xa;Prioritizes P1 (SOS) over P4 (Chat)&#xa;Calculates hop delay &amp; vector route" style="rounded=1;fillColor=#0E1627;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="410" y="1345" width="280" height="140" as="geometry" /></mxCell>
+        <mxCell id="gw_sat" value="&lt;b&gt;Hybrid Backhaul Uplink&lt;/b&gt;&#xa;• Starlink / Satellite Transceiver&#xa;• 4G/5G Tactical Cellular&#xa;• VHF / LoRa Long-Distance Radio&#xa;Auto-switches to cheapest available" style="rounded=1;fillColor=#0E1627;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="730" y="1345" width="320" height="140" as="geometry" /></mxCell>
+
+        <!-- Flow T3 -> T4 -->
+        <mxCell id="flow_t3_t4" value="Secure HTTPS / WSS Backhaul Uplink" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4CD08A;strokeWidth=3;fontColor=#4CD08A;fontSize=12;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="t3_box" target="t4_box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- TIER 4: COMMAND CENTER CLOUD -->
+        <mxCell id="t4_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#162036;strokeColor=#4CD08A;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1560" width="1010" height="540" as="geometry" />
+        </mxCell>
+        <mxCell id="t4_label" value="&lt;b style=&quot;font-size: 16px; color: #4CD08A;&quot;&gt;TIER 4: COMMAND CENTER CLOUD &amp; NATIONAL INCIDENT COORDINATION&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1570" width="650" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="api_gw" value="&lt;b&gt;FastAPI Gateway Hub&lt;/b&gt;&#xa;• REST Ingestion (/api/mesh/sync)&#xa;• WebSocket Live Stream (/ws/mesh)&#xa;• Auth, Rate Limiter &amp; Token Validator" style="rounded=1;fillColor=#0E1627;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="90" y="1610" width="280" height="90" as="geometry" /></mxCell>
+        <mxCell id="ai_triage" value="&lt;b&gt;Explainable AI Triage Engine&lt;/b&gt;&#xa;• Severity: P1 Critical to P4 Minor&#xa;• Confidence Score (e.g. 94%)&#xa;• Factors: Battery, Trapped, Medical&#xa;• Cluster &amp; Search Zone Predictor" style="rounded=1;fillColor=#0E1627;strokeColor=#FF5A4E;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="410" y="1610" width="280" height="90" as="geometry" /></mxCell>
+        <mxCell id="postgis" value="&lt;b&gt;PostgreSQL + PostGIS&lt;/b&gt;&#xa;• Spatial Incident Heatmaps&#xa;• Multi-hop Graph Path Tracer&#xa;• Resource Allocation Registry" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#0E1627;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="730" y="1610" width="320" height="90" as="geometry" /></mxCell>
+
+        <!-- Command Dashboard UI -->
+        <mxCell id="dash_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#3CC6D0;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1720" width="960" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="dash_lbl" value="&lt;b style=&quot;color: #3CC6D0;&quot;&gt;React Command Center Web Dashboard (Dark Control Room Theme)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1730" width="500" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" value="&lt;b&gt;Leaflet Incident Map&lt;/b&gt;&#xa;• SOS Red Pulse Rings&#xa;• Hop-link Dashed Lines&#xa;• Cluster Bubbles (&quot;12 nodes&quot;)&#xa;• Drone Search Corridors" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="110" y="1760" width="220" height="170" as="geometry" /></mxCell>
+        <mxCell id="d2" value="&lt;b&gt;Live Triage Incident Feed&lt;/b&gt;&#xa;• Severity Pills (P1/P2/P3/P4)&#xa;• Victim Name &amp; Last Contact&#xa;• Explainability Accordion&#xa;• Instant Dispatch Action Button" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="350" y="1760" width="280" height="170" as="geometry" /></mxCell>
+        <mxCell id="d3" value="&lt;b&gt;Rescue Ops &amp; Resource Matrix&lt;/b&gt;&#xa;• Field Teams 1-5 Status&#xa;• Shelter Occupancy / Capacity&#xa;• Food, Water, Medical Supplies&#xa;• Missing Persons Gallery Match" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;" vertex="1" parent="1"><mxGeometry x="650" y="1760" width="380" height="170" as="geometry" /></mxCell>
+
+        <!-- Government Sync Bridge -->
+        <mxCell id="gov_sync" value="&lt;b&gt;NDMA / SDMA National Disaster Management Ingestion Gateway (CAP XML Protocol / NDMA API v2)&lt;/b&gt;&#xa;Automated bidirectional synchronization with federal emergency alert networks, relief camps, and satellite rescue teams." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#162036;strokeColor=#FFD21F;strokeWidth=1;fontColor=#FFD21F;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1970" width="960" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ========================================================================= -->
+        <!-- SECTION 2: 13-SCREEN MOBILE APPLICATION WIREFRAME ARCHITECTURE -->
+        <!-- ========================================================================= -->
+        <mxCell id="sec2_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111A2C;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="150" width="2230" height="1980" as="geometry" />
+        </mxCell>
+        <mxCell id="sec2_title" value="&lt;b style=&quot;font-size: 20px; color: #FFD21F;&quot;&gt;2. COMPLETE 13-SCREEN MOBILE APPLICATION WIREFRAME SPECIFICATION (FLUTTER)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="165" width="800" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ================== WIREFRAME 1: SPLASH (Screen 1) ================== -->
+        <mxCell id="wf1_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#FFD21F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="1160" y="210" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf1_top" value="SignalRescue AI" style="rounded=0;fillColor=#FFD21F;strokeColor=none;fontColor=#1A1400;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="1160" y="210" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf1_logo" value="🚨&#xa;SignalRescue AI" style="ellipse;whiteSpace=wrap;html=1;fillColor=#162036;strokeColor=#FFD21F;strokeWidth=3;fontColor=#FFD21F;fontStyle=1;fontSize=13;align=center;" vertex="1" parent="1"><mxGeometry x="1220" y="320" width="160" height="160" as="geometry" /></mxCell>
+        <mxCell id="wf1_sub" value="Stay Connected. Save Lives.&#xa;Anytime. Anywhere." style="text;html=1;align=center;fontColor=#EEF2F8;fontSize=12;" vertex="1" parent="1"><mxGeometry x="1180" y="510" width="240" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf1_bar" value="Checking Profile Gate..." style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#3CC6D0;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="1200" y="660" width="200" height="30" as="geometry" /></mxCell>
+
+        <!-- ================== WIREFRAME 2: ONBOARDING (Screen 2) ================== -->
+        <mxCell id="wf2_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="1470" y="210" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf2_top" value="Onboarding Guide" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#FFD21F;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="1470" y="210" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf2_h1" value="Help each other&#xa;when networks fail" style="text;html=1;align=center;fontColor=#EEF2F8;fontStyle=1;fontSize=14;" vertex="1" parent="1"><mxGeometry x="1480" y="250" width="260" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf2_c1" value="⚡ Works without internet" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1490" y="300" width="240" height="36" as="geometry" /></mxCell>
+        <mxCell id="wf2_c2" value="📡 Connects nearby devices (Mesh)" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1490" y="346" width="240" height="36" as="geometry" /></mxCell>
+        <mxCell id="wf2_c3" value="🤖 AI guidance on your device" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1490" y="392" width="240" height="36" as="geometry" /></mxCell>
+        <mxCell id="wf2_c4" value="🏛️ Auto sends to govt when online" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1490" y="438" width="240" height="36" as="geometry" /></mxCell>
+        <mxCell id="wf2_btn" value="Get Started" style="rounded=1;fillColor=#FFD21F;strokeColor=none;fontColor=#1A1400;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1"><mxGeometry x="1490" y="630" width="240" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf2_skip" value="Skip Intro" style="text;html=1;align=center;fontColor=#9FADC2;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1490" y="675" width="240" height="25" as="geometry" /></mxCell>
+
+        <!-- ================== WIREFRAME 2B: PROFILE SETUP GATE (Screen 2b) ================== -->
+        <mxCell id="wf2b_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#D92D20;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="1780" y="210" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf2b_top" value="Emergency Profile Setup (Required)" style="rounded=0;fillColor=#D92D20;strokeColor=none;fontColor=#FFFFFF;fontStyle=1;align=center;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1780" y="210" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf2b_f1" value="Full Name / Nickname *" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#9FADC2;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1800" y="260" width="240" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf2b_f2" value="Blood Group (Dropdown: A+, B+, O+)" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#9FADC2;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1800" y="315" width="240" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf2b_f3" value="Emergency Contact Phone" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#9FADC2;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1800" y="370" width="240" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf2b_f4" value="Preferred Language (English/Hindi)" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#9FADC2;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1800" y="425" width="240" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf2b_note" value="⚠️ Saved locally in SQLite. Used to tag distress beacons anonymously (SR-XXXX-XXXX)." style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#FFD21F;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1800" y="480" width="240" height="50" as="geometry" /></mxCell>
+        <mxCell id="wf2b_save" value="Save Profile &amp; Enter App" style="rounded=1;fillColor=#FFD21F;strokeColor=none;fontColor=#1A1400;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1"><mxGeometry x="1800" y="640" width="240" height="45" as="geometry" /></mxCell>
+
+        <!-- ================== WIREFRAME 3: HOME / SOS BEACON (Screen 3) ================== -->
+        <mxCell id="wf3_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#FFD21F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="2090" y="210" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf3_top" value="SignalRescue AI   ⚙️" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#FFD21F;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="2090" y="210" width="280" height="30" as="geometry" /></mxCell>
+        <!-- 4 status cards -->
+        <mxCell id="wf3_c1" value="📡 Mesh: 12 Devices&#xa;Normal Low Power" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#3CC6D0;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2105" y="250" width="120" height="45" as="geometry" /></mxCell>
+        <mxCell id="wf3_c2" value="🌐 Internet: Offline&#xa;Messages queued" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#FF5A4E;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2235" y="250" width="120" height="45" as="geometry" /></mxCell>
+        <mxCell id="wf3_c3" value="📍 GPS: Unavailable&#xa;Using last dead-reck" style="rounded=1;fillColor=#162036;strokeColor=#9FADC2;fontColor=#9FADC2;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2105" y="305" width="120" height="45" as="geometry" /></mxCell>
+        <mxCell id="wf3_c4" value="🔋 Battery: 68%&#xa;Low-Power Ready" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#FFD21F;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2235" y="305" width="120" height="45" as="geometry" /></mxCell>
+        <!-- Large Circular SOS -->
+        <mxCell id="wf3_sos" value="&lt;b style=&quot;font-size: 26px; color: #FFFFFF;&quot;&gt;SOS&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size: 10px; color: #FFFFFF;&quot;&gt;Hold for 3s to alert mesh&lt;/span&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D92D20;strokeColor=#FF5A4E;strokeWidth=5;align=center;" vertex="1" parent="1"><mxGeometry x="2150" y="375" width="160" height="160" as="geometry" /></mxCell>
+        <mxCell id="wf3_warn" value="⚠️ OFFLINE MODE: Messages relayed via peers" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#FFD21F;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="2105" y="555" width="250" height="25" as="geometry" /></mxCell>
+        <!-- Bottom Tab Bar -->
+        <mxCell id="wf3_nav" value="💬 Chat | 🗺️ Map | 🚨 SOS | 📡 Nearby | 🤖 AI" style="rounded=0;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2090" y="685" width="280" height="45" as="geometry" /></mxCell>
+
+        <!-- ================== WIREFRAME 4: EMERGENCY REPORT (Screen 4) ================== -->
+        <mxCell id="wf4_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="2400" y="210" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf4_top" value="Emergency Report            ✖️" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#EEF2F8;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="2400" y="210" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf4_sub" value="What type of help do you need?" style="text;html=1;fontColor=#9FADC2;fontSize=11;align=center;" vertex="1" parent="1"><mxGeometry x="2410" y="245" width="260" height="20" as="geometry" /></mxCell>
+        <mxCell id="wf4_t1" value="🩸 Medical (Injury, breathing, illness)" style="rounded=1;fillColor=#162036;strokeColor=#D92D20;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2415" y="275" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf4_t2" value="🧱 Trapped (Under debris / water)" style="rounded=1;fillColor=#162036;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2415" y="315" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf4_t3" value="🔥 Fire (Smoke, structural hazard)" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2415" y="355" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf4_t4" value="🌊 Flood (Rising water level)" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2415" y="395" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf4_t5" value="👤 Missing Person (Search alert)" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2415" y="435" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf4_t6" value="❓ Other (Describe below...)" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2415" y="475" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf4_sos" value="((•)) Send SOS Distress" style="rounded=1;fillColor=#D92D20;strokeColor=none;fontColor=#FFFFFF;fontStyle=1;fontSize=13;align=center;" vertex="1" parent="1"><mxGeometry x="2415" y="630" width="250" height="45" as="geometry" /></mxCell>
+        <mxCell id="wf4_note" value="Will be sent to nearby devices &amp; govt" style="text;html=1;fontColor=#9FADC2;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2415" y="680" width="250" height="20" as="geometry" /></mxCell>
+
+        <!-- ================== WIREFRAME 5: OFFLINE MESH CHAT (Screen 5) ================== -->
+        <mxCell id="wf5_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="2710" y="210" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf5_top" value="Community Chat (24 online)  🔍" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#3CC6D0;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="2710" y="210" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf5_tabs" value="Nearby | Group | Rescue | Saved" style="rounded=0;fillColor=#111A2C;strokeColor=#26344F;fontColor=#FFD21F;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="2710" y="240" width="280" height="25" as="geometry" /></mxCell>
+        <mxCell id="wf5_b1" value="Rahul (1.1 km): Need drinking water at primary school. (✓✓ Sent Nearby)" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="2720" y="275" width="200" height="45" as="geometry" /></mxCell>
+        <mxCell id="wf5_b2" value="You: Rescue boat spotted on West Bank. (✓✓ Delivered • 2 hops)" style="rounded=1;fillColor=#0E8A94;strokeColor=#none;fontColor=#FFFFFF;fontSize=9;align=right;" vertex="1" parent="1"><mxGeometry x="2780" y="330" width="200" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf5_card" value="📍 Shared Location: Village School&#xa;Lat: 19.076, Lon: 72.877 (~1.2 km away)" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#FFD21F;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2725" y="380" width="250" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf5_pill" value="Quick: Need Medical | Safe Here | Road Block" style="text;html=1;fontColor=#9FADC2;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="2710" y="605" width="280" height="20" as="geometry" /></mxCell>
+        <mxCell id="wf5_input" value="Type offline message...         🎙️ ➡️" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#9FADC2;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2720" y="630" width="260" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf5_nav" value="💬 Chat | 🗺️ Map | 🚨 SOS | 📡 Nearby | 🤖 AI" style="rounded=0;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2710" y="685" width="280" height="45" as="geometry" /></mxCell>
+
+        <!-- ================== WIREFRAME 6: LIVE MESH MAP (Screen 6) ================== -->
+        <mxCell id="wf6_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="3020" y="210" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf6_top" value="Live Map (18 devices)       📍 ⚙️" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#FFD21F;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="3020" y="210" width="280" height="30" as="geometry" /></mxCell>
+        <!-- Map Canvas Simulation -->
+        <mxCell id="wf6_canvas" value="" style="rounded=1;fillColor=#0E1627;strokeColor=#26344F;strokeWidth=1;" vertex="1" parent="1"><mxGeometry x="3025" y="245" width="270" height="280" as="geometry" /></mxCell>
+        <mxCell id="wf6_m_sos" value="🔴 SOS" style="ellipse;fillColor=#D92D20;strokeColor=#FF5A4E;strokeWidth=2;fontColor=#FFFFFF;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="3080" y="270" width="45" height="45" as="geometry" /></mxCell>
+        <mxCell id="wf6_m_node" value="🟡 Peer" style="ellipse;fillColor=#162036;strokeColor=#FFD21F;strokeWidth=1;fontColor=#FFD21F;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="3180" y="310" width="35" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf6_m_line" value="" style="dashed=1;strokeColor=#3CC6D0;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="wf6_m_sos" target="wf6_m_node"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="wf6_bubble" value="📍 5 devices in this cluster" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#3CC6D0;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="3110" y="380" width="120" height="25" as="geometry" /></mxCell>
+        <!-- Bottom Sheet -->
+        <mxCell id="wf6_sheet" value="&lt;b&gt;2 people need help ~1.3 km&lt;/b&gt;&#xa;Last contact 24m ago • Medical &amp; Trapped" style="rounded=1;fillColor=#162036;strokeColor=#D92D20;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="3030" y="540" width="260" height="60" as="geometry" /></mxCell>
+        <mxCell id="wf6_chips" value="Filter: All | SOS (2) | Rescue | Shelter" style="text;html=1;fontColor=#9FADC2;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="3020" y="615" width="280" height="20" as="geometry" /></mxCell>
+        <mxCell id="wf6_nav" value="💬 Chat | 🗺️ Map | 🚨 SOS | 📡 Nearby | 🤖 AI" style="rounded=0;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="3020" y="685" width="280" height="45" as="geometry" /></mxCell>
+
+        <!-- ================== ROW 2 WIREFRAMES ================== -->
+
+        <!-- WIREFRAME 7: AI ASSISTANT (Screen 7) -->
+        <mxCell id="wf7_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="1160" y="780" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf7_top" value="AI Assistant (Offline On-Device)" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#3CC6D0;fontStyle=1;align=center;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1160" y="780" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf7_q" value="You: How to purify water without power?" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1170" y="825" width="240" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf7_ans" value="&lt;b&gt;AI Guidance (Offline Heuristic):&lt;/b&gt;&#xa;1. Strain cloudy water through cotton cloth.&#xa;2. Boil for 3 mins if fire is available.&#xa;3. Sunlight SODIS: Clear PET bottle in sun for 6h.&#xa;⚠️ Safe for bacterial contamination." style="rounded=1;fillColor=#0E1627;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1170" y="875" width="260" height="90" as="geometry" /></mxCell>
+        <mxCell id="wf7_pills" value="Suggestions: Food Storage | First Aid | Flood Safety" style="text;html=1;fontColor=#9FADC2;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="1160" y="1175" width="280" height="20" as="geometry" /></mxCell>
+        <mxCell id="wf7_in" value="Ask offline safety assistant...      ➡️" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#9FADC2;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1170" y="1200" width="260" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf7_nav" value="💬 Chat | 🗺️ Map | 🚨 SOS | 📡 Nearby | 🤖 AI" style="rounded=0;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="1160" y="1255" width="280" height="45" as="geometry" /></mxCell>
+
+        <!-- WIREFRAME 8: MISSING PERSON REPORT (Screen 8) -->
+        <mxCell id="wf8_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="1470" y="780" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf8_top" value="Report Missing Person" style="rounded=0;fillColor=#FFD21F;strokeColor=none;fontColor=#1A1400;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="1470" y="780" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf8_f1" value="Person Name: Rohan Kumar" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1485" y="825" width="250" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf8_f2" value="Age: 12 years | Gender: Male" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1485" y="865" width="250" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf8_f3" value="Clothing: Blue jacket, black bag" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1485" y="905" width="250" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf8_f4" value="Last Seen: Near River Bridge (10:30 AM)" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1485" y="945" width="250" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf8_thumb" value="📷 Photo 1 | 📷 Photo 2 | ➕ Add" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#3CC6D0;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="1485" y="990" width="250" height="50" as="geometry" /></mxCell>
+        <mxCell id="wf8_btn" value="Submit Missing Person Report" style="rounded=1;fillColor=#FFD21F;strokeColor=none;fontColor=#1A1400;fontStyle=1;fontSize=11;align=center;" vertex="1" parent="1"><mxGeometry x="1485" y="1200" width="250" height="40" as="geometry" /></mxCell>
+
+        <!-- WIREFRAME 9: SHELTERS & RESOURCES (Screen 9) -->
+        <mxCell id="wf9_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="1780" y="780" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf9_top" value="Shelters &amp; Resources" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#3CC6D0;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="1780" y="780" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf9_tabs" value="Nearby (4) | All Camps (12)" style="rounded=0;fillColor=#111A2C;strokeColor=#26344F;fontColor=#FFD21F;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="1780" y="810" width="280" height="25" as="geometry" /></mxCell>
+        <mxCell id="wf9_c1" value="&lt;b&gt;Village School&lt;/b&gt; (1.2 km away)&#xa;Status: OPEN • 120 / 200 people&#xa;Tags: 🍞 Food | 💧 Water | 🩹 Medical" style="rounded=1;fillColor=#162036;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1795" y="845" width="250" height="50" as="geometry" /></mxCell>
+        <mxCell id="wf9_c2" value="&lt;b&gt;Community Center&lt;/b&gt; (2.6 km away)&#xa;Status: OPEN • 190 / 200 (Almost Full)&#xa;Tags: 🍞 Food | ⚡ Solar Power" style="rounded=1;fillColor=#162036;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1795" y="905" width="250" height="50" as="geometry" /></mxCell>
+        <mxCell id="wf9_c3" value="&lt;b&gt;Primary Health Center&lt;/b&gt; (3.1 km)&#xa;Status: CRITICAL MEDICAL SUPPORT&#xa;Tags: 💉 Vaccines | 🩺 Triage Beds" style="rounded=1;fillColor=#162036;strokeColor=#D92D20;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="1795" y="965" width="250" height="50" as="geometry" /></mxCell>
+        <mxCell id="wf9_nav" value="💬 Chat | 🗺️ Map | 🚨 SOS | 📡 Nearby | 🤖 AI" style="rounded=0;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="1780" y="1255" width="280" height="45" as="geometry" /></mxCell>
+
+        <!-- WIREFRAME 10: MY MESSAGES OUTBOX (Screen 10) -->
+        <mxCell id="wf10_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="2090" y="780" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf10_top" value="My Messages (Outbox)" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#FFD21F;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="2090" y="780" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf10_tabs" value="Pending (3) | Sent (8) | Received (14)" style="rounded=0;fillColor=#111A2C;strokeColor=#26344F;fontColor=#FFD21F;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2090" y="810" width="280" height="25" as="geometry" /></mxCell>
+        <mxCell id="wf10_m1" value="🚨 SOS - Trapped&#xa;To: Nearby devices • ⏳ Queued in SQLite" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="2105" y="845" width="250" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf10_m2" value="📍 Location Update&#xa;To: Rescue Teams • ⏳ Waiting for peer contact" style="rounded=1;fillColor=#162036;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="2105" y="895" width="250" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf10_m3" value="👤 Missing Person Report&#xa;To: Government Gateway • ⏳ Waiting for uplink" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=9;align=left;" vertex="1" parent="1"><mxGeometry x="2105" y="945" width="250" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf10_sync" value="🟢 Uplink Encountered!&#xa;3 messages will auto-forward to NDMA." style="rounded=1;fillColor=#0E1627;strokeColor=#4CD08A;fontColor=#4CD08A;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2105" y="1180" width="250" height="40" as="geometry" /></mxCell>
+        <mxCell id="wf10_nav" value="💬 Chat | 🗺️ Map | 🚨 SOS | 📡 Nearby | 🤖 AI" style="rounded=0;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2090" y="1255" width="280" height="45" as="geometry" /></mxCell>
+
+        <!-- WIREFRAME 11: SAFETY TOOLS (Screen 11) -->
+        <mxCell id="wf11_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="2400" y="780" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf11_top" value="Safety Tools" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#FFD21F;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="2400" y="780" width="280" height="30" as="geometry" /></mxCell>
+        <!-- 2x3 Grid of tools -->
+        <mxCell id="wf11_g1" value="🩹 First Aid Guide&#xa;Step-by-step" style="rounded=1;fillColor=#162036;strokeColor=#D92D20;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2415" y="825" width="115" height="55" as="geometry" /></mxCell>
+        <mxCell id="wf11_g2" value="💡 Emergency Tips&#xa;Survival handbook" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2540" y="825" width="115" height="55" as="geometry" /></mxCell>
+        <mxCell id="wf11_g3" value="🗺️ Offline Maps&#xa;Vector cached" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2415" y="890" width="115" height="55" as="geometry" /></mxCell>
+        <mxCell id="wf11_g4" value="✅ I Am Safe Check-in&#xa;Broadcast ok" style="rounded=1;fillColor=#162036;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2540" y="890" width="115" height="55" as="geometry" /></mxCell>
+        <mxCell id="wf11_g5" value="📞 Emergency Nos&#xa;NDRF / Fire / Police" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2415" y="955" width="115" height="55" as="geometry" /></mxCell>
+        <mxCell id="wf11_g6" value="🔔 Disaster Alerts&#xa;Local flood warning" style="rounded=1;fillColor=#162036;strokeColor=#FFA033;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="2540" y="955" width="115" height="55" as="geometry" /></mxCell>
+
+        <!-- WIREFRAME 12: SETTINGS (Screen 12) -->
+        <mxCell id="wf12_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="2710" y="780" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf12_top" value="Settings" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#EEF2F8;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="2710" y="780" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf12_s1" value="Offline Mesh Mode:  [ON 🟢]" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2725" y="825" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf12_s2" value="Location Sharing:   [ON 🟢]" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2725" y="870" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf12_s3" value="Auto Govt Sync:     [ON 🟢]" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2725" y="915" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf12_s4" value="Low Power (OLED #000000): [ON 🟢]" style="rounded=1;fillColor=#000000;strokeColor=#FFD21F;fontColor=#FFD21F;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2725" y="960" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf12_s5" value="Language: English / Hindi       ➡️" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2725" y="1005" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf12_s6" value="Privacy &amp; End-to-End Cryptography ➡️" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2725" y="1050" width="250" height="35" as="geometry" /></mxCell>
+        <mxCell id="wf12_s7" value="About SignalRescue AI v1.0      ➡️" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#9FADC2;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="2725" y="1095" width="250" height="35" as="geometry" /></mxCell>
+
+        <!-- WIREFRAME 13: PROFILE & IMPACT KPIS (Screen 13) -->
+        <mxCell id="wf13_frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B1220;strokeColor=#26344F;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="3020" y="780" width="280" height="520" as="geometry" /></mxCell>
+        <mxCell id="wf13_top" value="My Profile" style="rounded=0;fillColor=#162036;strokeColor=none;fontColor=#FFD21F;fontStyle=1;align=center;fontSize=12;" vertex="1" parent="1"><mxGeometry x="3020" y="780" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="wf13_user" value="👤 &lt;b&gt;Amit Sharma&lt;/b&gt;&#xa;Mesh ID: SR-284739 (Blood: O+)" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="3035" y="820" width="250" height="50" as="geometry" /></mxCell>
+        <mxCell id="wf13_banner" value="🤝 You are helping your community! Your phone is relaying critical beacons." style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#FFD21F;fontSize=8;align=center;" vertex="1" parent="1"><mxGeometry x="3035" y="880" width="250" height="30" as="geometry" /></mxCell>
+        <!-- 2x2 Impact KPI Grid -->
+        <mxCell id="wf13_k1" value="&lt;b style=&quot;font-size:14px; color:#4CD08A;&quot;&gt;12&lt;/b&gt;&#xa;People Helped" style="rounded=1;fillColor=#162036;strokeColor=#4CD08A;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="3035" y="920" width="120" height="50" as="geometry" /></mxCell>
+        <mxCell id="wf13_k2" value="&lt;b style=&quot;font-size:14px; color:#3CC6D0;&quot;&gt;8&lt;/b&gt;&#xa;Packets Relayed" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="3165" y="920" width="120" height="50" as="geometry" /></mxCell>
+        <mxCell id="wf13_k3" value="&lt;b style=&quot;font-size:14px; color:#FF5A4E;&quot;&gt;3&lt;/b&gt;&#xa;SOS Forwarded" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="3035" y="980" width="120" height="50" as="geometry" /></mxCell>
+        <mxCell id="wf13_k4" value="&lt;b style=&quot;font-size:14px; color:#FFD21F;&quot;&gt;1&lt;/b&gt;&#xa;Missing Found" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=9;align=center;" vertex="1" parent="1"><mxGeometry x="3165" y="980" width="120" height="50" as="geometry" /></mxCell>
+
+        <!-- ========================================================================= -->
+        <!-- SECTION 3: DTN PROTOCOL SPECIFICATION & SAVE-BEFORE-SEND TRANSACTION FLOW -->
+        <!-- ========================================================================= -->
+        <mxCell id="sec3_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#162036;strokeColor=#3CC6D0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="1360" width="2140" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="sec3_title" value="&lt;b style=&quot;font-size: 18px; color: #3CC6D0;&quot;&gt;3. DELAY-TOLERANT NETWORKING (DTN) PROTOCOL &amp; TRANSACTION PIPELINE&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="1375" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Envelope Spec Box -->
+        <mxCell id="env_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#FFD21F;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="1415" width="680" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="env_title" value="&lt;b style=&quot;color:#FFD21F;&quot;&gt;DTN Binary Envelope Specification (Wire Format)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="1425" width="400" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="e_fld1" value="&lt;b&gt;Envelope UUID&lt;/b&gt; (16 bytes)&#xa;Globally unique message identifier" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1200" y="1455" width="310" height="40" as="geometry" /></mxCell>
+        <mxCell id="e_fld2" value="&lt;b&gt;Sender ID&lt;/b&gt; (8 bytes, e.g. 'SR-284739')&#xa;Anonymous device pseudonym" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1530" y="1455" width="310" height="40" as="geometry" /></mxCell>
+        <mxCell id="e_fld3" value="&lt;b&gt;Creation Timestamp&lt;/b&gt; (8 bytes unix ms)&#xa;Monotonic origin clock" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1200" y="1505" width="310" height="40" as="geometry" /></mxCell>
+        <mxCell id="e_fld4" value="&lt;b&gt;Packet Type&lt;/b&gt; (1 byte)&#xa;0x01: SOS | 0x02: Chat | 0x03: Missing | 0x04: ACK" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1530" y="1505" width="310" height="40" as="geometry" /></mxCell>
+        <mxCell id="e_fld5" value="&lt;b&gt;TTL (Time To Live)&lt;/b&gt; (1 byte, default=5)&#xa;Decremented by 1 at each forward" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#FF5A4E;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1200" y="1555" width="310" height="40" as="geometry" /></mxCell>
+        <mxCell id="e_fld6" value="&lt;b&gt;Hop Count&lt;/b&gt; (1 byte, initial=0)&#xa;Incremented by 1 at each hop" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#3CC6D0;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1530" y="1555" width="310" height="40" as="geometry" /></mxCell>
+        <mxCell id="e_fld7" value="&lt;b&gt;Payload (Variable &amp;lt; 512 bytes)&lt;/b&gt;&#xa;Compressed JSON / CBOR (Text, GPS, Emergency Type)" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1200" y="1605" width="310" height="40" as="geometry" /></mxCell>
+        <mxCell id="e_fld8" value="&lt;b&gt;CRC32 / HMAC-SHA256&lt;/b&gt; (4-32 bytes)&#xa;Tamper detection &amp; frame integrity" style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1"><mxGeometry x="1530" y="1605" width="310" height="40" as="geometry" /></mxCell>
+
+        <!-- Save-Before-Send Flowchart Box -->
+        <mxCell id="pipe_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0E1627;strokeColor=#4CD08A;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1900" y="1415" width="1380" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="pipe_title" value="&lt;b style=&quot;color:#4CD08A;&quot;&gt;Save-Before-Send Transaction Sequence &amp; Epidemic Deduplication Flow&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1920" y="1425" width="600" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="st1" value="1. User taps&#xa;Send SOS / Message" style="rounded=1;fillColor=#162036;strokeColor=#FFD21F;fontColor=#EEF2F8;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="1920" y="1465" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="st2" value="2. SQLite Write&#xa;Status: 'SAVED'&#xa;Committed to disk" style="rounded=1;fillColor=#162036;strokeColor=#4CD08A;fontColor=#4CD08A;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="2110" y="1465" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="st3" value="3. BLE Broadcast&#xa;Adv Data Packet&#xa;Status: 'SENT_NEARBY'" style="rounded=1;fillColor=#162036;strokeColor=#3CC6D0;fontColor=#3CC6D0;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="2300" y="1465" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="st4" value="4. Peer Ingests&#xa;Dedup Check in SQLite&#xa;Seen? Drop!" style="rounded=1;fillColor=#162036;strokeColor=#FF5A4E;fontColor=#FF5A4E;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="2490" y="1465" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="st5" value="5. TTL Guard&#xa;TTL &amp;gt; 1 ? Decrement &amp; Forward&#xa;TTL &amp;lt;= 1 ? Halt" style="rounded=1;fillColor=#162036;strokeColor=#FFA033;fontColor=#FFA033;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="2680" y="1465" width="160" height="60" as="geometry" /></mxCell>
+        <mxCell id="st6" value="6. Gateway Reach&#xa;Cloud Uplink Sync&#xa;Status: 'DELIVERED'" style="rounded=1;fillColor=#162036;strokeColor=#4CD08A;fontColor=#FFFFFF;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="2880" y="1465" width="150" height="60" as="geometry" /></mxCell>
+
+        <!-- Sequence Arrows -->
+        <mxCell id="arr1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#FFD21F;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="st1" target="st2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="arr2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4CD08A;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="st2" target="st3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="arr3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#3CC6D0;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="st3" target="st4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="arr4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#FF5A4E;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="st4" target="st5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="arr5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#FFA033;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="st5" target="st6"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="pipe_expl" value="&lt;b&gt;Guaranteed Zero Message Loss In Zero-Connectivity Environments:&lt;/b&gt;&lt;br/&gt;Even if battery dies immediately after pressing Send, the message is durably written to non-volatile SQLite flash memory. Upon reboot or proximity encounter with any peer node, the mesh outbox automatically resumes opportunistic relaying." style="rounded=1;fillColor=#162036;strokeColor=#26344F;fontColor=#EEF2F8;fontSize=10;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1920" y="1560" width="1340" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,110 @@
+graph TB
+%% RakshaNet / SignalRescue AI — Comprehensive Architecture Diagram (architecture.mmd)
+
+    subgraph TIER1["Tier 1: Offline Mobile Mesh Nodes (Flutter / Dart)"]
+        direction TB
+
+        subgraph UI["13-Screen Hi-Vis UI Layer"]
+            S1["1. Splash Screen<br/>(Logo & Gate Check)"]
+            S2["2. Onboarding Screen<br/>(Value Cards)"]
+            S2B["2b. Profile Gate (Mandatory)<br/>(Name, Blood Group, Contact, Lang)"]
+            S3["3. Home / SOS Beacon<br/>(Status Grid, 3s Hold SOS)"]
+            S4["4. Emergency Report<br/>(Medical, Trapped, Fire, Flood...)"]
+            S5["5. Offline Mesh Chat<br/>(Nearby, Group, Rescue, Saved)"]
+            S6["6. Live Mesh Map<br/>(Offline Canvas, Cluster Bubble)"]
+            S7["7. AI Assistant<br/>(Offline Disaster Q&A & Triage)"]
+            S8["8. Missing Person<br/>(Form, Photos, Last Seen)"]
+            S9["9. Shelters & Resources<br/>(Capacity, Food, Water, Meds)"]
+            S10["10. My Messages (Outbox)<br/>(Pending, Sent, Received, Sync)"]
+            S11["11. Safety Tools<br/>(First Aid, Check-in, Emergency Nos)"]
+            S12["12. Settings<br/>(Offline Mode, OLED Black, Auto-Sync)"]
+            S13["13. Profile & Badges<br/>(ID: SR-XXXX, Impact KPIs)"]
+        end
+
+        subgraph STATE["State Management & Providers"]
+            P_PROF["ProfileProvider<br/>(Identity & Reg State)"]
+            P_THEME["ThemeProvider<br/>(Navy, Hi-Vis, OLED #000000)"]
+            P_MESH["MeshProvider<br/>(Peer discovery & Telemetry)"]
+            P_CHAT["ChatProvider<br/>(Conversations & Outbox Sync)"]
+            P_SOS["EmergencyProvider<br/>(Active SOS & Incident Reports)"]
+        end
+
+        subgraph SERVICES["Domain Services"]
+            SVC_CHAT["ChatService<br/>(Save-Before-Send Guarantee)"]
+            SVC_AI["AIAssistantService<br/>(Offline Rule-based Triage)"]
+            SVC_LOC["LocationService<br/>(GPS / Dead-Reckoning)"]
+            SVC_TELE["TelemetryService<br/>(Battery, Radio RSSI)"]
+        end
+
+        subgraph ENGINE["DTN Mesh Engine (Kabootar / MeshChat Architecture)"]
+            ME_ENV["Packet Envelope Builder<br/>(UUID, TTL=5, Hops, Payload, Type)"]
+            ME_DEDUP["Deduplication Filter<br/>(Bloom Filter + SQLite Cache)"]
+            ME_STORE["Store-and-Forward Outbox<br/>(FIFO Queue + Exponential Retry)"]
+            ME_ROUTER["Epidemic Relay Router<br/>(TTL Decr, Loop Detection, ACK Track)"]
+        end
+
+        subgraph PERSIST["Persistence Layer (SQLite Database)"]
+            DB[("SQLite AppDatabase<br/>(app_database.db)")]
+            T_USER[("user_profile")]
+            T_MSG[("messages & outbox")]
+            T_NODE[("nearby_devices")]
+            T_REPORT[("emergency_reports")]
+            T_SHELTER[("shelters & resources")]
+            T_MISSING[("missing_persons")]
+        end
+
+        subgraph RADIO["Hardware & Radio Layer"]
+            HW_BLE["Bluetooth Low Energy (BLE)<br/>GATT Server (Adv) & Client (Scan)"]
+            HW_WIFI["Wi-Fi Direct / Nearby Peers<br/>High-throughput media"]
+            HW_BATT["Battery Telemetry<br/>Duty-cycle power optimizer"]
+            HW_OLED["Display Controller<br/>OLED Black Pixel Off"]
+        end
+    end
+
+    subgraph TIER2["Tier 2: Decentralized Multi-Hop Mesh Network"]
+        direction LR
+        PHONE_A["Phone A (Survivor)<br/>TTL: 5 | Hops: 0"]
+        PHONE_B["Phone B (Relay Node)<br/>TTL: 4 | Hops: 1"]
+        PHONE_C["Phone C (Relay Node)<br/>TTL: 3 | Hops: 2"]
+        PHONE_D["Phone D (Community Hub)<br/>TTL: 2 | Hops: 3"]
+
+        PHONE_A -->|"BLE Broadcast (Adv Payload)"| PHONE_B
+        PHONE_B -->|"Store-and-Forward Relay"| PHONE_C
+        PHONE_C -->|"Multi-Hop Relay"| PHONE_D
+    end
+
+    subgraph TIER3["Tier 3: Field Edge Gateway & Forwarder"]
+        direction TB
+        GATEWAY["Rescue Vehicle / Field Gateway<br/>(BLE Receiver + Satellite / 4G Uplink)"]
+        GW_BUFFER[("Local Gateway Cache<br/>(Offline Ingestion)")]
+        GW_UPLINK["Uplink Manager<br/>(Cellular / Starlink / Radio HAM)"]
+        GATEWAY --> GW_BUFFER --> GW_UPLINK
+    end
+
+    subgraph TIER4["Tier 4: Command Center & Government Cloud (FastAPI + React)"]
+        direction TB
+        BACKEND["Command Center API (FastAPI)"]
+        WS_HUB["WebSocket Telemetry Hub"]
+        TRIAGE["Explainable AI Triage Engine<br/>(P1-Critical to P4-Minor Scorer)"]
+        DB_CENTRAL[("Central Incident Store<br/>(PostgreSQL + PostGIS)")]
+        DASH["Command Center Dashboard (React + Leaflet)<br/>- Live Incident Map<br/>- Drone Flight Path Planner<br/>- Resource Allocation Matrix"]
+        GOV_SYNC["NDMA / SDMA National Disaster Gateway<br/>(CAP XML Protocol Ingestion)"]
+
+        BACKEND --> WS_HUB
+        BACKEND --> TRIAGE
+        BACKEND --> DB_CENTRAL
+        BACKEND --> DASH
+        BACKEND --> GOV_SYNC
+    end
+
+    %% Linkages
+    UI --> STATE
+    STATE --> SERVICES
+    SERVICES --> SVC_CHAT
+    SVC_CHAT --> PERSIST
+    SVC_CHAT --> ENGINE
+    ENGINE --> PERSIST
+    ENGINE --> RADIO
+    RADIO --> PHONE_A
+    PHONE_D -->|"Edge Detection"| GATEWAY
+    GW_UPLINK -->|"Backhaul Uplink"| BACKEND
