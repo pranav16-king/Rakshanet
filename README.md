@@ -331,11 +331,32 @@ p:/RakshaNet/
 │   ├── competitor-analysis.md                    # Verified competitor audit (Crisis Connect, Tremour, Sahayata)
 │   ├── features.md                               # Complete 34-feature set across 7 pillars
 │   ├── idea.md                                   # Core concept, DTN sequence, and hackathon pitch
+│   ├── phase1-implementation-plan.md             # Detailed Phase 1 Mobile Implementation Plan (36 sections)
 │   ├── problem-statement-and-impact.md           # Real-world problem, Nepal case study, CWC Indian data
 │   └── RakshaNet_Comprehensive_System_Dossier.pdf # Copy of the executive 9-page white paper
+├── mobile/                                       # Android-First React Native + TypeScript Client (Phase 1)
+│   ├── android/                                  # Native Kotlin radio modules & AndroidManifest
+│   │   └── app/src/main/
+│   │       ├── AndroidManifest.xml               # Progressive BLE permissions (API 26-34)
+│   │       └── java/org/rakshanet/nativemodules/ # Kotlin BLE mesh engine & React Native bridges
+│   │           ├── BluetoothModule.kt            # NativeModule bridge & event emitter
+│   │           ├── MeshManager.kt                # BLE advertiser & scanner duty cycler
+│   │           └── RakshaNetPackage.kt           # React Native package registry
+│   ├── src/                                      # Modular multipage application source
+│   │   ├── app/navigation/                       # RootNavigator & MainTabNavigator
+│   │   ├── components/                           # StatusStrip, PrimaryButton, ChatBubble, DeviceCard
+│   │   ├── database/                             # SQLite schema, manager, and repositories
+│   │   ├── screens/                              # Page-wise screens (Onboarding, Home, Chat, Network, Settings)
+│   │   ├── services/                             # PermissionService, IdentityService, BluetoothService, MeshService
+│   │   ├── store/                                # Reactive Zustand UI stores (Profile, Network, Chat, Settings)
+│   │   ├── theme/                                # Hi-vis beacon design system tokens & hooks
+│   │   └── types/                                # Strict TypeScript interfaces (Profile, Device, Chat, Network)
+│   ├── App.tsx                                   # Application root & SQLite initialization
+│   ├── package.json                              # React Native dependencies & scripts
+│   └── tsconfig.json                             # TypeScript compiler configuration
 ├── graphify-out/                                 # Persistent Knowledge Graph Engine (Graphify)
 │   ├── graph.html                                # Interactive D3 force-directed visual graph
-│   ├── graph.json                                # Machine-queryable knowledge graph
+│   ├── graph.json                                # Machine-queryable knowledge graph (613 nodes, 32 communities)
 │   ├── GRAPH_REPORT.md                           # Graph architecture audit report
 │   └── manifest.json                             # File change tracking manifest
 ├── .gitignore                                    # Git ignore rules (caches, temp graphs)
