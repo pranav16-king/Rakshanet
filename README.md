@@ -14,7 +14,7 @@ SignalRescue AI (RakshaNet) is an offline-first disaster communication system th
 
 ## Documentation
 
-- **[Technical Dossier & Competitor Report (PDF)](RakshaNet_Comprehensive_System_Dossier.pdf)** — *7-Page Executive & Technical Report with Graphical Analytics*
+- **[Technical Dossier & Competitor Report (PDF)](RakshaNet_Comprehensive_System_Dossier.pdf)** — *9-Page Comprehensive Technical White Paper with Full Data & Graphical Analytics*
 - [Problem Statement, Latest Incident & Impact Case](docs/problem-statement-and-impact.md)
 - [System Concept & Specification](docs/idea.md)
 - [Complete Feature Set (34 Features)](docs/features.md)
