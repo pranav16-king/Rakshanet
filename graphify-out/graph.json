@@ -43,6 +43,32 @@
       "source_location": "L6"
     },
     {
+      "id": "mobile_src_store_settingsstore_settingsstate",
+      "label": "SettingsState",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "networkStore.ts",
+      "file_type": "code",
+      "norm_label": "settingsstate",
+      "source_file": "mobile/src/store/settingsStore.ts",
+      "source_location": "L5"
+    },
+    {
+      "id": "mobile_src_theme_tokens_thememode",
+      "label": "ThemeMode",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "networkStore.ts",
+      "file_type": "code",
+      "norm_label": "thememode",
+      "source_file": "mobile/src/theme/tokens.ts",
+      "source_location": "L143"
+    },
+    {
       "id": "mobile_src_types_device_connectiontype",
       "label": "ConnectionType",
       "_callable": true,
@@ -108,6 +134,19 @@
       "source_location": "L5"
     },
     {
+      "id": "mobile_src_types_network_radiomode",
+      "label": "RadioMode",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "networkStore.ts",
+      "file_type": "code",
+      "norm_label": "radiomode",
+      "source_file": "mobile/src/types/network.ts",
+      "source_location": "L3"
+    },
+    {
       "id": "mobile_android_app_src_main_java_org_rakshanet_nativemodules_bluetoothmodule_bluetoothmodule",
       "label": "BluetoothModule",
       "_callable": true,
@@ -147,6 +186,32 @@
       "source_location": "L15"
     },
     {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity",
+      "label": "MainActivity",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "norm_label": "mainactivity",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L20"
+    },
+    {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface",
+      "label": "WebAppInterface",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "norm_label": "webappinterface",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L83"
+    },
+    {
       "id": "mobile_src_database_repositories_profilerepository_profilerepository",
       "label": "profileRepository",
       "_callable": true,
@@ -158,6 +223,19 @@
       "norm_label": "profilerepository",
       "source_file": "mobile/src/database/repositories/profileRepository.ts",
       "source_location": "L38"
+    },
+    {
+      "id": "mobile_src_database_sqlite_databasemanager",
+      "label": "DatabaseManager",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "profileStore.ts",
+      "file_type": "code",
+      "norm_label": "databasemanager",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L7"
     },
     {
       "id": "mobile_src_services_identity_identityservice_identityservice",
@@ -365,45 +443,6 @@
       "file_type": "code",
       "norm_label": "permissionstatusresult",
       "source_file": "mobile/src/services/permissions/permissionService.ts",
-      "source_location": "L3"
-    },
-    {
-      "id": "mobile_src_store_settingsstore_settingsstate",
-      "label": "SettingsState",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "settingsstate",
-      "source_file": "mobile/src/store/settingsStore.ts",
-      "source_location": "L5"
-    },
-    {
-      "id": "mobile_src_theme_tokens_thememode",
-      "label": "ThemeMode",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "thememode",
-      "source_file": "mobile/src/theme/tokens.ts",
-      "source_location": "L143"
-    },
-    {
-      "id": "mobile_src_types_network_radiomode",
-      "label": "RadioMode",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "radiomode",
-      "source_file": "mobile/src/types/network.ts",
       "source_location": "L3"
     },
     {
@@ -615,17 +654,17 @@
       "source_location": "L64"
     },
     {
-      "id": "mobile_src_database_sqlite_databasemanager",
-      "label": "DatabaseManager",
+      "id": "test_phase1_mocksqlitedevice",
+      "label": "MockSQLiteDevice",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 55,
-      "community_name": "sqlite.ts",
+      "community": 54,
+      "community_name": "test_phase1.js",
       "file_type": "code",
-      "norm_label": "databasemanager",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L7"
+      "norm_label": "mocksqlitedevice",
+      "source_file": "test_phase1.js",
+      "source_location": "L14"
     },
     {
       "id": "mobile_src_database_repositories_devicerepository_devicerepository_getallnearby",
@@ -832,6 +871,230 @@
       "source_location": "L96"
     },
     {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_onbackpressed",
+      "label": ".onBackPressed()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "metadata": {
+        "unresolved_calls": [
+          {
+            "callee": "canGoBack",
+            "receiver_type": "WebView",
+            "lang": "java",
+            "line": "L76"
+          },
+          {
+            "callee": "goBack",
+            "receiver_type": "WebView",
+            "lang": "java",
+            "line": "L77"
+          }
+        ]
+      },
+      "norm_label": ".onbackpressed()",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L74"
+    },
+    {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_oncreate",
+      "label": ".onCreate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "metadata": {
+        "unresolved_calls": [
+          {
+            "callee": "getSettings",
+            "receiver_type": "WebView",
+            "lang": "java",
+            "line": "L31"
+          },
+          {
+            "callee": "setJavaScriptEnabled",
+            "receiver_type": "WebSettings",
+            "lang": "java",
+            "line": "L32"
+          },
+          {
+            "callee": "setDomStorageEnabled",
+            "receiver_type": "WebSettings",
+            "lang": "java",
+            "line": "L33"
+          },
+          {
+            "callee": "setDatabaseEnabled",
+            "receiver_type": "WebSettings",
+            "lang": "java",
+            "line": "L34"
+          },
+          {
+            "callee": "setAllowFileAccess",
+            "receiver_type": "WebSettings",
+            "lang": "java",
+            "line": "L35"
+          },
+          {
+            "callee": "setAllowContentAccess",
+            "receiver_type": "WebSettings",
+            "lang": "java",
+            "line": "L36"
+          },
+          {
+            "callee": "setLoadWithOverviewMode",
+            "receiver_type": "WebSettings",
+            "lang": "java",
+            "line": "L37"
+          },
+          {
+            "callee": "setUseWideViewPort",
+            "receiver_type": "WebSettings",
+            "lang": "java",
+            "line": "L38"
+          },
+          {
+            "callee": "setWebViewClient",
+            "receiver_type": "WebView",
+            "lang": "java",
+            "line": "L40"
+          },
+          {
+            "callee": "addJavascriptInterface",
+            "receiver_type": "WebView",
+            "lang": "java",
+            "line": "L41"
+          },
+          {
+            "callee": "loadUrl",
+            "receiver_type": "WebView",
+            "lang": "java",
+            "line": "L47"
+          }
+        ]
+      },
+      "norm_label": ".oncreate()",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L24"
+    },
+    {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_requestblepermissions",
+      "label": ".requestBlePermissions()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "norm_label": ".requestblepermissions()",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L50"
+    },
+    {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_getbatterylevel",
+      "label": ".getBatteryLevel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "metadata": {
+        "unresolved_calls": [
+          {
+            "callee": "registerReceiver",
+            "receiver_type": "Context",
+            "lang": "java",
+            "line": "L110"
+          },
+          {
+            "callee": "getIntExtra",
+            "receiver_type": "Intent",
+            "lang": "java",
+            "line": "L112"
+          }
+        ]
+      },
+      "norm_label": ".getbatterylevel()",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L107"
+    },
+    {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_requestpermissions",
+      "label": ".requestPermissions()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "norm_label": ".requestpermissions()",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L119"
+    },
+    {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_showtoast",
+      "label": ".showToast()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "metadata": {
+        "unresolved_calls": [
+          {
+            "callee": "makeText",
+            "receiver_type": "Toast",
+            "lang": "java",
+            "line": "L92"
+          }
+        ]
+      },
+      "norm_label": ".showtoast()",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L90"
+    },
+    {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_vibrate",
+      "label": ".vibrate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "metadata": {
+        "unresolved_calls": [
+          {
+            "callee": "vibrate",
+            "receiver_type": "Vibrator",
+            "lang": "java",
+            "line": "L100"
+          },
+          {
+            "callee": "createOneShot",
+            "receiver_type": "VibrationEffect",
+            "lang": "java",
+            "line": "L100"
+          }
+        ]
+      },
+      "norm_label": ".vibrate()",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L95"
+    },
+    {
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_webappinterface",
+      "label": ".WebAppInterface()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "file_type": "code",
+      "norm_label": ".webappinterface()",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L86"
+    },
+    {
       "id": "mobile_src_database_repositories_profilerepository_profilerepository_getdeviceidentity",
       "label": ".getDeviceIdentity()",
       "_callable": true,
@@ -880,6 +1143,42 @@
       "source_location": "L10"
     },
     {
+      "id": "mobile_src_database_sqlite_databasemanager_getmocktable",
+      "label": ".getMockTable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "profileStore.ts",
+      "file_type": "code",
+      "norm_label": ".getmocktable()",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L33"
+    },
+    {
+      "id": "mobile_src_database_sqlite_databasemanager_initialize",
+      "label": ".initialize()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "profileStore.ts",
+      "file_type": "code",
+      "norm_label": ".initialize()",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L19"
+    },
+    {
+      "id": "mobile_src_database_sqlite_databasemanager_setmocktable",
+      "label": ".setMockTable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "profileStore.ts",
+      "file_type": "code",
+      "norm_label": ".setmocktable()",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L40"
+    },
+    {
       "id": "mobile_src_services_identity_identityservice_identityservice_getorgenerateidentity",
       "label": ".getOrGenerateIdentity()",
       "_callable": true,
@@ -892,6 +1191,18 @@
       "source_location": "L7"
     },
     {
+      "id": "mobile_app_app",
+      "label": "App()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "app()",
+      "source_file": "mobile/App.tsx",
+      "source_location": "L9"
+    },
+    {
       "id": "mobile_src_app_navigation_maintabnavigator_maintabnavigator",
       "label": "MainTabNavigator()",
       "_callable": true,
@@ -901,6 +1212,18 @@
       "file_type": "code",
       "norm_label": "maintabnavigator()",
       "source_file": "mobile/src/app/navigation/MainTabNavigator.tsx",
+      "source_location": "L12"
+    },
+    {
+      "id": "mobile_src_app_navigation_rootnavigator_rootnavigator",
+      "label": "RootNavigator()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "rootnavigator()",
+      "source_file": "mobile/src/app/navigation/RootNavigator.tsx",
       "source_location": "L12"
     },
     {
@@ -1384,64 +1707,64 @@
       "source_location": "L9"
     },
     {
-      "id": "mobile_app_app",
-      "label": "App()",
+      "id": "test_phase1_assert",
+      "label": "assert()",
       "_callable": true,
       "_origin": "ast",
-      "community": 53,
-      "community_name": "App.tsx",
+      "community": 54,
+      "community_name": "test_phase1.js",
       "file_type": "code",
-      "norm_label": "app()",
-      "source_file": "mobile/App.tsx",
-      "source_location": "L9"
+      "norm_label": "assert()",
+      "source_file": "test_phase1.js",
+      "source_location": "L108"
     },
     {
-      "id": "mobile_src_app_navigation_rootnavigator_rootnavigator",
-      "label": "RootNavigator()",
+      "id": "test_phase1_mocksqlitedevice_constructor",
+      "label": ".constructor()",
       "_callable": true,
       "_origin": "ast",
-      "community": 53,
-      "community_name": "App.tsx",
+      "community": 54,
+      "community_name": "test_phase1.js",
       "file_type": "code",
-      "norm_label": "rootnavigator()",
-      "source_file": "mobile/src/app/navigation/RootNavigator.tsx",
-      "source_location": "L12"
+      "norm_label": ".constructor()",
+      "source_file": "test_phase1.js",
+      "source_location": "L15"
     },
     {
-      "id": "mobile_src_database_sqlite_databasemanager_getmocktable",
-      "label": ".getMockTable()",
+      "id": "test_phase1_mocksqlitedevice_getradioscanprofile",
+      "label": ".getRadioScanProfile()",
       "_callable": true,
       "_origin": "ast",
-      "community": 55,
-      "community_name": "sqlite.ts",
+      "community": 54,
+      "community_name": "test_phase1.js",
       "file_type": "code",
-      "norm_label": ".getmocktable()",
-      "source_file": "mobile/src/database/sqlite.ts",
+      "norm_label": ".getradioscanprofile()",
+      "source_file": "test_phase1.js",
+      "source_location": "L97"
+    },
+    {
+      "id": "test_phase1_mocksqlitedevice_receivepacket",
+      "label": ".receivePacket()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": ".receivepacket()",
+      "source_file": "test_phase1.js",
+      "source_location": "L52"
+    },
+    {
+      "id": "test_phase1_mocksqlitedevice_sendmessage",
+      "label": ".sendMessage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": ".sendmessage()",
+      "source_file": "test_phase1.js",
       "source_location": "L33"
-    },
-    {
-      "id": "mobile_src_database_sqlite_databasemanager_initialize",
-      "label": ".initialize()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 55,
-      "community_name": "sqlite.ts",
-      "file_type": "code",
-      "norm_label": ".initialize()",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L19"
-    },
-    {
-      "id": "mobile_src_database_sqlite_databasemanager_setmocktable",
-      "label": ".setMockTable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 55,
-      "community_name": "sqlite.ts",
-      "file_type": "code",
-      "norm_label": ".setmocktable()",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L40"
     },
     {
       "id": "docs_features_10_store_and_forward_delay_tolerant_networking",
@@ -2332,28 +2655,6 @@
       "source_location": "L424"
     },
     {
-      "id": "mobile_src_components_devicecard",
-      "label": "DeviceCard.tsx",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": "devicecard.tsx",
-      "source_file": "mobile/src/components/DeviceCard.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "mobile_src_components_devicecard_styles",
-      "label": "styles",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": "styles",
-      "source_file": "mobile/src/components/DeviceCard.tsx",
-      "source_location": "L67"
-    },
-    {
       "id": "mobile_src_database_repositories_devicerepository",
       "label": "deviceRepository.ts",
       "_origin": "ast",
@@ -2373,6 +2674,17 @@
       "file_type": "code",
       "norm_label": "networkstore.ts",
       "source_file": "mobile/src/store/networkStore.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "mobile_src_store_settingsstore",
+      "label": "settingsStore.ts",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "networkStore.ts",
+      "file_type": "code",
+      "norm_label": "settingsstore.ts",
+      "source_file": "mobile/src/store/settingsStore.ts",
       "source_location": "L1"
     },
     {
@@ -2396,6 +2708,17 @@
       "norm_label": "network.ts",
       "source_file": "mobile/src/types/network.ts",
       "source_location": "L1"
+    },
+    {
+      "id": "ref_zustand",
+      "label": "zustand",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "networkStore.ts",
+      "file_type": "concept",
+      "norm_label": "zustand",
+      "source_file": "mobile/package.json",
+      "source_location": "L26"
     },
     {
       "id": "agents_skills_graphify_references_query",
@@ -4117,17 +4440,6 @@
       "source_location": ""
     },
     {
-      "id": "context",
-      "label": "Context",
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "MeshManager",
-      "file_type": "code",
-      "norm_label": "context",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "deviceid",
       "label": "deviceId",
       "_origin": "ast",
@@ -4148,6 +4460,17 @@
       "norm_label": "meshmanager.kt",
       "source_file": "mobile/android/app/src/main/java/org/rakshanet/nativemodules/MeshManager.kt",
       "source_location": "L1"
+    },
+    {
+      "id": "mobile_android_app_src_main_java_org_rakshanet_nativemodules_meshmanager_kt_context",
+      "label": "Context",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "MeshManager",
+      "file_type": "code",
+      "norm_label": "context",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "name",
@@ -4411,147 +4734,81 @@
       "source_location": "L1"
     },
     {
-      "id": "mobile_package_dependencies",
-      "label": "dependencies",
+      "id": "android_app_activity",
+      "label": "android.app.Activity",
       "_origin": "ast",
       "community": 26,
-      "community_name": "dependencies",
+      "community_name": "MainActivity.java",
       "file_type": "code",
-      "norm_label": "dependencies",
-      "source_file": "mobile/package.json",
-      "source_location": "L14"
+      "norm_label": "android.app.activity",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "mobile_package_dependencies_lucide_react_native",
-      "label": "lucide-react-native",
+      "id": "android_content_context",
+      "label": "android.content.Context",
       "_origin": "ast",
       "community": 26,
-      "community_name": "dependencies",
+      "community_name": "MainActivity.java",
       "file_type": "code",
-      "norm_label": "lucide-react-native",
-      "source_file": "mobile/package.json",
-      "source_location": "L18"
+      "norm_label": "android.content.context",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "mobile_package_dependencies_react",
-      "label": "react",
+      "id": "android_os_bundle",
+      "label": "android.os.Bundle",
       "_origin": "ast",
       "community": 26,
-      "community_name": "dependencies",
+      "community_name": "MainActivity.java",
       "file_type": "code",
-      "norm_label": "react",
-      "source_file": "mobile/package.json",
-      "source_location": "L19"
+      "norm_label": "android.os.bundle",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "mobile_package_dependencies_react_native",
-      "label": "react-native",
+      "id": "android_webkit_javascriptinterface",
+      "label": "android.webkit.JavascriptInterface",
       "_origin": "ast",
       "community": 26,
-      "community_name": "dependencies",
+      "community_name": "MainActivity.java",
       "file_type": "code",
-      "norm_label": "react-native",
-      "source_file": "mobile/package.json",
-      "source_location": "L20"
+      "norm_label": "android.webkit.javascriptinterface",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "mobile_package_dependencies_react_native_gesture_handler",
-      "label": "react-native-gesture-handler",
+      "id": "android_webkit_webview",
+      "label": "android.webkit.WebView",
       "_origin": "ast",
       "community": 26,
-      "community_name": "dependencies",
+      "community_name": "MainActivity.java",
       "file_type": "code",
-      "norm_label": "react-native-gesture-handler",
-      "source_file": "mobile/package.json",
-      "source_location": "L21"
+      "norm_label": "android.webkit.webview",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "mobile_package_dependencies_react_native_reanimated",
-      "label": "react-native-reanimated",
+      "id": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "label": "MainActivity.java",
       "_origin": "ast",
       "community": 26,
-      "community_name": "dependencies",
+      "community_name": "MainActivity.java",
       "file_type": "code",
-      "norm_label": "react-native-reanimated",
-      "source_file": "mobile/package.json",
-      "source_location": "L22"
+      "norm_label": "mainactivity.java",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L1"
     },
     {
-      "id": "mobile_package_dependencies_react_native_safe_area_context",
-      "label": "react-native-safe-area-context",
+      "id": "override",
+      "label": "Override",
       "_origin": "ast",
       "community": 26,
-      "community_name": "dependencies",
+      "community_name": "MainActivity.java",
       "file_type": "code",
-      "norm_label": "react-native-safe-area-context",
-      "source_file": "mobile/package.json",
-      "source_location": "L23"
-    },
-    {
-      "id": "mobile_package_dependencies_react_native_screens",
-      "label": "react-native-screens",
-      "_origin": "ast",
-      "community": 26,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "react-native-screens",
-      "source_file": "mobile/package.json",
-      "source_location": "L24"
-    },
-    {
-      "id": "mobile_package_dependencies_react_native_svg",
-      "label": "react-native-svg",
-      "_origin": "ast",
-      "community": 26,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "react-native-svg",
-      "source_file": "mobile/package.json",
-      "source_location": "L25"
-    },
-    {
-      "id": "mobile_package_dependencies_react_navigation_bottom_tabs",
-      "label": "@react-navigation/bottom-tabs",
-      "_origin": "ast",
-      "community": 26,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "@react-navigation/bottom-tabs",
-      "source_file": "mobile/package.json",
-      "source_location": "L15"
-    },
-    {
-      "id": "mobile_package_dependencies_react_navigation_native",
-      "label": "@react-navigation/native",
-      "_origin": "ast",
-      "community": 26,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "@react-navigation/native",
-      "source_file": "mobile/package.json",
-      "source_location": "L16"
-    },
-    {
-      "id": "mobile_package_dependencies_react_navigation_native_stack",
-      "label": "@react-navigation/native-stack",
-      "_origin": "ast",
-      "community": 26,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "@react-navigation/native-stack",
-      "source_file": "mobile/package.json",
-      "source_location": "L17"
-    },
-    {
-      "id": "mobile_package_dependencies_zustand",
-      "label": "zustand",
-      "_origin": "ast",
-      "community": 26,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "zustand",
-      "source_file": "mobile/package.json",
-      "source_location": "L26"
+      "norm_label": "override",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "mobile_tsconfig",
@@ -4750,6 +5007,50 @@
       "norm_label": "profilerepository.ts",
       "source_file": "mobile/src/database/repositories/profileRepository.ts",
       "source_location": "L1"
+    },
+    {
+      "id": "mobile_src_database_schema",
+      "label": "schema.ts",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "profileStore.ts",
+      "file_type": "code",
+      "norm_label": "schema.ts",
+      "source_file": "mobile/src/database/schema.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "mobile_src_database_schema_create_tables_sql",
+      "label": "CREATE_TABLES_SQL",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "profileStore.ts",
+      "file_type": "code",
+      "norm_label": "create_tables_sql",
+      "source_file": "mobile/src/database/schema.ts",
+      "source_location": "L6"
+    },
+    {
+      "id": "mobile_src_database_sqlite",
+      "label": "sqlite.ts",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "profileStore.ts",
+      "file_type": "code",
+      "norm_label": "sqlite.ts",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "mobile_src_database_sqlite_dbmanager",
+      "label": "dbManager",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "profileStore.ts",
+      "file_type": "code",
+      "norm_label": "dbmanager",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L45"
     },
     {
       "id": "mobile_src_services_identity_identityservice",
@@ -5709,6 +6010,17 @@
       "source_location": "L186"
     },
     {
+      "id": "mobile_app_tsx_mobile_app",
+      "label": "App.tsx",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "app.tsx",
+      "source_file": "mobile/App.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "mobile_src_app_navigation_maintabnavigator",
       "label": "MainTabNavigator.tsx",
       "_origin": "ast",
@@ -5795,6 +6107,28 @@
       "norm_label": "styles",
       "source_file": "mobile/src/components/ChatBubble.tsx",
       "source_location": "L77"
+    },
+    {
+      "id": "mobile_src_components_devicecard",
+      "label": "DeviceCard.tsx",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "devicecard.tsx",
+      "source_file": "mobile/src/components/DeviceCard.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "mobile_src_components_devicecard_styles",
+      "label": "styles",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "styles",
+      "source_file": "mobile/src/components/DeviceCard.tsx",
+      "source_location": "L67"
     },
     {
       "id": "mobile_src_components_primarybutton",
@@ -6081,17 +6415,6 @@
       "norm_label": "useprofilestore",
       "source_file": "mobile/src/store/profileStore.ts",
       "source_location": "L14"
-    },
-    {
-      "id": "mobile_src_store_settingsstore",
-      "label": "settingsStore.ts",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "settingsstore.ts",
-      "source_file": "mobile/src/store/settingsStore.ts",
-      "source_location": "L1"
     },
     {
       "id": "mobile_src_store_settingsstore_usesettingsstore",
@@ -6442,7 +6765,7 @@
       "label": "displayName",
       "_origin": "ast",
       "community": 53,
-      "community_name": "App.tsx",
+      "community_name": "index.js",
       "file_type": "code",
       "norm_label": "displayname",
       "source_file": "mobile/app.json",
@@ -6453,7 +6776,7 @@
       "label": "app.json",
       "_origin": "ast",
       "community": 53,
-      "community_name": "App.tsx",
+      "community_name": "index.js",
       "file_type": "code",
       "norm_label": "app.json",
       "source_file": "mobile/app.json",
@@ -6464,264 +6787,231 @@
       "label": "name",
       "_origin": "ast",
       "community": 53,
-      "community_name": "App.tsx",
+      "community_name": "index.js",
       "file_type": "code",
       "norm_label": "name",
       "source_file": "mobile/app.json",
       "source_location": "L2"
     },
     {
-      "id": "mobile_app_tsx_mobile_app",
-      "label": "App.tsx",
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "App.tsx",
-      "file_type": "code",
-      "norm_label": "app.tsx",
-      "source_file": "mobile/App.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "mobile_index",
       "label": "index.js",
       "_origin": "ast",
       "community": 53,
-      "community_name": "App.tsx",
+      "community_name": "index.js",
       "file_type": "code",
       "norm_label": "index.js",
       "source_file": "mobile/index.js",
       "source_location": "L1"
     },
     {
-      "id": "ref_react_native_safe_area_context",
-      "label": "react-native-safe-area-context",
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "App.tsx",
-      "file_type": "concept",
-      "norm_label": "react-native-safe-area-context",
-      "source_file": "mobile/package.json",
-      "source_location": "L23"
-    },
-    {
-      "id": "ref_react_navigation_native",
-      "label": "@react-navigation/native",
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "App.tsx",
-      "file_type": "concept",
-      "norm_label": "@react-navigation/native",
-      "source_file": "mobile/package.json",
-      "source_location": "L16"
-    },
-    {
-      "id": "mobile_package_scripts",
-      "label": "scripts",
+      "id": "test_phase1",
+      "label": "test_phase1.js",
       "_origin": "ast",
       "community": 54,
-      "community_name": "scripts",
+      "community_name": "test_phase1.js",
       "file_type": "code",
-      "norm_label": "scripts",
-      "source_file": "mobile/package.json",
-      "source_location": "L5"
-    },
-    {
-      "id": "mobile_package_scripts_android",
-      "label": "android",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "scripts",
-      "file_type": "code",
-      "norm_label": "android",
-      "source_file": "mobile/package.json",
-      "source_location": "L8"
-    },
-    {
-      "id": "mobile_package_scripts_dev",
-      "label": "dev",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "scripts",
-      "file_type": "code",
-      "norm_label": "dev",
-      "source_file": "mobile/package.json",
-      "source_location": "L6"
-    },
-    {
-      "id": "mobile_package_scripts_ios",
-      "label": "ios",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "scripts",
-      "file_type": "code",
-      "norm_label": "ios",
-      "source_file": "mobile/package.json",
-      "source_location": "L9"
-    },
-    {
-      "id": "mobile_package_scripts_lint",
-      "label": "lint",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "scripts",
-      "file_type": "code",
-      "norm_label": "lint",
-      "source_file": "mobile/package.json",
-      "source_location": "L12"
-    },
-    {
-      "id": "mobile_package_scripts_preview",
-      "label": "preview",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "scripts",
-      "file_type": "code",
-      "norm_label": "preview",
-      "source_file": "mobile/package.json",
-      "source_location": "L7"
-    },
-    {
-      "id": "mobile_package_scripts_start",
-      "label": "start",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "scripts",
-      "file_type": "code",
-      "norm_label": "start",
-      "source_file": "mobile/package.json",
-      "source_location": "L10"
-    },
-    {
-      "id": "mobile_package_scripts_test",
-      "label": "test",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "scripts",
-      "file_type": "code",
-      "norm_label": "test",
-      "source_file": "mobile/package.json",
-      "source_location": "L11"
-    },
-    {
-      "id": "mobile_src_database_schema",
-      "label": "schema.ts",
-      "_origin": "ast",
-      "community": 55,
-      "community_name": "sqlite.ts",
-      "file_type": "code",
-      "norm_label": "schema.ts",
-      "source_file": "mobile/src/database/schema.ts",
+      "norm_label": "test_phase1.js",
+      "source_file": "test_phase1.js",
       "source_location": "L1"
     },
     {
-      "id": "mobile_src_database_schema_create_tables_sql",
-      "label": "CREATE_TABLES_SQL",
+      "id": "test_phase1_devcrit",
+      "label": "devCrit",
       "_origin": "ast",
-      "community": 55,
-      "community_name": "sqlite.ts",
+      "community": 54,
+      "community_name": "test_phase1.js",
       "file_type": "code",
-      "norm_label": "create_tables_sql",
-      "source_file": "mobile/src/database/schema.ts",
-      "source_location": "L6"
+      "norm_label": "devcrit",
+      "source_file": "test_phase1.js",
+      "source_location": "L177"
     },
     {
-      "id": "mobile_src_database_sqlite",
-      "label": "sqlite.ts",
+      "id": "test_phase1_devlow",
+      "label": "devLow",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "devlow",
+      "source_file": "test_phase1.js",
+      "source_location": "L176"
+    },
+    {
+      "id": "test_phase1_devnormal",
+      "label": "devNormal",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "devnormal",
+      "source_file": "test_phase1.js",
+      "source_location": "L175"
+    },
+    {
+      "id": "test_phase1_duplicateres",
+      "label": "duplicateRes",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "duplicateres",
+      "source_file": "test_phase1.js",
+      "source_location": "L165"
+    },
+    {
+      "id": "test_phase1_msg1",
+      "label": "msg1",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "msg1",
+      "source_file": "test_phase1.js",
+      "source_location": "L126"
+    },
+    {
+      "id": "test_phase1_packet1",
+      "label": "packet1",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "packet1",
+      "source_file": "test_phase1.js",
+      "source_location": "L129"
+    },
+    {
+      "id": "test_phase1_packetlowttl",
+      "label": "packetLowTTL",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "packetlowttl",
+      "source_file": "test_phase1.js",
+      "source_location": "L170"
+    },
+    {
+      "id": "test_phase1_phonea",
+      "label": "phoneA",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "phonea",
+      "source_file": "test_phase1.js",
+      "source_location": "L123"
+    },
+    {
+      "id": "test_phase1_phoneb",
+      "label": "phoneB",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "phoneb",
+      "source_file": "test_phase1.js",
+      "source_location": "L124"
+    },
+    {
+      "id": "test_phase1_phonec",
+      "label": "phoneC",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "phonec",
+      "source_file": "test_phase1.js",
+      "source_location": "L146"
+    },
+    {
+      "id": "test_phase1_phoned",
+      "label": "phoneD",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "phoned",
+      "source_file": "test_phase1.js",
+      "source_location": "L152"
+    },
+    {
+      "id": "test_phase1_rebootedphonea",
+      "label": "rebootedPhoneA",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "rebootedphonea",
+      "source_file": "test_phase1.js",
+      "source_location": "L159"
+    },
+    {
+      "id": "test_phase1_resb",
+      "label": "resB",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "resb",
+      "source_file": "test_phase1.js",
+      "source_location": "L141"
+    },
+    {
+      "id": "test_phase1_resc",
+      "label": "resC",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "resc",
+      "source_file": "test_phase1.js",
+      "source_location": "L147"
+    },
+    {
+      "id": "test_phase1_resd",
+      "label": "resD",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "resd",
+      "source_file": "test_phase1.js",
+      "source_location": "L153"
+    },
+    {
+      "id": "test_phase1_reslowttl",
+      "label": "resLowTTL",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "reslowttl",
+      "source_file": "test_phase1.js",
+      "source_location": "L171"
+    },
+    {
+      "id": "test_phase1_serializeddb",
+      "label": "serializedDB",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "test_phase1.js",
+      "file_type": "code",
+      "norm_label": "serializeddb",
+      "source_file": "test_phase1.js",
+      "source_location": "L158"
+    },
+    {
+      "id": "mobile_build_apk",
+      "label": "build_apk.ps1",
       "_origin": "ast",
       "community": 55,
-      "community_name": "sqlite.ts",
+      "community_name": "build_apk.ps1",
       "file_type": "code",
-      "norm_label": "sqlite.ts",
-      "source_file": "mobile/src/database/sqlite.ts",
+      "norm_label": "build_apk.ps1",
+      "source_file": "mobile/build_apk.ps1",
       "source_location": "L1"
-    },
-    {
-      "id": "mobile_src_database_sqlite_dbmanager",
-      "label": "dbManager",
-      "_origin": "ast",
-      "community": 55,
-      "community_name": "sqlite.ts",
-      "file_type": "code",
-      "norm_label": "dbmanager",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L45"
-    },
-    {
-      "id": "mobile_package_devdependencies",
-      "label": "devDependencies",
-      "_origin": "ast",
-      "community": 56,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "devdependencies",
-      "source_file": "mobile/package.json",
-      "source_location": "L28"
-    },
-    {
-      "id": "mobile_package_devdependencies_babel_core",
-      "label": "@babel/core",
-      "_origin": "ast",
-      "community": 56,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "@babel/core",
-      "source_file": "mobile/package.json",
-      "source_location": "L29"
-    },
-    {
-      "id": "mobile_package_devdependencies_babel_preset_env",
-      "label": "@babel/preset-env",
-      "_origin": "ast",
-      "community": 56,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "@babel/preset-env",
-      "source_file": "mobile/package.json",
-      "source_location": "L30"
-    },
-    {
-      "id": "mobile_package_devdependencies_babel_runtime",
-      "label": "@babel/runtime",
-      "_origin": "ast",
-      "community": 56,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "@babel/runtime",
-      "source_file": "mobile/package.json",
-      "source_location": "L31"
-    },
-    {
-      "id": "mobile_package_devdependencies_types_react",
-      "label": "@types/react",
-      "_origin": "ast",
-      "community": 56,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "@types/react",
-      "source_file": "mobile/package.json",
-      "source_location": "L32"
-    },
-    {
-      "id": "mobile_package_devdependencies_types_react_native",
-      "label": "@types/react-native",
-      "_origin": "ast",
-      "community": 56,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "@types/react-native",
-      "source_file": "mobile/package.json",
-      "source_location": "L33"
-    },
-    {
-      "id": "mobile_package_devdependencies_typescript",
-      "label": "typescript",
-      "_origin": "ast",
-      "community": 56,
-      "community_name": "devDependencies",
-      "file_type": "code",
-      "norm_label": "typescript",
-      "source_file": "mobile/package.json",
-      "source_location": "L34"
     },
     {
       "id": "agents_skills_graphify_references_exports",
@@ -7020,6 +7310,226 @@
       "source_location": "L1"
     },
     {
+      "id": "mobile_package_dependencies",
+      "label": "dependencies",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "dependencies",
+      "source_file": "mobile/package.json",
+      "source_location": "L14"
+    },
+    {
+      "id": "mobile_package_dependencies_lucide_react_native",
+      "label": "lucide-react-native",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "lucide-react-native",
+      "source_file": "mobile/package.json",
+      "source_location": "L18"
+    },
+    {
+      "id": "mobile_package_dependencies_react",
+      "label": "react",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "react",
+      "source_file": "mobile/package.json",
+      "source_location": "L19"
+    },
+    {
+      "id": "mobile_package_dependencies_react_native",
+      "label": "react-native",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "react-native",
+      "source_file": "mobile/package.json",
+      "source_location": "L20"
+    },
+    {
+      "id": "mobile_package_dependencies_react_native_gesture_handler",
+      "label": "react-native-gesture-handler",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "react-native-gesture-handler",
+      "source_file": "mobile/package.json",
+      "source_location": "L21"
+    },
+    {
+      "id": "mobile_package_dependencies_react_native_reanimated",
+      "label": "react-native-reanimated",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "react-native-reanimated",
+      "source_file": "mobile/package.json",
+      "source_location": "L22"
+    },
+    {
+      "id": "mobile_package_dependencies_react_native_safe_area_context",
+      "label": "react-native-safe-area-context",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "react-native-safe-area-context",
+      "source_file": "mobile/package.json",
+      "source_location": "L23"
+    },
+    {
+      "id": "mobile_package_dependencies_react_native_screens",
+      "label": "react-native-screens",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "react-native-screens",
+      "source_file": "mobile/package.json",
+      "source_location": "L24"
+    },
+    {
+      "id": "mobile_package_dependencies_react_native_svg",
+      "label": "react-native-svg",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "react-native-svg",
+      "source_file": "mobile/package.json",
+      "source_location": "L25"
+    },
+    {
+      "id": "mobile_package_dependencies_react_navigation_bottom_tabs",
+      "label": "@react-navigation/bottom-tabs",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "@react-navigation/bottom-tabs",
+      "source_file": "mobile/package.json",
+      "source_location": "L15"
+    },
+    {
+      "id": "mobile_package_dependencies_react_navigation_native",
+      "label": "@react-navigation/native",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "@react-navigation/native",
+      "source_file": "mobile/package.json",
+      "source_location": "L16"
+    },
+    {
+      "id": "mobile_package_dependencies_react_navigation_native_stack",
+      "label": "@react-navigation/native-stack",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "@react-navigation/native-stack",
+      "source_file": "mobile/package.json",
+      "source_location": "L17"
+    },
+    {
+      "id": "mobile_package_dependencies_zustand",
+      "label": "zustand",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "zustand",
+      "source_file": "mobile/package.json",
+      "source_location": "L26"
+    },
+    {
+      "id": "mobile_package_devdependencies",
+      "label": "devDependencies",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "devdependencies",
+      "source_file": "mobile/package.json",
+      "source_location": "L28"
+    },
+    {
+      "id": "mobile_package_devdependencies_babel_core",
+      "label": "@babel/core",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "@babel/core",
+      "source_file": "mobile/package.json",
+      "source_location": "L29"
+    },
+    {
+      "id": "mobile_package_devdependencies_babel_preset_env",
+      "label": "@babel/preset-env",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "@babel/preset-env",
+      "source_file": "mobile/package.json",
+      "source_location": "L30"
+    },
+    {
+      "id": "mobile_package_devdependencies_babel_runtime",
+      "label": "@babel/runtime",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "@babel/runtime",
+      "source_file": "mobile/package.json",
+      "source_location": "L31"
+    },
+    {
+      "id": "mobile_package_devdependencies_types_react",
+      "label": "@types/react",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "@types/react",
+      "source_file": "mobile/package.json",
+      "source_location": "L32"
+    },
+    {
+      "id": "mobile_package_devdependencies_types_react_native",
+      "label": "@types/react-native",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "@types/react-native",
+      "source_file": "mobile/package.json",
+      "source_location": "L33"
+    },
+    {
+      "id": "mobile_package_devdependencies_typescript",
+      "label": "typescript",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "typescript",
+      "source_file": "mobile/package.json",
+      "source_location": "L34"
+    },
+    {
       "id": "mobile_package_name",
       "label": "name",
       "_origin": "ast",
@@ -7040,6 +7550,94 @@
       "norm_label": "private",
       "source_file": "mobile/package.json",
       "source_location": "L4"
+    },
+    {
+      "id": "mobile_package_scripts",
+      "label": "scripts",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "scripts",
+      "source_file": "mobile/package.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "mobile_package_scripts_android",
+      "label": "android",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "android",
+      "source_file": "mobile/package.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "mobile_package_scripts_dev",
+      "label": "dev",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "dev",
+      "source_file": "mobile/package.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "mobile_package_scripts_ios",
+      "label": "ios",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "ios",
+      "source_file": "mobile/package.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "mobile_package_scripts_lint",
+      "label": "lint",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "lint",
+      "source_file": "mobile/package.json",
+      "source_location": "L12"
+    },
+    {
+      "id": "mobile_package_scripts_preview",
+      "label": "preview",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "preview",
+      "source_file": "mobile/package.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "mobile_package_scripts_start",
+      "label": "start",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "start",
+      "source_file": "mobile/package.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "mobile_package_scripts_test",
+      "label": "test",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "code",
+      "norm_label": "test",
+      "source_file": "mobile/package.json",
+      "source_location": "L11"
     },
     {
       "id": "mobile_package_version",
@@ -7119,6 +7717,17 @@
       "source_location": "L22"
     },
     {
+      "id": "ref_react_native_safe_area_context",
+      "label": "react-native-safe-area-context",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "concept",
+      "norm_label": "react-native-safe-area-context",
+      "source_file": "mobile/package.json",
+      "source_location": "L23"
+    },
+    {
       "id": "ref_react_native_screens",
       "label": "react-native-screens",
       "_origin": "ast",
@@ -7150,6 +7759,17 @@
       "norm_label": "@react-navigation/bottom-tabs",
       "source_file": "mobile/package.json",
       "source_location": "L15"
+    },
+    {
+      "id": "ref_react_navigation_native",
+      "label": "@react-navigation/native",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "mobile/package.json",
+      "file_type": "concept",
+      "norm_label": "@react-navigation/native",
+      "source_file": "mobile/package.json",
+      "source_location": "L16"
     },
     {
       "id": "ref_react_navigation_native_stack",
@@ -7194,17 +7814,6 @@
       "norm_label": "typescript",
       "source_file": "mobile/package.json",
       "source_location": "L34"
-    },
-    {
-      "id": "ref_zustand",
-      "label": "zustand",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "mobile/package.json",
-      "file_type": "concept",
-      "norm_label": "zustand",
-      "source_file": "mobile/package.json",
-      "source_location": "L26"
     },
     {
       "id": "deviceeventmanagermodule",
@@ -7413,6 +8022,7 @@
     {
       "id": "ref_child_process",
       "label": "ref_child_process",
+      "_origin": "semantic",
       "community": 52,
       "community_name": "server.js",
       "external": true,
@@ -7424,6 +8034,7 @@
     {
       "id": "ref_fs",
       "label": "ref_fs",
+      "_origin": "semantic",
       "community": 52,
       "community_name": "server.js",
       "external": true,
@@ -7435,6 +8046,7 @@
     {
       "id": "ref_http",
       "label": "ref_http",
+      "_origin": "semantic",
       "community": 52,
       "community_name": "server.js",
       "external": true,
@@ -7446,11 +8058,133 @@
     {
       "id": "ref_path",
       "label": "ref_path",
+      "_origin": "semantic",
       "community": 52,
       "community_name": "server.js",
       "external": true,
       "file_type": "concept",
       "norm_label": "ref_path",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "batterymanager",
+      "label": "batterymanager",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "batterymanager",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "build",
+      "label": "build",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "build",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "intent",
+      "label": "intent",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "intent",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "intentfilter",
+      "label": "intentfilter",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "intentfilter",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "manifest",
+      "label": "manifest",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "manifest",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "packagemanager",
+      "label": "packagemanager",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "packagemanager",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "toast",
+      "label": "toast",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "toast",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "vibrationeffect",
+      "label": "vibrationeffect",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "vibrationeffect",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "vibrator",
+      "label": "vibrator",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "vibrator",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "websettings",
+      "label": "websettings",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "websettings",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "webviewclient",
+      "label": "webviewclient",
+      "community": 26,
+      "community_name": "MainActivity.java",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "webviewclient",
       "source_file": "",
       "type": "external"
     }
@@ -7490,6 +8224,78 @@
       "context": "attribute",
       "source_file": "mobile/android/app/src/main/java/org/rakshanet/nativemodules/BluetoothModule.kt",
       "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_onbackpressed",
+      "target": "override",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "attribute",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_oncreate",
+      "target": "override",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "attribute",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_getbatterylevel",
+      "target": "android_webkit_javascriptinterface",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "attribute",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L107",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_requestpermissions",
+      "target": "android_webkit_javascriptinterface",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "attribute",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_showtoast",
+      "target": "android_webkit_javascriptinterface",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "attribute",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_vibrate",
+      "target": "android_webkit_javascriptinterface",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "attribute",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -7598,6 +8404,42 @@
       "context": "call",
       "source_file": "mobile/android/app/src/main/java/org/rakshanet/nativemodules/MeshManager.kt",
       "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_oncreate",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_webappinterface",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_oncreate",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_requestblepermissions",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L44",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_requestblepermissions",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_requestpermissions",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -8226,7 +9068,7 @@
     },
     {
       "source": "mobile_android_app_src_main_java_org_rakshanet_nativemodules_meshmanager_meshmanager",
-      "target": "context",
+      "target": "mobile_android_app_src_main_java_org_rakshanet_nativemodules_meshmanager_kt_context",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -8330,6 +9172,30 @@
       "context": "field",
       "source_file": "mobile/android/app/src/main/java/org/rakshanet/nativemodules/MeshManager.kt",
       "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity",
+      "target": "android_webkit_webview",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "field",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface",
+      "target": "android_content_context",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "field",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -8646,7 +9512,7 @@
     },
     {
       "source": "mobile_android_app_src_main_java_org_rakshanet_nativemodules_meshmanager",
-      "target": "context",
+      "target": "mobile_android_app_src_main_java_org_rakshanet_nativemodules_meshmanager_kt_context",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -8807,6 +9673,198 @@
       },
       "source_file": "mobile/android/app/src/main/java/org/rakshanet/nativemodules/MeshManager.kt",
       "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "intentfilter",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "batterymanager",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "android_webkit_webview",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "websettings",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "webviewclient",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "android_webkit_javascriptinterface",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "toast",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "manifest",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "packagemanager",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "android_app_activity",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "android_os_bundle",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "build",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "vibrator",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "vibrationeffect",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "android_content_context",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "intent",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -12170,6 +13228,30 @@
       "weight": 1.0
     },
     {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_oncreate",
+      "target": "android_os_bundle",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_webappinterface",
+      "target": "android_content_context",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
       "source": "mobile_src_database_repositories_chatrepository_chatrepository_addrelayhop",
       "target": "mobile_src_types_chat_messagerelay",
       "relation": "references",
@@ -14885,6 +15967,28 @@
       "weight": 1.0
     },
     {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
       "source": "mobile_app_json_mobile_app",
       "target": "mobile_app_name",
       "relation": "contains",
@@ -17261,6 +18365,215 @@
       "weight": 1.0
     },
     {
+      "source": "test_phase1",
+      "target": "test_phase1_assert",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_phonea",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L123",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_phoneb",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L124",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_msg1",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L126",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_packet1",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L129",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_mocksqlitedevice",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_resb",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L141",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_phonec",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L146",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_resc",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L147",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_phoned",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L152",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_resd",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L153",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_serializeddb",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L158",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_rebootedphonea",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L159",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_duplicateres",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L165",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_packetlowttl",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L170",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_reslowttl",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L171",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_devnormal",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L175",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_devlow",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L176",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1",
+      "target": "test_phase1_devcrit",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L177",
+      "weight": 1.0
+    },
+    {
       "source": "mobile_android_app_src_main_java_org_rakshanet_nativemodules_rakshanetpackage_rakshanetpackage",
       "target": "reactpackage",
       "relation": "implements",
@@ -17280,6 +18593,17 @@
       "confidence_score": 1.0,
       "source_file": "mobile/android/app/src/main/java/org/rakshanet/nativemodules/BluetoothModule.kt",
       "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity",
+      "target": "android_app_activity",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -17434,6 +18758,94 @@
       "confidence_score": 1.0,
       "source_file": "mobile/android/app/src/main/java/org/rakshanet/nativemodules/RakshaNetPackage.kt",
       "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_oncreate",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_requestblepermissions",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_mainactivity_onbackpressed",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_getbatterylevel",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L107",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_requestpermissions",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_webappinterface",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_showtoast",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface",
+      "target": "mobile_android_app_src_org_rakshanet_mainactivity_webappinterface_vibrate",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/android_app/src/org/rakshanet/MainActivity.java",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -17822,6 +19234,50 @@
       "weight": 1.0
     },
     {
+      "source": "test_phase1_mocksqlitedevice",
+      "target": "test_phase1_mocksqlitedevice_constructor",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1_mocksqlitedevice",
+      "target": "test_phase1_mocksqlitedevice_sendmessage",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1_mocksqlitedevice",
+      "target": "test_phase1_mocksqlitedevice_receivepacket",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "test_phase1_mocksqlitedevice",
+      "target": "test_phase1_mocksqlitedevice_getradioscanprofile",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test_phase1.js",
+      "source_location": "L97",
+      "weight": 1.0
+    },
+    {
       "source": "readme",
       "target": "design",
       "relation": "references",
@@ -17938,5 +19394,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "86b1df5e5d2627ae5be27bca7b8c7903abd42b79"
+  "built_at_commit": "9c95b5c3ca92662f763cbc8ceaf1ff39780cc26b"
 }

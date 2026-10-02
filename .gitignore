@@ -7,14 +7,22 @@ yarn-error.log*
 
 # Android build outputs & local config
 *.apk
+!RakshaNet.apk
 *.aab
+*.idsig
 .gradle/
 */.gradle/
 build/
 */build/
+bin/
+*/bin/
+gen/
+*/gen/
 local.properties
 *.keystore
 !debug.keystore
+.android_sdk/
+mobile/build_tools/
 
 # iOS build outputs
 *.ipa

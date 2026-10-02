@@ -478,5 +478,35 @@
     "seen": 1790934254.695389,
     "ast_hash": "86fe2fb85d9730670dda9d850a129a35",
     "semantic_hash": ""
+  },
+  "mobile/android_app/src/org/rakshanet/MainActivity.java": {
+    "mtime": 1790942976.8168242,
+    "seen": 1790943107.5022182,
+    "ast_hash": "32caf866c715a6236b10ca628645986d",
+    "semantic_hash": ""
+  },
+  "mobile/build_apk.ps1": {
+    "mtime": 1790943000.9022539,
+    "seen": 1790943107.5022182,
+    "ast_hash": "2e4665c66e192060f1469652a909477f",
+    "semantic_hash": ""
+  },
+  "test_phase1.js": {
+    "mtime": 1790942361.530893,
+    "seen": 1790943107.5022182,
+    "ast_hash": "59d74edea69de4d82fe6e87e93135ebf",
+    "semantic_hash": ""
+  },
+  "mobile/android_app/assets/index.html": {
+    "mtime": 1790934170.6391418,
+    "seen": 1790943107.5022182,
+    "ast_hash": "86fe2fb85d9730670dda9d850a129a35",
+    "semantic_hash": ""
+  },
+  "mobile/android_app/res/mipmap/ic_launcher.png": {
+    "mtime": 1790922334.0372512,
+    "seen": 1790943107.5022182,
+    "ast_hash": "fd8af2aa2bb0f4e76b765fcedeb6a1ba",
+    "semantic_hash": ""
   }
 }

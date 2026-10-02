@@ -1,17 +1,17 @@
 # Graph Report - RakshaNet  (2026-10-02)
 
 ## Corpus Check
-- 69 files · ~285,188 words
+- 72 files · ~340,115 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 2 file(s) not represented in the graph (top: (none) 1, .xml 1)
+- Unclassified: 8 file(s) not represented in the graph (top: .xml 4, .apk 2, (none) 1)
 
 ## Summary
-- 631 nodes · 913 edges · 57 communities (36 shown, 21 thin omitted)
+- 684 nodes · 976 edges · 56 communities (32 shown, 24 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `86b1df5e`
+- Built from commit: `9c95b5c3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -42,7 +42,7 @@
 - BluetoothModule
 - MeshManager
 - SignalRescue AI (RakshaNet) — Phase 1 Implementation Plan
-- dependencies
+- MainActivity.java
 - compilerOptions
 - profileStore.ts
 - metro.config.js
@@ -57,10 +57,8 @@
 - 🏆 Competitor Analysis & Market Moat
 - ⚙️ Requirements
 - server.js
-- App.tsx
-- scripts
-- sqlite.ts
-- devDependencies
+- index.js
+- test_phase1.js
 
 ## God Nodes (most connected - your core abstractions)
 1. `SignalRescue AI (RakshaNet) — Complete Feature Set` - 36 edges
@@ -83,13 +81,13 @@
   design.md → mobile/src/components/StatusStrip.tsx
 - `BluetoothModule` --calls--> `MeshManager`  [INFERRED]
   mobile/android/app/src/main/java/org/rakshanet/nativemodules/BluetoothModule.kt → mobile/android/app/src/main/java/org/rakshanet/nativemodules/MeshManager.kt
-- `App()` --calls--> `useTheme()`  [EXTRACTED]
-  mobile/App.tsx → mobile/src/theme/index.ts
+- `Props` --references--> `Message`  [EXTRACTED]
+  mobile/src/components/ChatBubble.tsx → mobile/src/types/chat.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (57 total, 21 thin omitted)
+## Communities (56 total, 24 thin omitted)
 
 ### Community 0 - "SignalRescue AI (RakshaNet) — Complete Feature Set"
 Cohesion: 0.05
@@ -109,7 +107,7 @@ Nodes (26): For /graphify add and --watch, For /graphify query, For the commit h
 
 ### Community 4 - "useTheme"
 Cohesion: 0.07
-Nodes (62): 9. Core Components, MainTabNavigator(), Tab, Stack, Card(), Props, styles, ChatBubble() (+54 more)
+Nodes (62): 9. Core Components, App(), MainTabNavigator(), Tab, RootNavigator(), Stack, Card(), Props (+54 more)
 
 ### Community 5 - "chat.ts"
 Cohesion: 0.09
@@ -128,16 +126,16 @@ Cohesion: 0.29
 Nodes (6): Always, Component recipe (React Native example), Never, Screen checklist, SignalRescue Design System & UI Guidelines, When to apply
 
 ### Community 9 - "mobile/package.json"
-Cohesion: 0.11
-Nodes (17): name, private, version, @babel/core, @babel/preset-env, @babel/runtime, lucide-react-native, react-native-gesture-handler (+9 more)
+Cohesion: 0.04
+Nodes (46): dependencies, lucide-react-native, react, react-native, react-native-gesture-handler, react-native-reanimated, react-native-safe-area-context, react-native-screens (+38 more)
 
 ### Community 10 - "▶️ Running the Project"
 Cohesion: 0.50
 Nodes (4): 1. Launch the Interactive Mobile Client & Mesh Simulator (Edge Browser), 2. Inspect the Interactive Knowledge Graph, 3. Query the Codebase Knowledge Graph via CLI, ▶️ Running the Project
 
 ### Community 11 - "networkStore.ts"
-Cohesion: 0.20
-Nodes (9): Props, styles, deviceRepository, NetworkStoreState, ConnectionType, NearbyDevice, ProximityBand, MeshState (+1 more)
+Cohesion: 0.17
+Nodes (12): Props, deviceRepository, NetworkStoreState, SettingsState, ThemeMode, ConnectionType, NearbyDevice, ProximityBand (+4 more)
 
 ### Community 12 - "graphify reference: query, path, explain"
 Cohesion: 0.33
@@ -167,17 +165,13 @@ Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphif
 Cohesion: 0.11
 Nodes (18): 10. Adaptive Battery Governance, 11. Multi-Device Verification Matrix (4 Phones), 1. Phase 1 Objective, 2. Technology Stack, 3. Native Android Layer Architecture, 4. Application Startup & Progressive Permissions, 5. Required Permissions (Android-First), 6. Local Anonymous Identity (+10 more)
 
-### Community 26 - "dependencies"
-Cohesion: 0.15
-Nodes (13): dependencies, lucide-react-native, react, react-native, react-native-gesture-handler, react-native-reanimated, react-native-safe-area-context, react-native-screens (+5 more)
-
 ### Community 27 - "compilerOptions"
 Cohesion: 0.12
 Nodes (16): compilerOptions, allowJs, allowSyntheticDefaultImports, baseUrl, esModuleInterop, isolatedModules, jsx, lib (+8 more)
 
 ### Community 28 - "profileStore.ts"
-Cohesion: 0.35
-Nodes (5): profileRepository, identityService, ProfileState, DeviceIdentity, UserProfile
+Cohesion: 0.18
+Nodes (8): profileRepository, CREATE_TABLES_SQL, DatabaseManager, dbManager, identityService, ProfileState, DeviceIdentity, UserProfile
 
 ### Community 30 - "RakshaNet Mobile (SignalRescue AI) — Phase 1"
 Cohesion: 0.50
@@ -219,36 +213,24 @@ Nodes (3): 🏆 Competitor Analysis & Market Moat, Head-to-Head: RakshaNet vs. C
 Cohesion: 0.17
 Nodes (7): { exec }, fs, http, MIME_TYPES, MOBILE_DIR, path, server
 
-### Community 53 - "App.tsx"
-Cohesion: 0.31
-Nodes (6): App(), displayName, name, RootNavigator(), react-native-safe-area-context, @react-navigation/native
-
-### Community 54 - "scripts"
-Cohesion: 0.25
-Nodes (8): scripts, android, dev, ios, lint, preview, start, test
-
-### Community 55 - "sqlite.ts"
-Cohesion: 0.29
-Nodes (3): CREATE_TABLES_SQL, DatabaseManager, dbManager
-
-### Community 56 - "devDependencies"
-Cohesion: 0.29
-Nodes (7): devDependencies, @babel/core, @babel/preset-env, @babel/runtime, @types/react, @types/react-native, typescript
+### Community 54 - "test_phase1.js"
+Cohesion: 0.08
+Nodes (18): devCrit, devLow, devNormal, duplicateRes, MockSQLiteDevice, msg1, packet1, packetLowTTL (+10 more)
 
 ## Knowledge Gaps
-- **345 isolated node(s):** `displayName`, `{ getDefaultConfig, mergeConfig }`, `config`, `name`, `version` (+340 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 407 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **21 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **362 isolated node(s):** `displayName`, `{ getDefaultConfig, mergeConfig }`, `config`, `name`, `version` (+357 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 441 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `SignalRescue AI — design.md` connect `SignalRescue AI — design.md` to `useTheme`, `RakshaNet (SignalRescue AI): Verified Competitor and Uniqueness Report`?**
-  _High betweenness centrality (0.269) - this node is a cross-community bridge._
-- **Why does `9. Core Components` connect `useTheme` to `SignalRescue AI — design.md`?**
   _High betweenness centrality (0.229) - this node is a cross-community bridge._
+- **Why does `9. Core Components` connect `useTheme` to `SignalRescue AI — design.md`?**
+  _High betweenness centrality (0.194) - this node is a cross-community bridge._
 - **What connects `displayName`, `{ getDefaultConfig, mergeConfig }`, `config` to the rest of the system?**
-  _345 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _362 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `SignalRescue AI (RakshaNet) — Complete Feature Set` be split into smaller, more focused modules?**
   _Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected._
 - **Should `RakshaNet — Offline Disaster Communication and AI Rescue System` be split into smaller, more focused modules?**

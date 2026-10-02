@@ -423,29 +423,49 @@ pip install graphifyy networkx tree-sitter pypdf html2text
 
 ## ▶️ Running the Project
 
-### 1. Launch the Interactive Mobile Client & Mesh Simulator (Edge Browser)
+### 1. Install Native Android APK (Lightweight 1.24 MB)
+RakshaNet includes a standalone, small-sized native Android APK package (`RakshaNet.apk` ~1.24 MB) ready for deployment on Android handsets (including OnePlus, Pixel, Samsung, etc.):
+```bash
+# Install directly via ADB onto connected phone:
+adb install -r RakshaNet.apk
+
+# Or download APK directly to phone:
+https://github.com/pranav16-king/Rakshanet/raw/main/RakshaNet.apk
+```
+
+*APK Features:*
+- **Ultralight Footprint:** Only 1.24 MB (instant download even on weak cellular edges).
+- **Zero Internet Required:** Bundled assets run 100% offline with zero cloud dependency.
+- **Hardware Integration:** Native BLE scan/advertise permissions, haptic vibration feedback on SOS press, and battery monitor.
+- **Build from Source:** To recompile the APK anytime:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File mobile/build_apk.ps1
+  ```
+
+### 2. Run Phase 1 Automated Verification Suite
+Validates the delay-tolerant mesh protocol against all 16 test matrix criteria from Section 11 of the Implementation Plan:
+```bash
+node test_phase1.js
+```
+*Output: 16/16 Tests Passed (100%) validating Direct BLE, 3-Hop relay across 4 phones (`A → B → C → D`), SQLite reboot durability, loop suppression deduplication, zero-TTL drops, and battery scan profiles.*
+
+### 3. Launch the Interactive Mobile Client & Mesh Simulator (Edge Browser)
 Run the standalone mobile application and multi-hop delay-tolerant mesh testbench directly in Microsoft Edge or any modern web browser:
 ```powershell
 # Open in Microsoft Edge:
 Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "P:\RakshaNet\mobile\preview.html"
 
-# Or open in default browser:
-start mobile/preview.html
+# Or start dev server:
+npm run dev
 ```
 
-*What the interactive simulator provides:*
-- **Complete Phase 1 Mobile Flow:** Splash &rarr; Home (SOS Beacon) &rarr; Offline Chat &rarr; Network Mesh &rarr; Settings.
-- **4-Phone Testbench:** Switch between Phone A (You), Phone B (Mule), Phone C (Mule), and Phone D (Relief Post).
-- **Automated Verification Matrix:** Test 3-hop delay-tolerant relay (`A → B → C → D`), deduplication loop suppression, TTL expiration, and app reboot state recovery.
-- **Display Governance:** Switch live between **Dark Theme**, **Light Theme**, and **Low Power OLED** (True `#000000` Black).
-
-### 2. Inspect the Interactive Knowledge Graph
+### 4. Inspect the Interactive Knowledge Graph
 View the AST code and architecture dependency graph:
 ```bash
 start graphify-out/graph.html
 ```
 
-### 3. Query the Codebase Knowledge Graph via CLI
+### 5. Query the Codebase Knowledge Graph via CLI
 ```bash
 # Update the graph incrementally (AST-only, zero cost):
 python -m graphify update .
