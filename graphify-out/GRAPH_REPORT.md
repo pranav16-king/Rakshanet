@@ -1,17 +1,17 @@
 # Graph Report - RakshaNet  (2026-10-02)
 
 ## Corpus Check
-- 67 files · ~284,764 words
+- 69 files · ~285,188 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 1, .xml 1)
 
 ## Summary
-- 605 nodes · 889 edges · 52 communities (30 shown, 22 thin omitted)
+- 631 nodes · 913 edges · 57 communities (36 shown, 21 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `69a2be8c`
+- Built from commit: `86b1df5e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -25,7 +25,7 @@
 - graphify reference: extra exports and benchmark
 - Frontend Design
 - SignalRescue Design System & UI Guidelines
-- package.json
+- mobile/package.json
 - ▶️ Running the Project
 - networkStore.ts
 - graphify reference: query, path, explain
@@ -48,7 +48,7 @@
 - metro.config.js
 - RakshaNet Mobile (SignalRescue AI) — Phase 1
 - ✨ Features
-- permissionService.ts
+- package.json
 - 🚀 Installation & Reproduction
 - 🗺️ Roadmap
 - 🎯 Problem Statement
@@ -56,6 +56,11 @@
 - 🛠️ Tech Stack
 - 🏆 Competitor Analysis & Market Moat
 - ⚙️ Requirements
+- server.js
+- App.tsx
+- scripts
+- sqlite.ts
+- devDependencies
 
 ## God Nodes (most connected - your core abstractions)
 1. `SignalRescue AI (RakshaNet) — Complete Feature Set` - 36 edges
@@ -84,7 +89,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (52 total, 22 thin omitted)
+## Communities (57 total, 21 thin omitted)
 
 ### Community 0 - "SignalRescue AI (RakshaNet) — Complete Feature Set"
 Cohesion: 0.05
@@ -104,7 +109,7 @@ Nodes (26): For /graphify add and --watch, For /graphify query, For the commit h
 
 ### Community 4 - "useTheme"
 Cohesion: 0.07
-Nodes (60): 9. Core Components, MainTabNavigator(), Tab, Stack, Card(), Props, styles, ChatBubble() (+52 more)
+Nodes (62): 9. Core Components, MainTabNavigator(), Tab, Stack, Card(), Props, styles, ChatBubble() (+54 more)
 
 ### Community 5 - "chat.ts"
 Cohesion: 0.09
@@ -122,17 +127,17 @@ Nodes (6): Design principles, Frontend Design, Ground your designs in the subjec
 Cohesion: 0.29
 Nodes (6): Always, Component recipe (React Native example), Never, Screen checklist, SignalRescue Design System & UI Guidelines, When to apply
 
-### Community 9 - "package.json"
-Cohesion: 0.06
-Nodes (36): App(), displayName, name, devDependencies, @babel/core, @babel/preset-env, @babel/runtime, @types/react (+28 more)
+### Community 9 - "mobile/package.json"
+Cohesion: 0.11
+Nodes (17): name, private, version, @babel/core, @babel/preset-env, @babel/runtime, lucide-react-native, react-native-gesture-handler (+9 more)
 
 ### Community 10 - "▶️ Running the Project"
 Cohesion: 0.50
-Nodes (4): 1. Generate High-Resolution Analytical Figures, 2. Compile the 9-Page Executive PDF White Paper, 3. Query or Update the Codebase Knowledge Graph, ▶️ Running the Project
+Nodes (4): 1. Launch the Interactive Mobile Client & Mesh Simulator (Edge Browser), 2. Inspect the Interactive Knowledge Graph, 3. Query the Codebase Knowledge Graph via CLI, ▶️ Running the Project
 
 ### Community 11 - "networkStore.ts"
-Cohesion: 0.12
-Nodes (12): Props, styles, deviceRepository, CREATE_TABLES_SQL, DatabaseManager, dbManager, NetworkStoreState, ConnectionType (+4 more)
+Cohesion: 0.20
+Nodes (9): Props, styles, deviceRepository, NetworkStoreState, ConnectionType, NearbyDevice, ProximityBand, MeshState (+1 more)
 
 ### Community 12 - "graphify reference: query, path, explain"
 Cohesion: 0.33
@@ -182,6 +187,10 @@ Nodes (3): 🛠️ Key Implementation Guarantees, 📱 Phase 1 Scope & Architect
 Cohesion: 0.20
 Nodes (10): 1. Core Offline Communications & Mesh Protocol, 2. Delay-Tolerant Networking & Protocol Security, 3. Localization & Geospatial Mapping, 4. On-Device Edge & Cloud AI Intelligence, 5. Rescue Coordination & Command Center, 6. Civilian Modes & Community Resilience, 7. Implementation & Architecture in this Repository, 📱 Civilian Mobile Application Interface Suite (+2 more)
 
+### Community 33 - "package.json"
+Cohesion: 0.17
+Nodes (11): author, description, keywords, license, main, name, scripts, dev (+3 more)
+
 ### Community 34 - "🚀 Installation & Reproduction"
 Cohesion: 0.50
 Nodes (4): 1. Clone the Repository, 2. Set Up a Virtual Environment (Recommended), 3. Install Document & Chart Dependencies, 🚀 Installation & Reproduction
@@ -206,20 +215,40 @@ Nodes (3): Actual Technologies Implemented & Verified in Repository, Specified A
 Cohesion: 0.67
 Nodes (3): 🏆 Competitor Analysis & Market Moat, Head-to-Head: RakshaNet vs. Crisis Connect, Reality Check: What is NOT Unique vs. The Real Moat
 
+### Community 52 - "server.js"
+Cohesion: 0.17
+Nodes (7): { exec }, fs, http, MIME_TYPES, MOBILE_DIR, path, server
+
+### Community 53 - "App.tsx"
+Cohesion: 0.31
+Nodes (6): App(), displayName, name, RootNavigator(), react-native-safe-area-context, @react-navigation/native
+
+### Community 54 - "scripts"
+Cohesion: 0.25
+Nodes (8): scripts, android, dev, ios, lint, preview, start, test
+
+### Community 55 - "sqlite.ts"
+Cohesion: 0.29
+Nodes (3): CREATE_TABLES_SQL, DatabaseManager, dbManager
+
+### Community 56 - "devDependencies"
+Cohesion: 0.29
+Nodes (7): devDependencies, @babel/core, @babel/preset-env, @babel/runtime, @types/react, @types/react-native, typescript
+
 ## Knowledge Gaps
-- **326 isolated node(s):** `displayName`, `{ getDefaultConfig, mergeConfig }`, `config`, `name`, `version` (+321 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 384 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **22 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **345 isolated node(s):** `displayName`, `{ getDefaultConfig, mergeConfig }`, `config`, `name`, `version` (+340 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 407 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **21 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `SignalRescue AI — design.md` connect `SignalRescue AI — design.md` to `useTheme`, `RakshaNet (SignalRescue AI): Verified Competitor and Uniqueness Report`?**
-  _High betweenness centrality (0.290) - this node is a cross-community bridge._
+  _High betweenness centrality (0.269) - this node is a cross-community bridge._
 - **Why does `9. Core Components` connect `useTheme` to `SignalRescue AI — design.md`?**
-  _High betweenness centrality (0.246) - this node is a cross-community bridge._
+  _High betweenness centrality (0.229) - this node is a cross-community bridge._
 - **What connects `displayName`, `{ getDefaultConfig, mergeConfig }`, `config` to the rest of the system?**
-  _326 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _345 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `SignalRescue AI (RakshaNet) — Complete Feature Set` be split into smaller, more focused modules?**
   _Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected._
 - **Should `RakshaNet — Offline Disaster Communication and AI Rescue System` be split into smaller, more focused modules?**

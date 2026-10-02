@@ -3,6 +3,8 @@
   "version": "1.0.0-phase1",
   "private": true,
   "scripts": {
+    "dev": "node ../server.js",
+    "preview": "node ../server.js",
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "start": "react-native start",

@@ -30,19 +30,6 @@
       "source_location": "L33"
     },
     {
-      "id": "mobile_src_database_sqlite_databasemanager",
-      "label": "DatabaseManager",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": "databasemanager",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L7"
-    },
-    {
       "id": "mobile_src_store_networkstore_networkstorestate",
       "label": "NetworkStoreState",
       "_callable": true,
@@ -225,32 +212,6 @@
       "source_location": "L1"
     },
     {
-      "id": "mobile_src_services_permissions_permissionservice_permissionservice",
-      "label": "permissionService",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "permissionService.ts",
-      "file_type": "code",
-      "norm_label": "permissionservice",
-      "source_file": "mobile/src/services/permissions/permissionService.ts",
-      "source_location": "L77"
-    },
-    {
-      "id": "mobile_src_services_permissions_permissionservice_permissionstatusresult",
-      "label": "PermissionStatusResult",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "permissionService.ts",
-      "file_type": "code",
-      "norm_label": "permissionstatusresult",
-      "source_file": "mobile/src/services/permissions/permissionService.ts",
-      "source_location": "L3"
-    },
-    {
       "id": "mobile_src_components_card_props",
       "label": "Props",
       "_callable": true,
@@ -379,6 +340,32 @@
       "norm_label": "props",
       "source_file": "mobile/src/screens/onboarding/WelcomeScreen.tsx",
       "source_location": "L6"
+    },
+    {
+      "id": "mobile_src_services_permissions_permissionservice_permissionservice",
+      "label": "permissionService",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "permissionservice",
+      "source_file": "mobile/src/services/permissions/permissionService.ts",
+      "source_location": "L77"
+    },
+    {
+      "id": "mobile_src_services_permissions_permissionservice_permissionstatusresult",
+      "label": "PermissionStatusResult",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "permissionstatusresult",
+      "source_file": "mobile/src/services/permissions/permissionService.ts",
+      "source_location": "L3"
     },
     {
       "id": "mobile_src_store_settingsstore_settingsstate",
@@ -628,6 +615,19 @@
       "source_location": "L64"
     },
     {
+      "id": "mobile_src_database_sqlite_databasemanager",
+      "label": "DatabaseManager",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "sqlite.ts",
+      "file_type": "code",
+      "norm_label": "databasemanager",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L7"
+    },
+    {
       "id": "mobile_src_database_repositories_devicerepository_devicerepository_getallnearby",
       "label": ".getAllNearby()",
       "_callable": true,
@@ -662,42 +662,6 @@
       "norm_label": ".upsertdevice()",
       "source_file": "mobile/src/database/repositories/deviceRepository.ts",
       "source_location": "L11"
-    },
-    {
-      "id": "mobile_src_database_sqlite_databasemanager_getmocktable",
-      "label": ".getMockTable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": ".getmocktable()",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L33"
-    },
-    {
-      "id": "mobile_src_database_sqlite_databasemanager_initialize",
-      "label": ".initialize()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": ".initialize()",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L19"
-    },
-    {
-      "id": "mobile_src_database_sqlite_databasemanager_setmocktable",
-      "label": ".setMockTable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": ".setmocktable()",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L40"
     },
     {
       "id": "mobile_android_app_src_main_java_org_rakshanet_nativemodules_bluetoothmodule_bluetoothmodule_broadcastpacket",
@@ -928,30 +892,6 @@
       "source_location": "L7"
     },
     {
-      "id": "mobile_src_services_permissions_permissionservice_permissionservice_checknearbydevicespermission",
-      "label": ".checkNearbyDevicesPermission()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "permissionService.ts",
-      "file_type": "code",
-      "norm_label": ".checknearbydevicespermission()",
-      "source_file": "mobile/src/services/permissions/permissionService.ts",
-      "source_location": "L59"
-    },
-    {
-      "id": "mobile_src_services_permissions_permissionservice_permissionservice_requestnearbydevicespermission",
-      "label": ".requestNearbyDevicesPermission()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "permissionService.ts",
-      "file_type": "code",
-      "norm_label": ".requestnearbydevicespermission()",
-      "source_file": "mobile/src/services/permissions/permissionService.ts",
-      "source_location": "L15"
-    },
-    {
       "id": "mobile_src_app_navigation_maintabnavigator_maintabnavigator",
       "label": "MainTabNavigator()",
       "_callable": true,
@@ -1142,6 +1082,30 @@
       "norm_label": "settingsscreen()",
       "source_file": "mobile/src/screens/settings/SettingsScreen.tsx",
       "source_location": "L9"
+    },
+    {
+      "id": "mobile_src_services_permissions_permissionservice_permissionservice_checknearbydevicespermission",
+      "label": ".checkNearbyDevicesPermission()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": ".checknearbydevicespermission()",
+      "source_file": "mobile/src/services/permissions/permissionService.ts",
+      "source_location": "L59"
+    },
+    {
+      "id": "mobile_src_services_permissions_permissionservice_permissionservice_requestnearbydevicespermission",
+      "label": ".requestNearbyDevicesPermission()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": ".requestnearbydevicespermission()",
+      "source_file": "mobile/src/services/permissions/permissionService.ts",
+      "source_location": "L15"
     },
     {
       "id": "mobile_src_theme_index_usetheme",
@@ -1424,8 +1388,8 @@
       "label": "App()",
       "_callable": true,
       "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
+      "community": 53,
+      "community_name": "App.tsx",
       "file_type": "code",
       "norm_label": "app()",
       "source_file": "mobile/App.tsx",
@@ -1436,12 +1400,48 @@
       "label": "RootNavigator()",
       "_callable": true,
       "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
+      "community": 53,
+      "community_name": "App.tsx",
       "file_type": "code",
       "norm_label": "rootnavigator()",
       "source_file": "mobile/src/app/navigation/RootNavigator.tsx",
       "source_location": "L12"
+    },
+    {
+      "id": "mobile_src_database_sqlite_databasemanager_getmocktable",
+      "label": ".getMockTable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "sqlite.ts",
+      "file_type": "code",
+      "norm_label": ".getmocktable()",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L33"
+    },
+    {
+      "id": "mobile_src_database_sqlite_databasemanager_initialize",
+      "label": ".initialize()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "sqlite.ts",
+      "file_type": "code",
+      "norm_label": ".initialize()",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L19"
+    },
+    {
+      "id": "mobile_src_database_sqlite_databasemanager_setmocktable",
+      "label": ".setMockTable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "sqlite.ts",
+      "file_type": "code",
+      "norm_label": ".setmocktable()",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L40"
     },
     {
       "id": "docs_features_10_store_and_forward_delay_tolerant_networking",
@@ -2284,40 +2284,40 @@
       "source_location": "L7"
     },
     {
-      "id": "readme_1_generate_high_resolution_analytical_figures",
-      "label": "1. Generate High-Resolution Analytical Figures",
+      "id": "readme_1_launch_the_interactive_mobile_client_mesh_simulator_edge_browser",
+      "label": "1. Launch the Interactive Mobile Client & Mesh Simulator (Edge Browser)",
       "_origin": "ast",
       "community": 10,
       "community_name": "\u25b6\ufe0f Running the Project",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "1. generate high-resolution analytical figures",
+      "norm_label": "1. launch the interactive mobile client & mesh simulator (edge browser)",
       "source_file": "README.md",
-      "source_location": "L428"
+      "source_location": "L426"
     },
     {
-      "id": "readme_2_compile_the_9_page_executive_pdf_white_paper",
-      "label": "2. Compile the 9-Page Executive PDF White Paper",
+      "id": "readme_2_inspect_the_interactive_knowledge_graph",
+      "label": "2. Inspect the Interactive Knowledge Graph",
       "_origin": "ast",
       "community": 10,
       "community_name": "\u25b6\ufe0f Running the Project",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "2. compile the 9-page executive pdf white paper",
-      "source_file": "README.md",
-      "source_location": "L435"
-    },
-    {
-      "id": "readme_3_query_or_update_the_codebase_knowledge_graph",
-      "label": "3. Query or Update the Codebase Knowledge Graph",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "\u25b6\ufe0f Running the Project",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "3. query or update the codebase knowledge graph",
+      "norm_label": "2. inspect the interactive knowledge graph",
       "source_file": "README.md",
       "source_location": "L442"
+    },
+    {
+      "id": "readme_3_query_the_codebase_knowledge_graph_via_cli",
+      "label": "3. Query the Codebase Knowledge Graph via CLI",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "\u25b6\ufe0f Running the Project",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "3. query the codebase knowledge graph via cli",
+      "source_file": "README.md",
+      "source_location": "L448"
     },
     {
       "id": "readme_running_the_project",
@@ -2329,7 +2329,7 @@
       "node_kind": "heading",
       "norm_label": "\u25b6\ufe0f running the project",
       "source_file": "README.md",
-      "source_location": "L426"
+      "source_location": "L424"
     },
     {
       "id": "mobile_src_components_devicecard",
@@ -2363,50 +2363,6 @@
       "norm_label": "devicerepository.ts",
       "source_file": "mobile/src/database/repositories/deviceRepository.ts",
       "source_location": "L1"
-    },
-    {
-      "id": "mobile_src_database_schema",
-      "label": "schema.ts",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": "schema.ts",
-      "source_file": "mobile/src/database/schema.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "mobile_src_database_schema_create_tables_sql",
-      "label": "CREATE_TABLES_SQL",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": "create_tables_sql",
-      "source_file": "mobile/src/database/schema.ts",
-      "source_location": "L6"
-    },
-    {
-      "id": "mobile_src_database_sqlite",
-      "label": "sqlite.ts",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": "sqlite.ts",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "mobile_src_database_sqlite_dbmanager",
-      "label": "dbManager",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "networkStore.ts",
-      "file_type": "code",
-      "norm_label": "dbmanager",
-      "source_file": "mobile/src/database/sqlite.ts",
-      "source_location": "L45"
     },
     {
       "id": "mobile_src_store_networkstore",
@@ -2523,7 +2479,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\ude4f acknowledgements",
       "source_file": "README.md",
-      "source_location": "L596"
+      "source_location": "L602"
     },
     {
       "id": "readme_ai_ml_architecture",
@@ -2535,7 +2491,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83e\udd16 ai / ml architecture",
       "source_file": "README.md",
-      "source_location": "L508"
+      "source_location": "L513"
     },
     {
       "id": "readme_documentation_links",
@@ -2547,7 +2503,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\udd17 documentation links",
       "source_file": "README.md",
-      "source_location": "L536"
+      "source_location": "L541"
     },
     {
       "id": "readme_environment_variables",
@@ -2559,7 +2515,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\udd10 environment variables",
       "source_file": "README.md",
-      "source_location": "L454"
+      "source_location": "L459"
     },
     {
       "id": "readme_license",
@@ -2571,7 +2527,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\udcc4 license",
       "source_file": "README.md",
-      "source_location": "L590"
+      "source_location": "L596"
     },
     {
       "id": "readme_overview",
@@ -2595,7 +2551,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\udccb project status",
       "source_file": "README.md",
-      "source_location": "L573"
+      "source_location": "L579"
     },
     {
       "id": "readme_project_structure",
@@ -2643,7 +2599,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\udd12 security & privacy",
       "source_file": "README.md",
-      "source_location": "L527"
+      "source_location": "L532"
     },
     {
       "id": "readme_solution",
@@ -4463,7 +4419,7 @@
       "file_type": "code",
       "norm_label": "dependencies",
       "source_file": "mobile/package.json",
-      "source_location": "L12"
+      "source_location": "L14"
     },
     {
       "id": "mobile_package_dependencies_lucide_react_native",
@@ -4474,7 +4430,7 @@
       "file_type": "code",
       "norm_label": "lucide-react-native",
       "source_file": "mobile/package.json",
-      "source_location": "L16"
+      "source_location": "L18"
     },
     {
       "id": "mobile_package_dependencies_react",
@@ -4485,7 +4441,7 @@
       "file_type": "code",
       "norm_label": "react",
       "source_file": "mobile/package.json",
-      "source_location": "L17"
+      "source_location": "L19"
     },
     {
       "id": "mobile_package_dependencies_react_native",
@@ -4496,7 +4452,7 @@
       "file_type": "code",
       "norm_label": "react-native",
       "source_file": "mobile/package.json",
-      "source_location": "L18"
+      "source_location": "L20"
     },
     {
       "id": "mobile_package_dependencies_react_native_gesture_handler",
@@ -4507,7 +4463,7 @@
       "file_type": "code",
       "norm_label": "react-native-gesture-handler",
       "source_file": "mobile/package.json",
-      "source_location": "L19"
+      "source_location": "L21"
     },
     {
       "id": "mobile_package_dependencies_react_native_reanimated",
@@ -4518,7 +4474,7 @@
       "file_type": "code",
       "norm_label": "react-native-reanimated",
       "source_file": "mobile/package.json",
-      "source_location": "L20"
+      "source_location": "L22"
     },
     {
       "id": "mobile_package_dependencies_react_native_safe_area_context",
@@ -4529,7 +4485,7 @@
       "file_type": "code",
       "norm_label": "react-native-safe-area-context",
       "source_file": "mobile/package.json",
-      "source_location": "L21"
+      "source_location": "L23"
     },
     {
       "id": "mobile_package_dependencies_react_native_screens",
@@ -4540,7 +4496,7 @@
       "file_type": "code",
       "norm_label": "react-native-screens",
       "source_file": "mobile/package.json",
-      "source_location": "L22"
+      "source_location": "L24"
     },
     {
       "id": "mobile_package_dependencies_react_native_svg",
@@ -4551,7 +4507,7 @@
       "file_type": "code",
       "norm_label": "react-native-svg",
       "source_file": "mobile/package.json",
-      "source_location": "L23"
+      "source_location": "L25"
     },
     {
       "id": "mobile_package_dependencies_react_navigation_bottom_tabs",
@@ -4562,7 +4518,7 @@
       "file_type": "code",
       "norm_label": "@react-navigation/bottom-tabs",
       "source_file": "mobile/package.json",
-      "source_location": "L13"
+      "source_location": "L15"
     },
     {
       "id": "mobile_package_dependencies_react_navigation_native",
@@ -4573,7 +4529,7 @@
       "file_type": "code",
       "norm_label": "@react-navigation/native",
       "source_file": "mobile/package.json",
-      "source_location": "L14"
+      "source_location": "L16"
     },
     {
       "id": "mobile_package_dependencies_react_navigation_native_stack",
@@ -4584,7 +4540,7 @@
       "file_type": "code",
       "norm_label": "@react-navigation/native-stack",
       "source_file": "mobile/package.json",
-      "source_location": "L15"
+      "source_location": "L17"
     },
     {
       "id": "mobile_package_dependencies_zustand",
@@ -4595,7 +4551,7 @@
       "file_type": "code",
       "norm_label": "zustand",
       "source_file": "mobile/package.json",
-      "source_location": "L24"
+      "source_location": "L26"
     },
     {
       "id": "mobile_tsconfig",
@@ -5369,15 +5325,136 @@
       "source_location": "L98"
     },
     {
-      "id": "mobile_src_services_permissions_permissionservice",
-      "label": "permissionService.ts",
+      "id": "package",
+      "label": "package.json",
       "_origin": "ast",
       "community": 33,
-      "community_name": "permissionService.ts",
+      "community_name": "package.json",
       "file_type": "code",
-      "norm_label": "permissionservice.ts",
-      "source_file": "mobile/src/services/permissions/permissionService.ts",
+      "norm_label": "package.json",
+      "source_file": "package.json",
       "source_location": "L1"
+    },
+    {
+      "id": "package_author",
+      "label": "author",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "author",
+      "source_file": "package.json",
+      "source_location": "L18"
+    },
+    {
+      "id": "package_description",
+      "label": "description",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "description",
+      "source_file": "package.json",
+      "source_location": "L4"
+    },
+    {
+      "id": "package_keywords",
+      "label": "keywords",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "keywords",
+      "source_file": "package.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "package_license",
+      "label": "license",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "license",
+      "source_file": "package.json",
+      "source_location": "L19"
+    },
+    {
+      "id": "package_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "package.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "package_name",
+      "label": "name",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "name",
+      "source_file": "package.json",
+      "source_location": "L2"
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "scripts",
+      "source_file": "package.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "package_scripts_dev",
+      "label": "dev",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "dev",
+      "source_file": "package.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "package_scripts_preview",
+      "label": "preview",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "preview",
+      "source_file": "package.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "package_scripts_start",
+      "label": "start",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "start",
+      "source_file": "package.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "package_version",
+      "label": "version",
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "package.json",
+      "file_type": "code",
+      "norm_label": "version",
+      "source_file": "package.json",
+      "source_location": "L3"
     },
     {
       "id": "readme_1_clone_the_repository",
@@ -5389,7 +5466,7 @@
       "node_kind": "heading",
       "norm_label": "1. clone the repository",
       "source_file": "README.md",
-      "source_location": "L397"
+      "source_location": "L395"
     },
     {
       "id": "readme_2_set_up_a_virtual_environment_recommended",
@@ -5401,7 +5478,7 @@
       "node_kind": "heading",
       "norm_label": "2. set up a virtual environment (recommended)",
       "source_file": "README.md",
-      "source_location": "L405"
+      "source_location": "L403"
     },
     {
       "id": "readme_3_install_document_chart_dependencies",
@@ -5413,7 +5490,7 @@
       "node_kind": "heading",
       "norm_label": "3. install document & chart dependencies",
       "source_file": "README.md",
-      "source_location": "L414"
+      "source_location": "L412"
     },
     {
       "id": "readme_installation_reproduction",
@@ -5425,7 +5502,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\ude80 installation & reproduction",
       "source_file": "README.md",
-      "source_location": "L395"
+      "source_location": "L393"
     },
     {
       "id": "readme_completed_x",
@@ -5437,7 +5514,7 @@
       "node_kind": "heading",
       "norm_label": "completed `[x]`",
       "source_file": "README.md",
-      "source_location": "L549"
+      "source_location": "L554"
     },
     {
       "id": "readme_in_progress",
@@ -5449,7 +5526,7 @@
       "node_kind": "heading",
       "norm_label": "in progress `[~]`",
       "source_file": "README.md",
-      "source_location": "L560"
+      "source_location": "L566"
     },
     {
       "id": "readme_planned",
@@ -5461,7 +5538,7 @@
       "node_kind": "heading",
       "norm_label": "planned `[ ]`",
       "source_file": "README.md",
-      "source_location": "L564"
+      "source_location": "L570"
     },
     {
       "id": "readme_roadmap",
@@ -5473,7 +5550,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\uddfa\ufe0f roadmap",
       "source_file": "README.md",
-      "source_location": "L547"
+      "source_location": "L552"
     },
     {
       "id": "readme_ground_truth_evidence_nepal_tibet_glacier_collapse_floods_26_august_2026",
@@ -5533,7 +5610,7 @@
       "node_kind": "heading",
       "norm_label": "1. on-device sqlite local outbox (`design.md`)",
       "source_file": "README.md",
-      "source_location": "L468"
+      "source_location": "L473"
     },
     {
       "id": "readme_2_cloud_postgis_incident_schema_docs_features_md",
@@ -5545,7 +5622,7 @@
       "node_kind": "heading",
       "norm_label": "2. cloud postgis incident schema (`docs/features.md`)",
       "source_file": "README.md",
-      "source_location": "L488"
+      "source_location": "L493"
     },
     {
       "id": "readme_database_models_specified_architecture",
@@ -5557,7 +5634,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\uddc4\ufe0f database models (specified architecture)",
       "source_file": "README.md",
-      "source_location": "L466"
+      "source_location": "L471"
     },
     {
       "id": "readme_actual_technologies_implemented_verified_in_repository",
@@ -5962,6 +6039,17 @@
       "source_location": "L122"
     },
     {
+      "id": "mobile_src_services_permissions_permissionservice",
+      "label": "permissionService.ts",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "permissionservice.ts",
+      "source_file": "mobile/src/services/permissions/permissionService.ts",
+      "source_location": "L1"
+    },
+    {
       "id": "mobile_src_store_chatstore_usechatstore",
       "label": "useChatStore",
       "_origin": "ast",
@@ -6146,7 +6234,7 @@
       "file_type": "concept",
       "norm_label": "react",
       "source_file": "mobile/package.json",
-      "source_location": "L17"
+      "source_location": "L19"
     },
     {
       "id": "ref_react_native",
@@ -6157,7 +6245,7 @@
       "file_type": "concept",
       "norm_label": "react-native",
       "source_file": "mobile/package.json",
-      "source_location": "L18"
+      "source_location": "L20"
     },
     {
       "id": "design_9_core_components",
@@ -6181,7 +6269,7 @@
       "node_kind": "heading",
       "norm_label": "prerequisites for running dossier & analytics generators",
       "source_file": "README.md",
-      "source_location": "L376"
+      "source_location": "L374"
     },
     {
       "id": "readme_requirements",
@@ -6193,7 +6281,7 @@
       "node_kind": "heading",
       "norm_label": "\u2699\ufe0f requirements",
       "source_file": "README.md",
-      "source_location": "L374"
+      "source_location": "L372"
     },
     {
       "id": "mobile_src_database_repositories_chatrepository",
@@ -6260,6 +6348,380 @@
       "norm_label": "chat.ts",
       "source_file": "mobile/src/types/chat.ts",
       "source_location": "L1"
+    },
+    {
+      "id": "server",
+      "label": "server.js",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "server.js",
+      "file_type": "code",
+      "norm_label": "server.js",
+      "source_file": "server.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "server_exec",
+      "label": "{ exec }",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "server.js",
+      "file_type": "code",
+      "norm_label": "{ exec }",
+      "source_file": "server.js",
+      "source_location": "L4"
+    },
+    {
+      "id": "server_fs",
+      "label": "fs",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "server.js",
+      "file_type": "code",
+      "norm_label": "fs",
+      "source_file": "server.js",
+      "source_location": "L2"
+    },
+    {
+      "id": "server_http",
+      "label": "http",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "server.js",
+      "file_type": "code",
+      "norm_label": "http",
+      "source_file": "server.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "server_mime_types",
+      "label": "MIME_TYPES",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "server.js",
+      "file_type": "code",
+      "norm_label": "mime_types",
+      "source_file": "server.js",
+      "source_location": "L10"
+    },
+    {
+      "id": "server_mobile_dir",
+      "label": "MOBILE_DIR",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "server.js",
+      "file_type": "code",
+      "norm_label": "mobile_dir",
+      "source_file": "server.js",
+      "source_location": "L8"
+    },
+    {
+      "id": "server_path",
+      "label": "path",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "server.js",
+      "file_type": "code",
+      "norm_label": "path",
+      "source_file": "server.js",
+      "source_location": "L3"
+    },
+    {
+      "id": "server_server",
+      "label": "server",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "server.js",
+      "file_type": "code",
+      "norm_label": "server",
+      "source_file": "server.js",
+      "source_location": "L23"
+    },
+    {
+      "id": "mobile_app_displayname",
+      "label": "displayName",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "App.tsx",
+      "file_type": "code",
+      "norm_label": "displayname",
+      "source_file": "mobile/app.json",
+      "source_location": "L3"
+    },
+    {
+      "id": "mobile_app_json_mobile_app",
+      "label": "app.json",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "App.tsx",
+      "file_type": "code",
+      "norm_label": "app.json",
+      "source_file": "mobile/app.json",
+      "source_location": "L1"
+    },
+    {
+      "id": "mobile_app_name",
+      "label": "name",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "App.tsx",
+      "file_type": "code",
+      "norm_label": "name",
+      "source_file": "mobile/app.json",
+      "source_location": "L2"
+    },
+    {
+      "id": "mobile_app_tsx_mobile_app",
+      "label": "App.tsx",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "App.tsx",
+      "file_type": "code",
+      "norm_label": "app.tsx",
+      "source_file": "mobile/App.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "mobile_index",
+      "label": "index.js",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "App.tsx",
+      "file_type": "code",
+      "norm_label": "index.js",
+      "source_file": "mobile/index.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "ref_react_native_safe_area_context",
+      "label": "react-native-safe-area-context",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "App.tsx",
+      "file_type": "concept",
+      "norm_label": "react-native-safe-area-context",
+      "source_file": "mobile/package.json",
+      "source_location": "L23"
+    },
+    {
+      "id": "ref_react_navigation_native",
+      "label": "@react-navigation/native",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "App.tsx",
+      "file_type": "concept",
+      "norm_label": "@react-navigation/native",
+      "source_file": "mobile/package.json",
+      "source_location": "L16"
+    },
+    {
+      "id": "mobile_package_scripts",
+      "label": "scripts",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "scripts",
+      "source_file": "mobile/package.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "mobile_package_scripts_android",
+      "label": "android",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "android",
+      "source_file": "mobile/package.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "mobile_package_scripts_dev",
+      "label": "dev",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "dev",
+      "source_file": "mobile/package.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "mobile_package_scripts_ios",
+      "label": "ios",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "ios",
+      "source_file": "mobile/package.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "mobile_package_scripts_lint",
+      "label": "lint",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "lint",
+      "source_file": "mobile/package.json",
+      "source_location": "L12"
+    },
+    {
+      "id": "mobile_package_scripts_preview",
+      "label": "preview",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "preview",
+      "source_file": "mobile/package.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "mobile_package_scripts_start",
+      "label": "start",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "start",
+      "source_file": "mobile/package.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "mobile_package_scripts_test",
+      "label": "test",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "test",
+      "source_file": "mobile/package.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "mobile_src_database_schema",
+      "label": "schema.ts",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "sqlite.ts",
+      "file_type": "code",
+      "norm_label": "schema.ts",
+      "source_file": "mobile/src/database/schema.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "mobile_src_database_schema_create_tables_sql",
+      "label": "CREATE_TABLES_SQL",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "sqlite.ts",
+      "file_type": "code",
+      "norm_label": "create_tables_sql",
+      "source_file": "mobile/src/database/schema.ts",
+      "source_location": "L6"
+    },
+    {
+      "id": "mobile_src_database_sqlite",
+      "label": "sqlite.ts",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "sqlite.ts",
+      "file_type": "code",
+      "norm_label": "sqlite.ts",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "mobile_src_database_sqlite_dbmanager",
+      "label": "dbManager",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "sqlite.ts",
+      "file_type": "code",
+      "norm_label": "dbmanager",
+      "source_file": "mobile/src/database/sqlite.ts",
+      "source_location": "L45"
+    },
+    {
+      "id": "mobile_package_devdependencies",
+      "label": "devDependencies",
+      "_origin": "ast",
+      "community": 56,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "devdependencies",
+      "source_file": "mobile/package.json",
+      "source_location": "L28"
+    },
+    {
+      "id": "mobile_package_devdependencies_babel_core",
+      "label": "@babel/core",
+      "_origin": "ast",
+      "community": 56,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@babel/core",
+      "source_file": "mobile/package.json",
+      "source_location": "L29"
+    },
+    {
+      "id": "mobile_package_devdependencies_babel_preset_env",
+      "label": "@babel/preset-env",
+      "_origin": "ast",
+      "community": 56,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@babel/preset-env",
+      "source_file": "mobile/package.json",
+      "source_location": "L30"
+    },
+    {
+      "id": "mobile_package_devdependencies_babel_runtime",
+      "label": "@babel/runtime",
+      "_origin": "ast",
+      "community": 56,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@babel/runtime",
+      "source_file": "mobile/package.json",
+      "source_location": "L31"
+    },
+    {
+      "id": "mobile_package_devdependencies_types_react",
+      "label": "@types/react",
+      "_origin": "ast",
+      "community": 56,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@types/react",
+      "source_file": "mobile/package.json",
+      "source_location": "L32"
+    },
+    {
+      "id": "mobile_package_devdependencies_types_react_native",
+      "label": "@types/react-native",
+      "_origin": "ast",
+      "community": 56,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@types/react-native",
+      "source_file": "mobile/package.json",
+      "source_location": "L33"
+    },
+    {
+      "id": "mobile_package_devdependencies_typescript",
+      "label": "typescript",
+      "_origin": "ast",
+      "community": 56,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "typescript",
+      "source_file": "mobile/package.json",
+      "source_location": "L34"
     },
     {
       "id": "agents_skills_graphify_references_exports",
@@ -6547,154 +7009,22 @@
       "source_location": "L11"
     },
     {
-      "id": "mobile_app_displayname",
-      "label": "displayName",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "displayname",
-      "source_file": "mobile/app.json",
-      "source_location": "L3"
-    },
-    {
-      "id": "mobile_app_json_mobile_app",
-      "label": "app.json",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "app.json",
-      "source_file": "mobile/app.json",
-      "source_location": "L1"
-    },
-    {
-      "id": "mobile_app_name",
-      "label": "name",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "name",
-      "source_file": "mobile/app.json",
-      "source_location": "L2"
-    },
-    {
-      "id": "mobile_app_tsx_mobile_app",
-      "label": "App.tsx",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "app.tsx",
-      "source_file": "mobile/App.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "mobile_index",
-      "label": "index.js",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "index.js",
-      "source_file": "mobile/index.js",
-      "source_location": "L1"
-    },
-    {
       "id": "mobile_package",
-      "label": "package.json",
+      "label": "mobile/package.json",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "code",
-      "norm_label": "package.json",
+      "norm_label": "mobile/package.json",
       "source_file": "mobile/package.json",
       "source_location": "L1"
-    },
-    {
-      "id": "mobile_package_devdependencies",
-      "label": "devDependencies",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "devdependencies",
-      "source_file": "mobile/package.json",
-      "source_location": "L26"
-    },
-    {
-      "id": "mobile_package_devdependencies_babel_core",
-      "label": "@babel/core",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@babel/core",
-      "source_file": "mobile/package.json",
-      "source_location": "L27"
-    },
-    {
-      "id": "mobile_package_devdependencies_babel_preset_env",
-      "label": "@babel/preset-env",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@babel/preset-env",
-      "source_file": "mobile/package.json",
-      "source_location": "L28"
-    },
-    {
-      "id": "mobile_package_devdependencies_babel_runtime",
-      "label": "@babel/runtime",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@babel/runtime",
-      "source_file": "mobile/package.json",
-      "source_location": "L29"
-    },
-    {
-      "id": "mobile_package_devdependencies_types_react",
-      "label": "@types/react",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@types/react",
-      "source_file": "mobile/package.json",
-      "source_location": "L30"
-    },
-    {
-      "id": "mobile_package_devdependencies_types_react_native",
-      "label": "@types/react-native",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@types/react-native",
-      "source_file": "mobile/package.json",
-      "source_location": "L31"
-    },
-    {
-      "id": "mobile_package_devdependencies_typescript",
-      "label": "typescript",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "typescript",
-      "source_file": "mobile/package.json",
-      "source_location": "L32"
     },
     {
       "id": "mobile_package_name",
       "label": "name",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "code",
       "norm_label": "name",
       "source_file": "mobile/package.json",
@@ -6705,84 +7035,18 @@
       "label": "private",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "code",
       "norm_label": "private",
       "source_file": "mobile/package.json",
       "source_location": "L4"
     },
     {
-      "id": "mobile_package_scripts",
-      "label": "scripts",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "scripts",
-      "source_file": "mobile/package.json",
-      "source_location": "L5"
-    },
-    {
-      "id": "mobile_package_scripts_android",
-      "label": "android",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "android",
-      "source_file": "mobile/package.json",
-      "source_location": "L6"
-    },
-    {
-      "id": "mobile_package_scripts_ios",
-      "label": "ios",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "ios",
-      "source_file": "mobile/package.json",
-      "source_location": "L7"
-    },
-    {
-      "id": "mobile_package_scripts_lint",
-      "label": "lint",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "lint",
-      "source_file": "mobile/package.json",
-      "source_location": "L10"
-    },
-    {
-      "id": "mobile_package_scripts_start",
-      "label": "start",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "start",
-      "source_file": "mobile/package.json",
-      "source_location": "L8"
-    },
-    {
-      "id": "mobile_package_scripts_test",
-      "label": "test",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "test",
-      "source_file": "mobile/package.json",
-      "source_location": "L9"
-    },
-    {
       "id": "mobile_package_version",
       "label": "version",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "code",
       "norm_label": "version",
       "source_file": "mobile/package.json",
@@ -6793,176 +7057,154 @@
       "label": "@babel/core",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "@babel/core",
       "source_file": "mobile/package.json",
-      "source_location": "L27"
+      "source_location": "L29"
     },
     {
       "id": "ref_babel_preset_env",
       "label": "@babel/preset-env",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "@babel/preset-env",
       "source_file": "mobile/package.json",
-      "source_location": "L28"
+      "source_location": "L30"
     },
     {
       "id": "ref_babel_runtime",
       "label": "@babel/runtime",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "@babel/runtime",
       "source_file": "mobile/package.json",
-      "source_location": "L29"
+      "source_location": "L31"
     },
     {
       "id": "ref_lucide_react_native",
       "label": "lucide-react-native",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "lucide-react-native",
       "source_file": "mobile/package.json",
-      "source_location": "L16"
+      "source_location": "L18"
     },
     {
       "id": "ref_react_native_gesture_handler",
       "label": "react-native-gesture-handler",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "react-native-gesture-handler",
       "source_file": "mobile/package.json",
-      "source_location": "L19"
+      "source_location": "L21"
     },
     {
       "id": "ref_react_native_reanimated",
       "label": "react-native-reanimated",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "react-native-reanimated",
       "source_file": "mobile/package.json",
-      "source_location": "L20"
-    },
-    {
-      "id": "ref_react_native_safe_area_context",
-      "label": "react-native-safe-area-context",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "concept",
-      "norm_label": "react-native-safe-area-context",
-      "source_file": "mobile/package.json",
-      "source_location": "L21"
+      "source_location": "L22"
     },
     {
       "id": "ref_react_native_screens",
       "label": "react-native-screens",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "react-native-screens",
       "source_file": "mobile/package.json",
-      "source_location": "L22"
+      "source_location": "L24"
     },
     {
       "id": "ref_react_native_svg",
       "label": "react-native-svg",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "react-native-svg",
       "source_file": "mobile/package.json",
-      "source_location": "L23"
+      "source_location": "L25"
     },
     {
       "id": "ref_react_navigation_bottom_tabs",
       "label": "@react-navigation/bottom-tabs",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "@react-navigation/bottom-tabs",
       "source_file": "mobile/package.json",
-      "source_location": "L13"
-    },
-    {
-      "id": "ref_react_navigation_native",
-      "label": "@react-navigation/native",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "package.json",
-      "file_type": "concept",
-      "norm_label": "@react-navigation/native",
-      "source_file": "mobile/package.json",
-      "source_location": "L14"
+      "source_location": "L15"
     },
     {
       "id": "ref_react_navigation_native_stack",
       "label": "@react-navigation/native-stack",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "@react-navigation/native-stack",
       "source_file": "mobile/package.json",
-      "source_location": "L15"
+      "source_location": "L17"
     },
     {
       "id": "ref_types_react",
       "label": "@types/react",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "@types/react",
       "source_file": "mobile/package.json",
-      "source_location": "L30"
+      "source_location": "L32"
     },
     {
       "id": "ref_types_react_native",
       "label": "@types/react-native",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "@types/react-native",
       "source_file": "mobile/package.json",
-      "source_location": "L31"
+      "source_location": "L33"
     },
     {
       "id": "ref_typescript",
       "label": "typescript",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "typescript",
       "source_file": "mobile/package.json",
-      "source_location": "L32"
+      "source_location": "L34"
     },
     {
       "id": "ref_zustand",
       "label": "zustand",
       "_origin": "ast",
       "community": 9,
-      "community_name": "package.json",
+      "community_name": "mobile/package.json",
       "file_type": "concept",
       "norm_label": "zustand",
       "source_file": "mobile/package.json",
-      "source_location": "L24"
+      "source_location": "L26"
     },
     {
       "id": "deviceeventmanagermodule",
@@ -7165,6 +7407,50 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "sys",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "ref_child_process",
+      "label": "ref_child_process",
+      "community": 52,
+      "community_name": "server.js",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "ref_child_process",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "ref_fs",
+      "label": "ref_fs",
+      "community": 52,
+      "community_name": "server.js",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "ref_fs",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "ref_http",
+      "label": "ref_http",
+      "community": 52,
+      "community_name": "server.js",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "ref_http",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "ref_path",
+      "label": "ref_path",
+      "community": 52,
+      "community_name": "server.js",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "ref_path",
       "source_file": "",
       "type": "external"
     }
@@ -8592,7 +8878,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L13",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -8604,7 +8890,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L14",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -8616,7 +8902,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L15",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -8628,7 +8914,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L16",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -8640,7 +8926,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L17",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -8652,7 +8938,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L18",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -8664,7 +8950,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L19",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -8676,7 +8962,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L20",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -8688,7 +8974,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L21",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -8700,7 +8986,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L22",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -8712,7 +8998,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L23",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -8724,7 +9010,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L24",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -8736,7 +9022,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L27",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -8748,7 +9034,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -8760,7 +9046,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L29",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -8772,7 +9058,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L30",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -8784,7 +9070,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L31",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -8796,7 +9082,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "mobile/package.json",
-      "source_location": "L32",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -11764,6 +12050,54 @@
       "weight": 1.0
     },
     {
+      "source": "server",
+      "target": "ref_http",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "server.js",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "ref_fs",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "server.js",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "ref_path",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "server.js",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "ref_child_process",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "server.js",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
       "source": "mobile_android_app_src_main_java_org_rakshanet_nativemodules_bluetoothmodule_bluetoothmodule_broadcastpacket",
       "target": "promise",
       "relation": "references",
@@ -14613,7 +14947,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L12",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -14635,7 +14969,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L26",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -14679,7 +15013,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L13",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -14690,7 +15024,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L14",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -14701,7 +15035,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L15",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -14712,7 +15046,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L16",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -14723,7 +15057,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L17",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -14734,7 +15068,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L18",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -14745,7 +15079,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L19",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -14756,7 +15090,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L20",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -14767,7 +15101,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L21",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -14778,7 +15112,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L22",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -14789,7 +15123,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L23",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -14800,7 +15134,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L24",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -14811,7 +15145,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L27",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -14822,7 +15156,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -14833,7 +15167,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L29",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -14844,7 +15178,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L30",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -14855,7 +15189,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L31",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -14866,40 +15200,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L32",
-      "weight": 1.0
-    },
-    {
-      "source": "mobile_package_scripts",
-      "target": "mobile_package_scripts_lint",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "mobile/package.json",
-      "source_location": "L10",
-      "weight": 1.0
-    },
-    {
-      "source": "mobile_package_scripts",
-      "target": "mobile_package_scripts_android",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "mobile/package.json",
-      "source_location": "L6",
-      "weight": 1.0
-    },
-    {
-      "source": "mobile_package_scripts",
-      "target": "mobile_package_scripts_ios",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "mobile/package.json",
-      "source_location": "L7",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -14910,12 +15211,67 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/package.json",
-      "source_location": "L8",
+      "source_location": "L10",
       "weight": 1.0
     },
     {
       "source": "mobile_package_scripts",
       "target": "mobile_package_scripts_test",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/package.json",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_package_scripts",
+      "target": "mobile_package_scripts_lint",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/package.json",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_package_scripts",
+      "target": "mobile_package_scripts_dev",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/package.json",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_package_scripts",
+      "target": "mobile_package_scripts_preview",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/package.json",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_package_scripts",
+      "target": "mobile_package_scripts_android",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/package.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_package_scripts",
+      "target": "mobile_package_scripts_ios",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -16157,6 +16513,127 @@
       "weight": 1.0
     },
     {
+      "source": "package",
+      "target": "package_keywords",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_author",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_license",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_name",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_version",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_description",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_main",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_scripts",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "package_scripts",
+      "target": "package_scripts_dev",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "package_scripts",
+      "target": "package_scripts_start",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "package_scripts",
+      "target": "package_scripts_preview",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "package.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
       "source": "readme",
       "target": "readme_rakshanet_signalrescue_ai",
       "relation": "contains",
@@ -16197,7 +16674,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L468",
+      "source_location": "L473",
       "weight": 1.0
     },
     {
@@ -16208,7 +16685,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L488",
+      "source_location": "L493",
       "weight": 1.0
     },
     {
@@ -16318,7 +16795,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L397",
+      "source_location": "L395",
       "weight": 1.0
     },
     {
@@ -16329,7 +16806,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L405",
+      "source_location": "L403",
       "weight": 1.0
     },
     {
@@ -16340,7 +16817,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L414",
+      "source_location": "L412",
       "weight": 1.0
     },
     {
@@ -16461,7 +16938,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L374",
+      "source_location": "L372",
       "weight": 1.0
     },
     {
@@ -16472,7 +16949,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L395",
+      "source_location": "L393",
       "weight": 1.0
     },
     {
@@ -16483,7 +16960,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L426",
+      "source_location": "L424",
       "weight": 1.0
     },
     {
@@ -16494,7 +16971,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L454",
+      "source_location": "L459",
       "weight": 1.0
     },
     {
@@ -16505,7 +16982,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L466",
+      "source_location": "L471",
       "weight": 1.0
     },
     {
@@ -16516,7 +16993,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L508",
+      "source_location": "L513",
       "weight": 1.0
     },
     {
@@ -16527,7 +17004,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L527",
+      "source_location": "L532",
       "weight": 1.0
     },
     {
@@ -16538,7 +17015,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L536",
+      "source_location": "L541",
       "weight": 1.0
     },
     {
@@ -16549,7 +17026,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L547",
+      "source_location": "L552",
       "weight": 1.0
     },
     {
@@ -16560,7 +17037,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L573",
+      "source_location": "L579",
       "weight": 1.0
     },
     {
@@ -16571,7 +17048,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L590",
+      "source_location": "L596",
       "weight": 1.0
     },
     {
@@ -16582,7 +17059,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L596",
+      "source_location": "L602",
       "weight": 1.0
     },
     {
@@ -16615,7 +17092,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L376",
+      "source_location": "L374",
       "weight": 1.0
     },
     {
@@ -16626,7 +17103,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L549",
+      "source_location": "L554",
       "weight": 1.0
     },
     {
@@ -16637,7 +17114,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L560",
+      "source_location": "L566",
       "weight": 1.0
     },
     {
@@ -16648,40 +17125,40 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L564",
+      "source_location": "L570",
       "weight": 1.0
     },
     {
       "source": "readme_running_the_project",
-      "target": "readme_1_generate_high_resolution_analytical_figures",
+      "target": "readme_1_launch_the_interactive_mobile_client_mesh_simulator_edge_browser",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L428",
+      "source_location": "L426",
       "weight": 1.0
     },
     {
       "source": "readme_running_the_project",
-      "target": "readme_2_compile_the_9_page_executive_pdf_white_paper",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "README.md",
-      "source_location": "L435",
-      "weight": 1.0
-    },
-    {
-      "source": "readme_running_the_project",
-      "target": "readme_3_query_or_update_the_codebase_knowledge_graph",
+      "target": "readme_2_inspect_the_interactive_knowledge_graph",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
       "source_location": "L442",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_running_the_project",
+      "target": "readme_3_query_the_codebase_knowledge_graph_via_cli",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L448",
       "weight": 1.0
     },
     {
@@ -16704,6 +17181,83 @@
       "confidence_score": 1.0,
       "source_file": "README.md",
       "source_location": "L292",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "server_http",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.js",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "server_mime_types",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.js",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "server_fs",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.js",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "server_server",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.js",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "server_path",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.js",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "server_exec",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.js",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "server",
+      "target": "server_mobile_dir",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.js",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -17286,7 +17840,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L539",
+      "source_location": "L544",
       "weight": 1.0
     },
     {
@@ -17297,7 +17851,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L540",
+      "source_location": "L545",
       "weight": 1.0
     },
     {
@@ -17308,7 +17862,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L541",
+      "source_location": "L546",
       "weight": 1.0
     },
     {
@@ -17319,7 +17873,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L542",
+      "source_location": "L547",
       "weight": 1.0
     },
     {
@@ -17384,5 +17938,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "69a2be8cd5e3a33fac74bdb01293e511ef552300"
+  "built_at_commit": "86b1df5e5d2627ae5be27bca7b8c7903abd42b79"
 }

@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1790932675.0987988,
-    "seen": 1790933042.9150667,
-    "ast_hash": "c7315b10aa437c38b221c0fa2fc663d6",
+    "mtime": 1790933171.8107681,
+    "seen": 1790933511.3542557,
+    "ast_hash": "14d3fe5025222b03c141a3984fa48599",
     "semantic_hash": ""
   },
   "design.md": {
@@ -216,9 +216,9 @@
     "semantic_hash": ""
   },
   "mobile/package.json": {
-    "mtime": 1790931968.4432404,
-    "seen": 1790932653.7275765,
-    "ast_hash": "c56ab298f952f15529a9e32fae750b7b",
+    "mtime": 1790933444.8007703,
+    "seen": 1790933511.3542557,
+    "ast_hash": "2f15ca84529204d446a002253e281670",
     "semantic_hash": ""
   },
   "mobile/src/app/navigation/MainTabNavigator.tsx": {
@@ -459,6 +459,18 @@
     "mtime": 1790933011.028466,
     "seen": 1790933042.9150667,
     "ast_hash": "a50608c7c2a26f5336c77b3a76e8136f",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1790933424.1846292,
+    "seen": 1790933511.3542557,
+    "ast_hash": "fcf7abef0bea275734fcda19097f8864",
+    "semantic_hash": ""
+  },
+  "server.js": {
+    "mtime": 1790933414.2925098,
+    "seen": 1790933511.3542557,
+    "ast_hash": "1c5ea67cc289e48060315fe713c5c095",
     "semantic_hash": ""
   }
 }

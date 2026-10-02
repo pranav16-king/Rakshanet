@@ -1,0 +1,20 @@
+{
+  "name": "rakshanet",
+  "version": "1.0.0",
+  "description": "Offline-first disaster communication, multi-hop mesh networking, and AI-driven rescue intelligence platform.",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "preview": "node server.js"
+  },
+  "keywords": [
+    "disaster-response",
+    "mesh-networking",
+    "offline-first",
+    "ble-mesh",
+    "dtn"
+  ],
+  "author": "",
+  "license": "UNLICENSED"
+}
