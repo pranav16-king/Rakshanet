@@ -1,17 +1,17 @@
 # Graph Report - RakshaNet  (2026-10-02)
 
 ## Corpus Check
-- 69 files · ~287,417 words
+- 67 files · ~284,764 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 1, .xml 1)
 
 ## Summary
-- 613 nodes · 912 edges · 32 communities (23 shown, 9 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.92)
+- 605 nodes · 889 edges · 52 communities (30 shown, 22 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1aa68bde`
+- Built from commit: `69a2be8c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -26,7 +26,7 @@
 - Frontend Design
 - SignalRescue Design System & UI Guidelines
 - package.json
-- generate_dossier_pdf.py
+- ▶️ Running the Project
 - networkStore.ts
 - graphify reference: query, path, explain
 - RakshaNet (SignalRescue AI)
@@ -42,11 +42,20 @@
 - BluetoothModule
 - MeshManager
 - SignalRescue AI (RakshaNet) — Phase 1 Implementation Plan
-- index.ts
+- dependencies
 - compilerOptions
 - profileStore.ts
 - metro.config.js
 - RakshaNet Mobile (SignalRescue AI) — Phase 1
+- ✨ Features
+- permissionService.ts
+- 🚀 Installation & Reproduction
+- 🗺️ Roadmap
+- 🎯 Problem Statement
+- 🗄️ Database Models (Specified Architecture)
+- 🛠️ Tech Stack
+- 🏆 Competitor Analysis & Market Moat
+- ⚙️ Requirements
 
 ## God Nodes (most connected - your core abstractions)
 1. `SignalRescue AI (RakshaNet) — Complete Feature Set` - 36 edges
@@ -67,15 +76,15 @@
   design.md → mobile/src/components/ChatBubble.tsx
 - `9. Core Components` --references--> `StatusStrip()`  [INFERRED]
   design.md → mobile/src/components/StatusStrip.tsx
-- `2. Compile the 9-Page Executive PDF White Paper` --references--> `NumberedCanvas`  [INFERRED]
-  README.md → generate_dossier_pdf.py
 - `BluetoothModule` --calls--> `MeshManager`  [INFERRED]
   mobile/android/app/src/main/java/org/rakshanet/nativemodules/BluetoothModule.kt → mobile/android/app/src/main/java/org/rakshanet/nativemodules/MeshManager.kt
+- `App()` --calls--> `useTheme()`  [EXTRACTED]
+  mobile/App.tsx → mobile/src/theme/index.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (32 total, 9 thin omitted)
+## Communities (52 total, 22 thin omitted)
 
 ### Community 0 - "SignalRescue AI (RakshaNet) — Complete Feature Set"
 Cohesion: 0.05
@@ -95,11 +104,11 @@ Nodes (26): For /graphify add and --watch, For /graphify query, For the commit h
 
 ### Community 4 - "useTheme"
 Cohesion: 0.07
-Nodes (53): 9. Core Components, App(), displayName, name, MainTabNavigator(), Tab, RootNavigator(), Stack (+45 more)
+Nodes (60): 9. Core Components, MainTabNavigator(), Tab, Stack, Card(), Props, styles, ChatBubble() (+52 more)
 
 ### Community 5 - "chat.ts"
 Cohesion: 0.09
-Nodes (17): Props, styles, chatRepository, bluetoothService, DeviceDiscoveredCallback, PacketReceivedCallback, chatService, meshService (+9 more)
+Nodes (16): Props, chatRepository, bluetoothService, DeviceDiscoveredCallback, PacketReceivedCallback, chatService, meshService, ChatStoreState (+8 more)
 
 ### Community 6 - "graphify reference: extra exports and benchmark"
 Cohesion: 0.22
@@ -114,15 +123,15 @@ Cohesion: 0.29
 Nodes (6): Always, Component recipe (React Native example), Never, Screen checklist, SignalRescue Design System & UI Guidelines, When to apply
 
 ### Community 9 - "package.json"
-Cohesion: 0.04
-Nodes (44): dependencies, lucide-react-native, react, react-native, react-native-gesture-handler, react-native-reanimated, react-native-safe-area-context, react-native-screens (+36 more)
+Cohesion: 0.06
+Nodes (36): App(), displayName, name, devDependencies, @babel/core, @babel/preset-env, @babel/runtime, @types/react (+28 more)
 
-### Community 10 - "generate_dossier_pdf.py"
-Cohesion: 0.09
-Nodes (5): NumberedCanvas, 1. Generate High-Resolution Analytical Figures, 2. Compile the 9-Page Executive PDF White Paper, 3. Query or Update the Codebase Knowledge Graph, ▶️ Running the Project
+### Community 10 - "▶️ Running the Project"
+Cohesion: 0.50
+Nodes (4): 1. Generate High-Resolution Analytical Figures, 2. Compile the 9-Page Executive PDF White Paper, 3. Query or Update the Codebase Knowledge Graph, ▶️ Running the Project
 
 ### Community 11 - "networkStore.ts"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (12): Props, styles, deviceRepository, CREATE_TABLES_SQL, DatabaseManager, dbManager, NetworkStoreState, ConnectionType (+4 more)
 
 ### Community 12 - "graphify reference: query, path, explain"
@@ -130,8 +139,8 @@ Cohesion: 0.33
 Nodes (5): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
 
 ### Community 13 - "RakshaNet (SignalRescue AI)"
-Cohesion: 0.04
-Nodes (46): 1. Clone the Repository, 1. Core Offline Communications & Mesh Protocol, 1. On-Device SQLite Local Outbox (`design.md`), 2. Cloud PostGIS Incident Schema (`docs/features.md`), 2. Delay-Tolerant Networking & Protocol Security, 2. Set Up a Virtual Environment (Recommended), 3. Install Document & Chart Dependencies, 3. Localization & Geospatial Mapping (+38 more)
+Cohesion: 0.15
+Nodes (13): 🙏 Acknowledgements, 🤖 AI / ML Architecture, 🔗 Documentation Links, 🔐 Environment Variables, 📄 License, 📌 Overview, 📋 Project Status, 📂 Project Structure (+5 more)
 
 ### Community 14 - "RakshaNet (SignalRescue AI): Verified Competitor and Uniqueness Report"
 Cohesion: 0.05
@@ -153,9 +162,9 @@ Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphif
 Cohesion: 0.11
 Nodes (18): 10. Adaptive Battery Governance, 11. Multi-Device Verification Matrix (4 Phones), 1. Phase 1 Objective, 2. Technology Stack, 3. Native Android Layer Architecture, 4. Application Startup & Progressive Permissions, 5. Required Permissions (Android-First), 6. Local Anonymous Identity (+10 more)
 
-### Community 26 - "index.ts"
-Cohesion: 0.23
-Nodes (13): SettingsState, brand, dark, light, lowPower, radius, severity, size (+5 more)
+### Community 26 - "dependencies"
+Cohesion: 0.15
+Nodes (13): dependencies, lucide-react-native, react, react-native, react-native-gesture-handler, react-native-reanimated, react-native-safe-area-context, react-native-screens (+5 more)
 
 ### Community 27 - "compilerOptions"
 Cohesion: 0.12
@@ -169,25 +178,53 @@ Nodes (5): profileRepository, identityService, ProfileState, DeviceIdentity, Use
 Cohesion: 0.50
 Nodes (3): 🛠️ Key Implementation Guarantees, 📱 Phase 1 Scope & Architecture, RakshaNet Mobile (SignalRescue AI) — Phase 1
 
+### Community 32 - "✨ Features"
+Cohesion: 0.20
+Nodes (10): 1. Core Offline Communications & Mesh Protocol, 2. Delay-Tolerant Networking & Protocol Security, 3. Localization & Geospatial Mapping, 4. On-Device Edge & Cloud AI Intelligence, 5. Rescue Coordination & Command Center, 6. Civilian Modes & Community Resilience, 7. Implementation & Architecture in this Repository, 📱 Civilian Mobile Application Interface Suite (+2 more)
+
+### Community 34 - "🚀 Installation & Reproduction"
+Cohesion: 0.50
+Nodes (4): 1. Clone the Repository, 2. Set Up a Virtual Environment (Recommended), 3. Install Document & Chart Dependencies, 🚀 Installation & Reproduction
+
+### Community 35 - "🗺️ Roadmap"
+Cohesion: 0.50
+Nodes (4): Completed `[x]`, In Progress `[~]`, Planned `[ ]`, 🗺️ Roadmap
+
+### Community 36 - "🎯 Problem Statement"
+Cohesion: 0.50
+Nodes (4): Ground-Truth Evidence: Nepal–Tibet Glacier-Collapse Floods (26 August 2026), 🎯 Problem Statement, The Indian Context, The Real-World Crisis
+
+### Community 37 - "🗄️ Database Models (Specified Architecture)"
+Cohesion: 0.67
+Nodes (3): 1. On-Device SQLite Local Outbox (`design.md`), 2. Cloud PostGIS Incident Schema (`docs/features.md`), 🗄️ Database Models (Specified Architecture)
+
+### Community 38 - "🛠️ Tech Stack"
+Cohesion: 0.67
+Nodes (3): Actual Technologies Implemented & Verified in Repository, Specified Architecture for Implementation, 🛠️ Tech Stack
+
+### Community 39 - "🏆 Competitor Analysis & Market Moat"
+Cohesion: 0.67
+Nodes (3): 🏆 Competitor Analysis & Market Moat, Head-to-Head: RakshaNet vs. Crisis Connect, Reality Check: What is NOT Unique vs. The Real Moat
+
 ## Knowledge Gaps
-- **325 isolated node(s):** `displayName`, `{ getDefaultConfig, mergeConfig }`, `config`, `name`, `version` (+320 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 383 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **326 isolated node(s):** `displayName`, `{ getDefaultConfig, mergeConfig }`, `config`, `name`, `version` (+321 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 384 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **22 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `SignalRescue AI — design.md` connect `SignalRescue AI — design.md` to `useTheme`, `RakshaNet (SignalRescue AI): Verified Competitor and Uniqueness Report`?**
-  _High betweenness centrality (0.310) - this node is a cross-community bridge._
+  _High betweenness centrality (0.290) - this node is a cross-community bridge._
 - **Why does `9. Core Components` connect `useTheme` to `SignalRescue AI — design.md`?**
-  _High betweenness centrality (0.262) - this node is a cross-community bridge._
-- **Why does `RakshaNet (SignalRescue AI)` connect `RakshaNet (SignalRescue AI)` to `generate_dossier_pdf.py`, `RakshaNet (SignalRescue AI): Verified Competitor and Uniqueness Report`?**
-  _High betweenness centrality (0.147) - this node is a cross-community bridge._
+  _High betweenness centrality (0.246) - this node is a cross-community bridge._
 - **What connects `displayName`, `{ getDefaultConfig, mergeConfig }`, `config` to the rest of the system?**
-  _325 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _326 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `SignalRescue AI (RakshaNet) — Complete Feature Set` be split into smaller, more focused modules?**
   _Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected._
 - **Should `RakshaNet — Offline Disaster Communication and AI Rescue System` be split into smaller, more focused modules?**
   _Cohesion score 0.07407407407407407 - nodes in this community are weakly interconnected._
 - **Should `SignalRescue AI — design.md` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._
+- **Should `What You Must Do When Invoked` be split into smaller, more focused modules?**
+  _Cohesion score 0.07407407407407407 - nodes in this community are weakly interconnected._

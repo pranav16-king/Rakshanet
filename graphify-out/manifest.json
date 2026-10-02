@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1790926468.630075,
-    "seen": 1790926492.9734187,
-    "ast_hash": "26c9b93c274fffc3f8a09d6b2f735068",
+    "mtime": 1790932675.0987988,
+    "seen": 1790933042.9150667,
+    "ast_hash": "c7315b10aa437c38b221c0fa2fc663d6",
     "semantic_hash": ""
   },
   "design.md": {
@@ -119,22 +119,10 @@
     "ast_hash": "4b5f8fb7e5f35760de607963f98a86fe",
     "semantic_hash": ""
   },
-  "generate_charts.py": {
-    "mtime": 1790932631.527072,
-    "seen": 1790932653.7275765,
-    "ast_hash": "fc87c180aec3b359eea3d97d6f032b2d",
-    "semantic_hash": ""
-  },
-  "generate_dossier_pdf.py": {
-    "mtime": 1790932631.529295,
-    "seen": 1790932653.7275765,
-    "ast_hash": "fc473bfdd847a96f32421b25ec8da43e",
-    "semantic_hash": ""
-  },
   "RakshaNet_Comprehensive_System_Dossier.pdf": {
-    "mtime": 1790925025.9212155,
-    "seen": 1790925062.7351842,
-    "ast_hash": "ed5573313971ab3a64da7c5f65b06982",
+    "mtime": 1790932849.2644007,
+    "seen": 1790933042.9150667,
+    "ast_hash": "c054336b4ea2b364315e50e203fe9707",
     "semantic_hash": ""
   },
   "docs/RakshaNet_Comprehensive_System_Dossier.pdf": {
@@ -144,26 +132,26 @@
     "semantic_hash": ""
   },
   "docs/assets/figures/fig1_nepal_disaster_metrics.png": {
-    "mtime": 1790924507.916219,
-    "seen": 1790924644.5259502,
+    "mtime": 1790932838.0742874,
+    "seen": 1790933042.9150667,
     "ast_hash": "34a9572b853f73f920b40eceb384012f",
     "semantic_hash": ""
   },
   "docs/assets/figures/fig2_communication_gap_anomaly.png": {
-    "mtime": 1790924508.5400813,
-    "seen": 1790924644.5259502,
+    "mtime": 1790932838.5894487,
+    "seen": 1790933042.9150667,
     "ast_hash": "a774d0477cb64859f4dd40b54d2be7fd",
     "semantic_hash": ""
   },
   "docs/assets/figures/fig3_competitor_comparison_matrix.png": {
-    "mtime": 1790924509.2398348,
-    "seen": 1790924644.5259502,
+    "mtime": 1790932839.133202,
+    "seen": 1790933042.9150667,
     "ast_hash": "985e599b75f0fc43af53fd90fd887da1",
     "semantic_hash": ""
   },
   "docs/assets/figures/fig4_adoption_impact_model.png": {
-    "mtime": 1790924509.9595726,
-    "seen": 1790924644.5259502,
+    "mtime": 1790932839.5842707,
+    "seen": 1790933042.9150667,
     "ast_hash": "ac6c92397f239117674c83cef5b3296b",
     "semantic_hash": ""
   },
@@ -465,6 +453,12 @@
     "mtime": 1790932617.736857,
     "seen": 1790932653.7275765,
     "ast_hash": "0e33cf01b19108fcdab07044e22ccf9f",
+    "semantic_hash": ""
+  },
+  "mobile/preview.html": {
+    "mtime": 1790933011.028466,
+    "seen": 1790933042.9150667,
+    "ast_hash": "a50608c7c2a26f5336c77b3a76e8136f",
     "semantic_hash": ""
   }
 }

@@ -145,11 +145,11 @@ The system architecture defines **34 comprehensive features** across seven funct
 - `[~]` **32. Authoritative Emergency Broadcast:** Reverse-mesh capability allowing authorities to inject evacuation directives.
 
 ### 7. Implementation & Architecture in this Repository
-- `[x]` **Automated Technical Dossier Compiler:** Python script using ReportLab 5.0.1 compiling an executive 9-page white paper (`generate_dossier_pdf.py`).
-- `[x]` **High-Resolution Analytical Chart Generators:** Matplotlib 3.11.2 generator script producing 4 publication figures (`generate_charts.py`).
+- `[x]` **Interactive Mobile Client & Mesh Simulator:** Standalone runnable simulation (`mobile/preview.html`) featuring the complete Phase 1 hi-vis UI, save-before-send persistence, and 4-phone mesh relay testbench.
+- `[x]` **Executive Technical Dossier:** Publication-grade 9-page white paper PDF (`RakshaNet_Comprehensive_System_Dossier.pdf`) with empirical disaster metrics.
 - `[x]` **Production Design System & Token Engine:** Complete TypeScript design tokens, color scales, typography, component specs, and emergency rules (`design.md`).
 - `[x]` **13-Screen Hi-Vis Mobile Application UI Suite:** Complete mobile UX flow (`ui.png`) implementing high-stress emergency interaction guidelines.
-- `[x]` **Knowledge Graph & Architecture Engine:** Graphify v0.9.73 AST code intelligence graph with 27 communities and 304 nodes (`graphify-out/`).
+- `[x]` **Knowledge Graph & Architecture Engine:** Graphify v0.9.73 AST code intelligence graph with 52 communities and 605 nodes (`graphify-out/`).
 - `[x]` **Autonomous Antigravity Agent Skills:** Specialized skills and rules for UI styling, safety guardrails, and graph queries (`.agents/skills/`).
 
 ### 📱 Civilian Mobile Application Interface Suite
@@ -351,18 +351,16 @@ p:/RakshaNet/
 │   │   ├── store/                                # Reactive Zustand UI stores (Profile, Network, Chat, Settings)
 │   │   ├── theme/                                # Hi-vis beacon design system tokens & hooks
 │   │   └── types/                                # Strict TypeScript interfaces (Profile, Device, Chat, Network)
-│   ├── App.tsx                                   # Application root & SQLite initialization
+│   ├── preview.html                              # Interactive Multipage Web Runner & Mesh Simulator
 │   ├── package.json                              # React Native dependencies & scripts
 │   └── tsconfig.json                             # TypeScript compiler configuration
 ├── graphify-out/                                 # Persistent Knowledge Graph Engine (Graphify)
 │   ├── graph.html                                # Interactive D3 force-directed visual graph
-│   ├── graph.json                                # Machine-queryable knowledge graph (613 nodes, 32 communities)
+│   ├── graph.json                                # Machine-queryable knowledge graph (605 nodes, 52 communities)
 │   ├── GRAPH_REPORT.md                           # Graph architecture audit report
 │   └── manifest.json                             # File change tracking manifest
 ├── .gitignore                                    # Git ignore rules (caches, temp graphs)
 ├── design.md                                     # Production Design System & Tokens (TypeScript)
-├── generate_charts.py                            # Matplotlib script generating analytical figures
-├── generate_dossier_pdf.py                       # ReportLab script generating the 9-page PDF dossier
 ├── rakshanet_logo.png                            # Project identity logo asset
 ├── RakshaNet_Comprehensive_System_Dossier.pdf    # Master 9-Page Technical White Paper PDF
 ├── ui.png                                        # 13-Screen Mobile UI High-Fidelity Overview Mockup
@@ -425,27 +423,34 @@ pip install graphifyy networkx tree-sitter pypdf html2text
 
 ## ▶️ Running the Project
 
-### 1. Generate High-Resolution Analytical Figures
-Executes `generate_charts.py` to produce publication-grade PNG figures under `docs/assets/figures/`:
-```bash
-python generate_charts.py
-```
-*Output: Generates `fig1_nepal_disaster_metrics.png`, `fig2_communication_gap_anomaly.png`, `fig3_competitor_comparison_matrix.png`, and `fig4_adoption_impact_model.png`.*
+### 1. Launch the Interactive Mobile Client & Mesh Simulator (Edge Browser)
+Run the standalone mobile application and multi-hop delay-tolerant mesh testbench directly in Microsoft Edge or any modern web browser:
+```powershell
+# Open in Microsoft Edge:
+Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "P:\RakshaNet\mobile\preview.html"
 
-### 2. Compile the 9-Page Executive PDF White Paper
-Executes `generate_dossier_pdf.py` using ReportLab to compile the complete technical white paper:
-```bash
-python generate_dossier_pdf.py
+# Or open in default browser:
+start mobile/preview.html
 ```
-*Output: Generates `RakshaNet_Comprehensive_System_Dossier.pdf` (9 pages, comfortable 9.2 pt body text, two-pass `NumberedCanvas` headers and footers).*
 
-### 3. Query or Update the Codebase Knowledge Graph
-Run Graphify to inspect the repository's semantic knowledge graph:
+*What the interactive simulator provides:*
+- **Complete Phase 1 Mobile Flow:** Splash &rarr; Home (SOS Beacon) &rarr; Offline Chat &rarr; Network Mesh &rarr; Settings.
+- **4-Phone Testbench:** Switch between Phone A (You), Phone B (Mule), Phone C (Mule), and Phone D (Relief Post).
+- **Automated Verification Matrix:** Test 3-hop delay-tolerant relay (`A → B → C → D`), deduplication loop suppression, TTL expiration, and app reboot state recovery.
+- **Display Governance:** Switch live between **Dark Theme**, **Light Theme**, and **Low Power OLED** (True `#000000` Black).
+
+### 2. Inspect the Interactive Knowledge Graph
+View the AST code and architecture dependency graph:
+```bash
+start graphify-out/graph.html
+```
+
+### 3. Query the Codebase Knowledge Graph via CLI
 ```bash
 # Update the graph incrementally (AST-only, zero cost):
 python -m graphify update .
 
-# Query architectural relationships in the codebase:
+# Query architectural relationships:
 python -m graphify query "What are the core differentiators of RakshaNet?"
 ```
 
@@ -552,9 +557,10 @@ CREATE TABLE cloud_incidents (
 - Ground-truth disaster research and empirical failure analysis (Nepal 2026 & Indian CWC records).
 - Verified competitor code audit against Crisis Connect, Tremour, and Sahayata Setu.
 - Production UI design system with color scales, typography scales, and component specs in `design.md`.
-- Automated Python PDF generation engine (`generate_dossier_pdf.py`) producing an executive 9-page white paper.
-- Matplotlib analytical figure generators (`generate_charts.py`).
-- Knowledge graph integration (`graphify`) with 25 communities and 257 nodes.
+- Phase 1 Android-First Mobile Client architecture (`mobile/`) in React Native, TypeScript, and Kotlin.
+- Interactive Mobile Client & 4-Phone Mesh Simulator (`mobile/preview.html`) runnable in Edge browser.
+- Executive 9-page technical white paper PDF (`RakshaNet_Comprehensive_System_Dossier.pdf`).
+- Knowledge graph integration (`graphify`) with 52 communities and 605 nodes.
 - Antigravity agent skills for UI styling and graph querying.
 
 ### In Progress `[~]`
