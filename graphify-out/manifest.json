@@ -168,8 +168,8 @@
     "semantic_hash": ""
   },
   "mobile/App.tsx": {
-    "mtime": 1790932545.5259933,
-    "seen": 1790932653.7275765,
+    "mtime": 1790933988.737834,
+    "seen": 1790934254.695389,
     "ast_hash": "ab5c215675ee02249d82e5c784112a3d",
     "semantic_hash": ""
   },
@@ -216,20 +216,20 @@
     "semantic_hash": ""
   },
   "mobile/package.json": {
-    "mtime": 1790933444.8007703,
-    "seen": 1790933511.3542557,
-    "ast_hash": "2f15ca84529204d446a002253e281670",
+    "mtime": 1790934206.9430504,
+    "seen": 1790934254.695389,
+    "ast_hash": "7d18fbd951c9aabd7c54d36b6aedb6ed",
     "semantic_hash": ""
   },
   "mobile/src/app/navigation/MainTabNavigator.tsx": {
-    "mtime": 1790932524.0442019,
-    "seen": 1790932653.7275765,
+    "mtime": 1790933988.740048,
+    "seen": 1790934254.695389,
     "ast_hash": "30d8f306b20eb008452594d90c7c1dd2",
     "semantic_hash": ""
   },
   "mobile/src/app/navigation/RootNavigator.tsx": {
-    "mtime": 1790932535.5010853,
-    "seen": 1790932653.7275765,
+    "mtime": 1790933988.7427459,
+    "seen": 1790934254.695389,
     "ast_hash": "87d1c36e1343991bde2e5a470215fa08",
     "semantic_hash": ""
   },
@@ -456,21 +456,27 @@
     "semantic_hash": ""
   },
   "mobile/preview.html": {
-    "mtime": 1790933011.028466,
-    "seen": 1790933042.9150667,
-    "ast_hash": "a50608c7c2a26f5336c77b3a76e8136f",
+    "mtime": 1790934170.6391418,
+    "seen": 1790934254.695389,
+    "ast_hash": "86fe2fb85d9730670dda9d850a129a35",
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1790933424.1846292,
-    "seen": 1790933511.3542557,
-    "ast_hash": "fcf7abef0bea275734fcda19097f8864",
+    "mtime": 1790934170.6408386,
+    "seen": 1790934254.695389,
+    "ast_hash": "699da057398cbb8a4afed4fd04493e23",
     "semantic_hash": ""
   },
   "server.js": {
-    "mtime": 1790933414.2925098,
-    "seen": 1790933511.3542557,
-    "ast_hash": "1c5ea67cc289e48060315fe713c5c095",
+    "mtime": 1790934170.6419044,
+    "seen": 1790934254.695389,
+    "ast_hash": "5a597d66a95efe3ec647dd016426307b",
+    "semantic_hash": ""
+  },
+  "demo.html": {
+    "mtime": 1790933749.6240723,
+    "seen": 1790934254.695389,
+    "ast_hash": "86fe2fb85d9730670dda9d850a129a35",
     "semantic_hash": ""
   }
 }
