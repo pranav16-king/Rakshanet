@@ -137,6 +137,77 @@ mobile/lib/
 └── main.dart                            # MultiProvider entrypoint & initial route guard
 ```
 
+### 3.1 Database Entity-Relationship (ER) Model (`app_database.db`)
+
+The SQLite persistence engine guarantees offline durability across 6 normalized entities:
+
+```mermaid
+erDiagram
+    USER_PROFILE {
+        string id PK "UUID"
+        string name "User Full Name"
+        string device_id "SR-XXXX Pseudonym"
+        string blood_group "A+, B+, O+, AB+"
+        string emergency_contact "Phone Number"
+        string language "Preferred Locale"
+        int is_registered "0 = Unregistered, 1 = Ready"
+    }
+
+    MESSAGES {
+        string message_id PK "UUID v4"
+        string conversation_id FK "Channel ID"
+        string sender_id FK "Device Pseudonym"
+        string sender_name "Author Name"
+        string content "Encrypted or Plaintext"
+        int timestamp "Epoch Monotonic Millis"
+        string status "SAVED | RELAYED | DELIVERED"
+        int hop_count "Traversed Hops (0..5)"
+        int ttl "Remaining Hops (5..0)"
+    }
+
+    NEARBY_DEVICES {
+        string device_id PK "BLE MAC / UUID"
+        string display_name "Peer Name"
+        string connection_type "BLE | Wi-Fi Direct"
+        int rssi "Signal Strength dBm"
+        string proximity_band "IMMEDIATE | NEAR | FAR"
+        int is_connected "0 = Discovered, 1 = Connected"
+        int battery_level "0..100 %"
+    }
+
+    EMERGENCY_REPORTS {
+        string id PK "Incident UUID"
+        string type "Medical | Trapped | Fire | Flood"
+        int people_count "Distressed Persons Count"
+        string description "Incident Details"
+        string status "QUEUED | SENT | ACKNOWLEDGED"
+        int created_at "Timestamp ms"
+        string severity "P1-CRITICAL | P2-HIGH"
+    }
+
+    SHELTERS {
+        string id PK "Camp Identifier"
+        string name "Relief Hub Name"
+        float distance "Distance in km"
+        string open_status "OPEN | FULL | CLOSED"
+        int capacity "Current Occupants"
+        int max_capacity "Maximum Threshold"
+    }
+
+    MISSING_PERSONS {
+        string id PK "Bulletin UUID"
+        string name "Missing Individual Name"
+        int age "Age in Years"
+        string description "Clothing & Identifiers"
+        string last_seen_location "Sector / Landmark"
+        string status "SEARCHING | SIGHTED | FOUND"
+    }
+
+    USER_PROFILE ||--o{ MESSAGES : "authors"
+    USER_PROFILE ||--o{ EMERGENCY_REPORTS : "submits"
+    NEARBY_DEVICES ||--o{ MESSAGES : "relays"
+```
+
 ---
 
 ## 4. Complete 13-Screen Wireframe Specification
