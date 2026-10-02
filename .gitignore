@@ -49,6 +49,8 @@ venv/
 ENV/
 *.egg-info/
 .pytest_cache/
+*.db
+backend/data/
 
 # Graphify cache and date-stamped backup snapshots
 graphify-out/cache/
