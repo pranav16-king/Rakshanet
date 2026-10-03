@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+
 import '../../models/chat_message.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
@@ -19,6 +23,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+  final ImagePicker _imagePicker = ImagePicker();
 
   final List<String> _emergencyShortcuts = [
     'Need medical help',
@@ -27,6 +32,52 @@ class _ChatScreenState extends State<ChatScreen> {
     'Need drinking water',
     'Trapped - send help',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _recoverLostImagePick();
+  }
+
+  Future<void> _recoverLostImagePick() async {
+    final recovered = await _imagePicker.retrieveLostData();
+    if (!mounted || recovered.isEmpty) return;
+    final file = recovered.file;
+    if (file != null) {
+      await _sendImage(file);
+    }
+  }
+
+  Future<void> _pickAndSendImage() async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 82,
+        maxWidth: 1920,
+      );
+      if (image != null && mounted) {
+        await _sendImage(image);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to select image: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendImage(XFile image) async {
+    try {
+      await context.read<ChatService>().sendImage(image.path);
+      _scrollToBottom();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$error')));
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -89,17 +140,19 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     )
                   : messages.isEmpty
-                      ? _buildEmptyState(theme)
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            final msg = messages[index];
-                            return _buildMessageRow(theme, msg);
-                          },
-                        ),
+                  ? _buildEmptyState(theme)
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = messages[index];
+                        return _buildMessageRow(theme, msg);
+                      },
+                    ),
             ),
 
             // Emergency Shortcuts Bar
@@ -165,19 +218,15 @@ class _ChatScreenState extends State<ChatScreen> {
     ThemeProvider theme,
     ChatService chatService,
   ) {
-    final successColor =
-        theme.isLightMode ? AppTokens.lightSuccess : AppTokens.darkSuccess;
+    final successColor = theme.isLightMode
+        ? AppTokens.lightSuccess
+        : AppTokens.darkSuccess;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: theme.bg,
-        border: Border(
-          bottom: BorderSide(
-            color: theme.border,
-            width: 1,
-          ),
-        ),
+        border: Border(bottom: BorderSide(color: theme.border, width: 1)),
       ),
       child: Row(
         children: [
@@ -322,14 +371,10 @@ class _ChatScreenState extends State<ChatScreen> {
               constraints: const BoxConstraints(minWidth: AppTokens.touchMin),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppTokens.signalYellow
-                    : theme.surface,
+                color: isSelected ? AppTokens.signalYellow : theme.surface,
                 borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                 border: Border.all(
-                  color: isSelected
-                      ? AppTokens.signalYellow
-                      : theme.border,
+                  color: isSelected ? AppTokens.signalYellow : theme.border,
                   width: 1,
                 ),
               ),
@@ -371,11 +416,15 @@ class _ChatScreenState extends State<ChatScreen> {
     final borderColor = isLight
         ? AppTokens.lightBorderStrong
         : (isLowPower
-            ? AppTokens.oledBorderStrong
-            : AppTokens.darkPrimary.withValues(alpha: 0.4));
+              ? AppTokens.oledBorderStrong
+              : AppTokens.darkPrimary.withValues(alpha: 0.4));
 
-    final senderColor = isLight ? AppTokens.lightPrimaryInk : AppTokens.signalYellow;
-    final successColor = isLight ? AppTokens.lightSuccess : AppTokens.darkSuccess;
+    final senderColor = isLight
+        ? AppTokens.lightPrimaryInk
+        : AppTokens.signalYellow;
+    final successColor = isLight
+        ? AppTokens.lightSuccess
+        : AppTokens.darkSuccess;
     final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
 
     return Padding(
@@ -396,10 +445,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(4),
                 ),
-                border: Border.all(
-                  color: borderColor,
-                  width: 1,
-                ),
+                border: Border.all(color: borderColor, width: 1),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,6 +471,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
 
+                  if (msg.hasImageAttachment) ...[
+                    const SizedBox(height: 8),
+                    _buildImageAttachment(theme, msg.attachment!),
+                  ],
+
                   // Optional Location Preview
                   if (msg.location != null) ...[
                     const SizedBox(height: 8),
@@ -441,10 +492,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Text(
                         msg.formattedTime,
-                        style: TextStyle(
-                          color: theme.textMuted,
-                          fontSize: 11,
-                        ),
+                        style: TextStyle(color: theme.textMuted, fontSize: 11),
                       ),
                       const SizedBox(width: 6),
                       _buildStatusTickWidget(theme, msg.status),
@@ -456,10 +504,12 @@ class _ChatScreenState extends State<ChatScreen> {
                           fontWeight: FontWeight.w500,
                           color: msg.status == MessageDeliveryStatus.delivered
                               ? successColor
-                              : (msg.status == MessageDeliveryStatus.sentNearby ||
-                                      msg.status == MessageDeliveryStatus.relayed
-                                  ? infoColor
-                                  : theme.textMuted),
+                              : (msg.status ==
+                                            MessageDeliveryStatus.sentNearby ||
+                                        msg.status ==
+                                            MessageDeliveryStatus.relayed
+                                    ? infoColor
+                                    : theme.textMuted),
                         ),
                       ),
                     ],
@@ -474,9 +524,16 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Status ticks: 1 grey tick (saved locally), 2 teal ticks (sent to mesh), 2 green ticks (delivered to rescue team/cloud)
-  Widget _buildStatusTickWidget(ThemeProvider theme, MessageDeliveryStatus status) {
-    final infoColor = theme.isLightMode ? AppTokens.lightInfo : AppTokens.darkInfo;
-    final successColor = theme.isLightMode ? AppTokens.lightSuccess : AppTokens.darkSuccess;
+  Widget _buildStatusTickWidget(
+    ThemeProvider theme,
+    MessageDeliveryStatus status,
+  ) {
+    final infoColor = theme.isLightMode
+        ? AppTokens.lightInfo
+        : AppTokens.darkInfo;
+    final successColor = theme.isLightMode
+        ? AppTokens.lightSuccess
+        : AppTokens.darkSuccess;
     final sosColor = theme.isLightMode ? AppTokens.lightSos : AppTokens.darkSos;
 
     switch (status) {
@@ -500,12 +557,11 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Incoming message bubble (theirs)
   Widget _buildTheirMessageBubble(ThemeProvider theme, ChatMessage msg) {
     final isLight = theme.isLightMode;
-    final initial =
-        msg.senderName.isNotEmpty ? msg.senderName[0].toUpperCase() : '?';
+    final initial = msg.senderName.isNotEmpty
+        ? msg.senderName[0].toUpperCase()
+        : '?';
 
-    final bubbleBg = isLight
-        ? theme.surfaceSunken
-        : theme.surface;
+    final bubbleBg = isLight ? theme.surfaceSunken : theme.surface;
 
     final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
 
@@ -540,10 +596,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
                 ),
-                border: Border.all(
-                  color: theme.border,
-                  width: 1,
-                ),
+                border: Border.all(color: theme.border, width: 1),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -569,6 +622,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
 
+                  if (msg.hasImageAttachment) ...[
+                    const SizedBox(height: 8),
+                    _buildImageAttachment(theme, msg.attachment!),
+                  ],
+
                   // Shared Location Preview Card
                   if (msg.location != null) ...[
                     const SizedBox(height: 8),
@@ -580,10 +638,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   // Timestamp
                   Text(
                     msg.formattedTime,
-                    style: TextStyle(
-                      color: theme.textMuted,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: theme.textMuted, fontSize: 11),
                   ),
                 ],
               ),
@@ -596,7 +651,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Shared Location Preview Card matching Screen 5 mockup
-  Widget _buildLocationPreviewCard(ThemeProvider theme, LocationPreview location) {
+  Widget _buildLocationPreviewCard(
+    ThemeProvider theme,
+    LocationPreview location,
+  ) {
     final isLight = theme.isLightMode;
     final isLowPower = theme.isLowPower;
 
@@ -611,10 +669,7 @@ class _ChatScreenState extends State<ChatScreen> {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        border: Border.all(
-          color: infoColor.withValues(alpha: 0.4),
-          width: 1,
-        ),
+        border: Border.all(color: infoColor.withValues(alpha: 0.4), width: 1),
       ),
       child: Row(
         children: [
@@ -625,11 +680,7 @@ class _ChatScreenState extends State<ChatScreen> {
               color: infoColor.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.location_on,
-              color: infoColor,
-              size: 20,
-            ),
+            child: Icon(Icons.location_on, color: infoColor, size: 20),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -654,15 +705,50 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 Text(
                   location.distance,
-                  style: TextStyle(
-                    color: theme.textMuted,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: theme.textMuted, fontSize: 12),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildImageAttachment(
+    ThemeProvider theme,
+    MediaAttachment attachment,
+  ) {
+    final file = File(attachment.localPath);
+    return Semantics(
+      label: 'Shared image: ${attachment.fileName}',
+      image: true,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+        child: Image.file(
+          file,
+          fit: BoxFit.cover,
+          width: 220,
+          height: 160,
+          errorBuilder: (_, _, _) => Container(
+            width: 220,
+            constraints: const BoxConstraints(minHeight: 56),
+            color: theme.surfaceSunken,
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(Icons.broken_image_outlined, color: theme.textMuted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Image unavailable on this phone',
+                    style: TextStyle(color: theme.textMuted, fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -685,11 +771,7 @@ class _ChatScreenState extends State<ChatScreen> {
             elevation: 0,
             backgroundColor: theme.surfaceSunken,
             side: BorderSide(color: theme.border),
-            avatar: Icon(
-              Icons.emergency_outlined,
-              size: 14,
-              color: sosColor,
-            ),
+            avatar: Icon(Icons.emergency_outlined, size: 14, color: sosColor),
             label: Text(
               shortcut,
               style: TextStyle(
@@ -718,12 +800,7 @@ class _ChatScreenState extends State<ChatScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: barBg,
-        border: Border(
-          top: BorderSide(
-            color: theme.border,
-            width: 1,
-          ),
-        ),
+        border: Border(top: BorderSide(color: theme.border, width: 1)),
       ),
       child: Row(
         children: [
@@ -734,24 +811,24 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: theme.surface,
                 borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-                border: Border.all(
-                  color: theme.border,
-                  width: 1,
-                ),
+                border: Border.all(color: theme.border, width: 1),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
-                  // Smile / Attachment icon
+                  // Image attachment; stored locally before mesh transfer.
                   IconButton(
                     icon: Icon(
-                      Icons.sentiment_satisfied_alt,
+                      Icons.image_outlined,
                       color: theme.textMuted,
                       size: 22,
                     ),
-                    constraints:
-                        const BoxConstraints(minWidth: 40, minHeight: 40),
-                    onPressed: () {},
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                    ),
+                    tooltip: 'Send image offline',
+                    onPressed: _pickAndSendImage,
                   ),
 
                   // Text input
@@ -759,10 +836,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: TextField(
                       controller: _textController,
                       focusNode: _focusNode,
-                      style: TextStyle(
-                        color: theme.text,
-                        fontSize: 15,
-                      ),
+                      style: TextStyle(color: theme.text, fontSize: 15),
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _handleSendMessage(),
                       decoration: InputDecoration(
@@ -772,7 +846,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           fontSize: 14,
                         ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                        ),
                       ),
                     ),
                   ),
@@ -784,8 +860,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: theme.textMuted,
                       size: 22,
                     ),
-                    constraints:
-                        const BoxConstraints(minWidth: 40, minHeight: 40),
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                    ),
                     tooltip: 'Voice note (offline)',
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(

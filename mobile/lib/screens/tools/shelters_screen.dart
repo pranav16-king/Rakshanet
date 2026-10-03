@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../database/app_database.dart';
 import '../../models/shelter_resource.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/telemetry_provider.dart';
 import '../../theme/app_tokens.dart';
 
 /// Screen 9: Shelters & Resources
@@ -702,6 +705,28 @@ class _SheltersScreenState extends State<SheltersScreen>
 
   void _showDirectionsModal(ShelterResource shelter) {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
+    final telemetry = Provider.of<TelemetryProvider>(context, listen: false);
+    final hasCoordinates = telemetry.hasGpsFix &&
+        telemetry.latitude != null &&
+        telemetry.longitude != null &&
+        shelter.latitude != null &&
+        shelter.longitude != null;
+    final distanceMeters = hasCoordinates
+        ? _distanceMeters(
+            telemetry.latitude!,
+            telemetry.longitude!,
+            shelter.latitude!,
+            shelter.longitude!,
+          )
+        : null;
+    final bearing = hasCoordinates
+        ? _initialBearing(
+            telemetry.latitude!,
+            telemetry.longitude!,
+            shelter.latitude!,
+            shelter.longitude!,
+          )
+        : null;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: theme.surface,
@@ -719,7 +744,7 @@ class _SheltersScreenState extends State<SheltersScreen>
               children: [
                 Expanded(
                   child: Text(
-                    'Offline Route to ${shelter.name}',
+                    'Offline direction to ${shelter.name}',
                     style: TextStyle(
                       color: theme.text,
                       fontSize: 18,
@@ -752,7 +777,9 @@ class _SheltersScreenState extends State<SheltersScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Estimated Distance: ${shelter.distance.toStringAsFixed(1)} km',
+                          hasCoordinates
+                              ? 'Straight-line distance: ${_formatDistance(distanceMeters!)}'
+                              : 'No live GPS route available',
                           style: TextStyle(
                             color: theme.text,
                             fontSize: 15,
@@ -761,7 +788,9 @@ class _SheltersScreenState extends State<SheltersScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Approx. ${(shelter.distance * 15).toInt()} min walk under disaster conditions',
+                          hasCoordinates
+                              ? 'Heading: ${bearing!.round()}° (${_bearingLabel(bearing)})'
+                              : 'Turn on Location and obtain current GPS before using direction guidance.',
                           style: TextStyle(color: theme.textMuted, fontSize: 13),
                         ),
                         if (shelter.latitude != null && shelter.longitude != null) ...[
@@ -783,7 +812,7 @@ class _SheltersScreenState extends State<SheltersScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Offline Waypoints:',
+              'Guidance:',
               style: TextStyle(
                 color: theme.text,
                 fontSize: 14,
@@ -792,9 +821,9 @@ class _SheltersScreenState extends State<SheltersScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              '1. Follow designated flood/disaster evacuation markers.\n'
-              '2. Proceed towards ${shelter.address ?? shelter.name}.\n'
-              '3. Shelter entry has active volunteer check-in desk.',
+              hasCoordinates
+                  ? 'This is a direct GPS bearing, not turn-by-turn road routing. Follow official evacuation signage and avoid hazards; conditions can change after the local shelter data was saved.\n\nDestination: ${shelter.address ?? shelter.name}.'
+                  : 'This phone has no usable origin coordinate or this shelter has no stored coordinate. The app will not invent a route. Check the shelter address and local evacuation signage instead.',
               style: TextStyle(color: theme.textMuted, fontSize: 13, height: 1.4),
             ),
             const SizedBox(height: 20),
@@ -811,7 +840,7 @@ class _SheltersScreenState extends State<SheltersScreen>
                   ),
                 ),
                 child: const Text(
-                  'Dismiss Directions',
+                  'Close guidance',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -820,6 +849,47 @@ class _SheltersScreenState extends State<SheltersScreen>
         ),
       ),
     );
+  }
+
+  double _distanceMeters(
+    double latitudeA,
+    double longitudeA,
+    double latitudeB,
+    double longitudeB,
+  ) {
+    const earthRadius = 6371000.0;
+    final latDelta = (latitudeB - latitudeA) * math.pi / 180;
+    final lonDelta = (longitudeB - longitudeA) * math.pi / 180;
+    final a = math.sin(latDelta / 2) * math.sin(latDelta / 2) +
+        math.cos(latitudeA * math.pi / 180) *
+            math.cos(latitudeB * math.pi / 180) *
+            math.sin(lonDelta / 2) *
+            math.sin(lonDelta / 2);
+    return earthRadius * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
+  double _initialBearing(
+    double latitudeA,
+    double longitudeA,
+    double latitudeB,
+    double longitudeB,
+  ) {
+    final fromLat = latitudeA * math.pi / 180;
+    final toLat = latitudeB * math.pi / 180;
+    final lonDelta = (longitudeB - longitudeA) * math.pi / 180;
+    final y = math.sin(lonDelta) * math.cos(toLat);
+    final x = math.cos(fromLat) * math.sin(toLat) -
+        math.sin(fromLat) * math.cos(toLat) * math.cos(lonDelta);
+    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
+  }
+
+  String _formatDistance(double meters) => meters < 1000
+      ? 'about ${meters.round()} m'
+      : 'about ${(meters / 1000).toStringAsFixed(1)} km';
+
+  String _bearingLabel(double degrees) {
+    const labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    return labels[((degrees + 22.5) ~/ 45) % labels.length];
   }
 
   void _showContactModal(ShelterResource shelter) {

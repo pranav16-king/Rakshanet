@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import '../../database/repositories/report_repository.dart';
+import '../../models/chat_message.dart';
 import '../../models/emergency_report.dart';
-import '../../models/message_envelope.dart';
 import '../../providers/emergency_report_provider.dart';
 import '../../providers/mesh_provider.dart';
 import '../../providers/theme_provider.dart';
-import '../../providers/user_profile_provider.dart';
-import '../../services/mesh_engine.dart';
+import '../../services/chat_service.dart';
+import '../../services/platform_telemetry_service.dart';
 import '../../theme/app_tokens.dart';
 
 class EmergencyReportScreen extends StatefulWidget {
@@ -72,9 +74,12 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
 
   Future<void> _handleSendSos() async {
     // Read providers synchronously before any async gap
-    final profileProvider = Provider.of<UserProfileProvider>(context, listen: false);
-    final emergencyProvider = Provider.of<EmergencyReportProvider>(context, listen: false);
+    final emergencyProvider = Provider.of<EmergencyReportProvider>(
+      context,
+      listen: false,
+    );
     final meshProvider = Provider.of<MeshProvider>(context, listen: false);
+    final chatService = Provider.of<ChatService>(context, listen: false);
 
     setState(() {
       _isSending = true;
@@ -82,14 +87,30 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
 
     HapticFeedback.heavyImpact();
 
+    // SOS must still be saved when location is denied, but when the user has
+    // approved it we attach a real GPS fix and its uncertainty. We never put
+    // placeholder coordinates on the emergency map.
+    final locationPermission = await Permission.location.request();
+    final telemetry = locationPermission.isGranted
+        ? await PlatformTelemetryService().getTelemetry()
+        : TelemetryReading.empty;
+    final latitude = telemetry.hasGpsFix ? telemetry.latitude : null;
+    final longitude = telemetry.hasGpsFix ? telemetry.longitude : null;
+    final accuracy = telemetry.hasGpsFix ? telemetry.accuracy : null;
+
     final reportId = const Uuid().v4();
     final realReport = EmergencyReport.create(
       id: reportId,
       category: _selectedCategory,
-      description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+      description: _notesController.text.trim().isNotEmpty
+          ? _notesController.text.trim()
+          : null,
       peopleCount: _peopleCount,
-      latitude: null, // GPS unavailable in offline mode without permissions
-      longitude: null,
+      latitude: latitude,
+      longitude: longitude,
+      location: latitude != null && longitude != null
+          ? 'GPS fix (accuracy ${accuracy?.round() ?? 'unknown'} m)'
+          : 'Location unavailable',
       status: 'QUEUED',
       timestamp: DateTime.now(),
       syncPending: true,
@@ -99,30 +120,33 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
     final reportRepo = ReportRepository();
     await reportRepo.saveReport(realReport);
 
-    // 2. Queue in MeshEngine for peer-to-peer mesh broadcast
-    final senderId = profileProvider.profile?.id.isNotEmpty == true
-        ? profileProvider.profile!.id
-        : 'SR-ANONYMOUS';
-    final senderName = profileProvider.profile?.name.isNotEmpty == true
-        ? profileProvider.profile!.name
-        : 'Emergency Operator';
-
-    final envelope = MessageEnvelope(
-      uuid: realReport.id,
-      senderId: senderId,
-      senderName: senderName,
+    // 2. Queue the SOS through the same durable chat outbox as every mesh
+    // message. The report and message share an ID for acknowledgement status.
+    final location = latitude != null && longitude != null
+        ? LocationPreview(
+            title: 'GPS location',
+            distance: 'Accuracy about ${accuracy?.round() ?? 'unknown'} m',
+            latitude: latitude,
+            longitude: longitude,
+          )
+        : null;
+    final sosContent =
+        'EMERGENCY [${_selectedCategory.toUpperCase()}]: $_peopleCount individual(s) affected.${_notesController.text.trim().isNotEmpty ? ' Notes: ${_notesController.text.trim()}' : ''}';
+    await chatService.sendMessage(
+      messageId: realReport.id,
+      content: sosContent,
       conversationId: 'CONV_COMMUNITY',
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-      ttl: 5,
-      hops: 0,
-      type: 'SOS',
-      payload: 'EMERGENCY [${_selectedCategory.toUpperCase()}]: $_peopleCount individual(s) affected.${_notesController.text.trim().isNotEmpty ? ' Notes: ${_notesController.text.trim()}' : ''}',
+      messageType: 'SOS',
+      category: _selectedCategory,
       recipientTarget: 'BROADCAST',
+      location: location,
       metadata: {
         'category': _selectedCategory,
         'peopleCount': _peopleCount,
-        'latitude': realReport.latitude,
-        'longitude': realReport.longitude,
+        'latitude': latitude,
+        'longitude': longitude,
+        'accuracy_m': accuracy,
+        'location_method': latitude != null ? 'GPS' : 'UNAVAILABLE',
       },
     );
     MeshEngine().queueOutboxMessage(envelope);
@@ -151,7 +175,9 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
       enableDrag: false,
       backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTokens.radiusLg),
+        ),
       ),
       builder: (ctx) {
         return Padding(
@@ -166,7 +192,11 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                   shape: BoxShape.circle,
                   color: AppTokens.sosRed,
                 ),
-                child: const Icon(Icons.cell_tower_rounded, color: Colors.white, size: 36),
+                child: const Icon(
+                  Icons.cell_tower_rounded,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -191,7 +221,10 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
               ),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: theme.surfaceSunken,
                   borderRadius: BorderRadius.circular(AppTokens.radiusSm),
@@ -200,12 +233,18 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle_rounded, color: AppTokens.beaconTeal, size: 16),
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      color: AppTokens.beaconTeal,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Save-Before-Send: Persisted via ReportRepository',
                       style: TextStyle(
-                        color: theme.isLightMode ? AppTokens.beaconTeal : AppTokens.darkInfo,
+                        color: theme.isLightMode
+                            ? AppTokens.beaconTeal
+                            : AppTokens.darkInfo,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -249,7 +288,10 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
         backgroundColor: AppTokens.signalYellow,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppTokens.nightNavy),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: AppTokens.nightNavy,
+          ),
           tooltip: 'Back',
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -276,7 +318,10 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -292,10 +337,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Select the emergency category to notify rescuers.',
-                      style: TextStyle(
-                        color: theme.textMuted,
-                        fontSize: 13,
-                      ),
+                      style: TextStyle(color: theme.textMuted, fontSize: 13),
                     ),
                     const SizedBox(height: 18),
 
@@ -304,7 +346,8 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: _emergencyTypes.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 10),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final type = _emergencyTypes[index];
                         final isSelected = _selectedCategory == type['title'];
@@ -362,15 +405,24 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                           Row(
                             children: [
                               IconButton(
-                                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                constraints: const BoxConstraints(
+                                  minWidth: 48,
+                                  minHeight: 48,
+                                ),
                                 onPressed: _peopleCount > 1
                                     ? () => setState(() => _peopleCount--)
                                     : null,
-                                icon: const Icon(Icons.remove_circle_outline_rounded),
-                                color: theme.isLightMode ? AppTokens.lightPrimaryInk : AppTokens.signalYellow,
+                                icon: const Icon(
+                                  Icons.remove_circle_outline_rounded,
+                                ),
+                                color: theme.isLightMode
+                                    ? AppTokens.lightPrimaryInk
+                                    : AppTokens.signalYellow,
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
                                 child: Text(
                                   '$_peopleCount',
                                   style: TextStyle(
@@ -381,10 +433,17 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                                 ),
                               ),
                               IconButton(
-                                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                constraints: const BoxConstraints(
+                                  minWidth: 48,
+                                  minHeight: 48,
+                                ),
                                 onPressed: () => setState(() => _peopleCount++),
-                                icon: const Icon(Icons.add_circle_outline_rounded),
-                                color: theme.isLightMode ? AppTokens.lightPrimaryInk : AppTokens.signalYellow,
+                                icon: const Icon(
+                                  Icons.add_circle_outline_rounded,
+                                ),
+                                color: theme.isLightMode
+                                    ? AppTokens.lightPrimaryInk
+                                    : AppTokens.signalYellow,
                               ),
                             ],
                           ),
@@ -410,20 +469,32 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                       style: TextStyle(color: theme.text, fontSize: 14),
                       decoration: InputDecoration(
                         hintText: 'Additional details (e.g. severe leg wound, 2nd floor, elderly)...',
-                        hintStyle: TextStyle(color: theme.textMuted, fontSize: 13),
+                        hintStyle: TextStyle(
+                          color: theme.textMuted,
+                          fontSize: 13,
+                        ),
                         filled: true,
                         fillColor: theme.surfaceSunken,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusSm,
+                          ),
                           borderSide: BorderSide(color: theme.border),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusSm,
+                          ),
                           borderSide: BorderSide(color: theme.border),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                          borderSide: const BorderSide(color: AppTokens.signalYellow, width: 2),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusSm,
+                          ),
+                          borderSide: const BorderSide(
+                            color: AppTokens.signalYellow,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -453,7 +524,9 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                         backgroundColor: AppTokens.sosRed,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusMd,
+                          ),
                         ),
                         elevation: 4,
                         shadowColor: AppTokens.sosRed.withValues(alpha: 0.5),
@@ -470,7 +543,11 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                           : const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.cell_tower_rounded, size: 24, color: Colors.white),
+                                Icon(
+                                  Icons.cell_tower_rounded,
+                                  size: 24,
+                                  color: Colors.white,
+                                ),
                                 SizedBox(width: 10),
                                 Text(
                                   'Send SOS',
@@ -515,12 +592,16 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
   }) {
     final tileBg = isSelected
         ? (theme.isLightMode
-            ? AppTokens.lightPrimarySoft
-            : (theme.isLowPower ? const Color(0xFF1E1A04) : AppTokens.darkSurfaceAlt))
+              ? AppTokens.lightPrimarySoft
+              : (theme.isLowPower
+                    ? const Color(0xFF1E1A04)
+                    : AppTokens.darkSurfaceAlt))
         : theme.surface;
 
     final tileBorder = isSelected
-        ? (theme.isLightMode ? AppTokens.lightPrimaryInk : AppTokens.signalYellow)
+        ? (theme.isLightMode
+              ? AppTokens.lightPrimaryInk
+              : AppTokens.signalYellow)
         : theme.border;
 
     return InkWell(
@@ -532,10 +613,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
         decoration: BoxDecoration(
           color: tileBg,
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-          border: Border.all(
-            color: tileBorder,
-            width: isSelected ? 2.0 : 1.0,
-          ),
+          border: Border.all(color: tileBorder, width: isSelected ? 2.0 : 1.0),
           boxShadow: isSelected && !theme.isLowPower
               ? [
                   BoxShadow(
@@ -558,7 +636,9 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
               ),
               child: Icon(
                 icon,
-                color: badgeColor == AppTokens.signalYellow ? AppTokens.nightNavy : Colors.white,
+                color: badgeColor == AppTokens.signalYellow
+                    ? AppTokens.nightNavy
+                    : Colors.white,
                 size: 24,
               ),
             ),
@@ -579,10 +659,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      color: theme.textMuted,
-                      fontSize: 12.5,
-                    ),
+                    style: TextStyle(color: theme.textMuted, fontSize: 12.5),
                   ),
                 ],
               ),
@@ -591,7 +668,9 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
             if (isSelected)
               Icon(
                 Icons.check_circle_rounded,
-                color: theme.isLightMode ? AppTokens.lightPrimaryInk : AppTokens.signalYellow,
+                color: theme.isLightMode
+                    ? AppTokens.lightPrimaryInk
+                    : AppTokens.signalYellow,
                 size: 24,
               )
             else

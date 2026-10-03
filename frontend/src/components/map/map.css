@@ -1,0 +1,532 @@
+/**
+ * RakshaNet / SignalRescue AI — Map Component Styles & Keyframe Animations
+ * Source: design.md Section 2.6, Section 5 (Motion), and media_1791015140209.jpg
+ */
+
+/* Import Leaflet core styles */
+@import 'leaflet/dist/leaflet.css';
+
+/* =========================================================================
+   1. MAP CONTAINER & THEME BASICS
+   ========================================================================= */
+
+.raksha-map-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  background-color: #0B1220;
+  font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.raksha-map-container.theme-light {
+  background-color: #FFFCEB;
+}
+
+/* Custom Leaflet Controls */
+.raksha-map-container .leaflet-control-zoom {
+  border: 1px solid #26344F;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.raksha-map-container.theme-light .leaflet-control-zoom {
+  border: 1px solid #E6DCA8;
+  box-shadow: 0 4px 12px rgba(22, 32, 45, 0.1);
+}
+
+.raksha-map-container .leaflet-control-zoom a {
+  background-color: #111A2C !important;
+  color: #EEF2F8 !important;
+  border-color: #26344F !important;
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  font-size: 18px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.raksha-map-container .leaflet-control-zoom a:hover {
+  background-color: #162036 !important;
+  color: #FFD21F !important;
+}
+
+.raksha-map-container.theme-light .leaflet-control-zoom a {
+  background-color: #FFFFFF !important;
+  color: #16202D !important;
+  border-color: #E6DCA8 !important;
+}
+
+.raksha-map-container.theme-light .leaflet-control-zoom a:hover {
+  background-color: #FFF5C2 !important;
+  color: #8A5A00 !important;
+}
+
+/* Custom Popup Overrides */
+.raksha-map-container .leaflet-popup-content-wrapper {
+  background: #111A2C;
+  color: #EEF2F8;
+  border: 1px solid #26344F;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 0;
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+}
+
+.raksha-map-container.theme-light .leaflet-popup-content-wrapper {
+  background: #FFFFFF;
+  color: #16202D;
+  border: 1px solid #E6DCA8;
+  box-shadow: 0 8px 24px rgba(22, 32, 45, 0.15);
+}
+
+.raksha-map-container .leaflet-popup-tip {
+  background: #111A2C;
+  border: 1px solid #26344F;
+}
+
+.raksha-map-container.theme-light .leaflet-popup-tip {
+  background: #FFFFFF;
+  border: 1px solid #E6DCA8;
+}
+
+.raksha-map-container .leaflet-popup-close-button {
+  color: #9FADC2 !important;
+  padding: 6px 8px !important;
+}
+
+.raksha-map-container .leaflet-popup-close-button:hover {
+  color: #FF5A4E !important;
+}
+
+/* =========================================================================
+   2. SOS MARKER CONCENTRIC PULSING RIPPLE ANIMATION
+   ========================================================================= */
+
+.sr-sos-marker-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Concentric Ripple Waves */
+.sr-sos-ripple-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.sr-sos-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 2px solid #D92D20;
+  background: rgba(217, 45, 32, 0.18);
+  transform: translate(-50%, -50%) scale(0.3);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.sr-sos-ripple.ring-1 {
+  width: 60px;
+  height: 60px;
+  animation: sr-sos-pulse-wave 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.sr-sos-ripple.ring-2 {
+  width: 86px;
+  height: 86px;
+  animation: sr-sos-pulse-wave 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite 0.65s;
+}
+
+.sr-sos-ripple.ring-3 {
+  width: 116px;
+  height: 116px;
+  animation: sr-sos-pulse-wave 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite 1.3s;
+}
+
+@keyframes sr-sos-pulse-wave {
+  0% {
+    transform: translate(-50%, -50%) scale(0.25);
+    opacity: 0.85;
+    border-width: 3px;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+/* Core SOS Beacon Pin */
+.sr-sos-core {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FF5A4E 0%, #D92D20 60%, #9B1C13 100%);
+  border: 2.5px solid #FFFFFF;
+  box-shadow: 0 0 16px rgba(217, 45, 32, 0.75), 0 4px 10px rgba(0, 0, 0, 0.5);
+  color: #FFFFFF;
+  text-align: center;
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sr-sos-marker-wrapper:hover .sr-sos-core {
+  transform: scale(1.08);
+  box-shadow: 0 0 24px rgba(255, 90, 78, 0.9), 0 6px 14px rgba(0, 0, 0, 0.6);
+}
+
+.sr-sos-title {
+  font-family: 'Barlow Semi Condensed', sans-serif-condensed, sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.sr-sos-count-micro {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 1.1;
+  opacity: 0.95;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+/* Casualties Attached Pill */
+.sr-sos-pill {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  background: #111A2C;
+  border: 1px solid #FF5A4E;
+  color: #EEF2F8;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sr-sos-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #FF5A4E;
+  box-shadow: 0 0 6px #FF5A4E;
+}
+
+/* =========================================================================
+   3. HORIZONTAL BADGE MARKERS (Landslide & Rescue Team)
+   From media_1791015140209.jpg & design.md
+   ========================================================================= */
+
+.sr-badge-marker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(17, 26, 44, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1.5px solid #26344F;
+  border-radius: 20px;
+  padding: 4px 10px 4px 4px;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sr-badge-marker:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+}
+
+.sr-badge-icon-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Specific variants */
+.sr-badge-marker.landslide {
+  border-color: rgba(224, 123, 0, 0.45);
+}
+
+.sr-badge-marker.landslide:hover {
+  border-color: #FFA033;
+}
+
+.sr-badge-marker.landslide .sr-badge-icon-bubble {
+  background: radial-gradient(circle at 35% 30%, #FF5A4E 0%, #D92D20 100%);
+  color: #FFFFFF;
+}
+
+.sr-badge-marker.rescue-team {
+  border-color: rgba(76, 208, 138, 0.45);
+}
+
+.sr-badge-marker.rescue-team:hover {
+  border-color: #4CD08A;
+}
+
+.sr-badge-marker.rescue-team .sr-badge-icon-bubble {
+  background: radial-gradient(circle at 35% 30%, #4CD08A 0%, #1E8E4E 100%);
+  color: #FFFFFF;
+}
+
+.sr-badge-marker.flood {
+  border-color: rgba(108, 157, 255, 0.45);
+}
+
+.sr-badge-marker.flood .sr-badge-icon-bubble {
+  background: radial-gradient(circle at 35% 30%, #38BDF8 0%, #0284C7 100%);
+  color: #FFFFFF;
+}
+
+.sr-badge-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.15;
+}
+
+.sr-badge-title {
+  font-family: 'Barlow Semi Condensed', sans-serif-condensed, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: #EEF2F8;
+  letter-spacing: 0.2px;
+}
+
+.sr-badge-subtitle {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  color: #9FADC2;
+  margin-top: 1px;
+}
+
+/* Light theme support */
+.theme-light .sr-badge-marker {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #E6DCA8;
+  box-shadow: 0 4px 12px rgba(22, 32, 45, 0.15);
+}
+
+.theme-light .sr-badge-title {
+  color: #16202D;
+}
+
+.theme-light .sr-badge-subtitle {
+  color: #566070;
+}
+
+/* =========================================================================
+   4. DEVICE CLUSTER MARKER (Teal circle sized proportionally)
+   ========================================================================= */
+
+.sr-device-cluster-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #3CC6D0 0%, #0E8A94 70%, #075E66 100%);
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 12px rgba(14, 138, 148, 0.6), 0 3px 8px rgba(0, 0, 0, 0.4);
+  color: #FFFFFF;
+  font-family: 'Barlow Semi Condensed', sans-serif-condensed, sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sr-device-cluster-marker:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 18px rgba(60, 198, 208, 0.85), 0 5px 12px rgba(0, 0, 0, 0.5);
+}
+
+.sr-device-cluster-marker .cluster-count {
+  line-height: 1;
+}
+
+/* Size classes */
+.sr-device-cluster-marker.size-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+
+.sr-device-cluster-marker.size-md {
+  width: 40px;
+  height: 40px;
+  font-size: 14px;
+}
+
+.sr-device-cluster-marker.size-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+}
+
+.sr-device-cluster-marker.size-xl {
+  width: 58px;
+  height: 58px;
+  font-size: 18px;
+}
+
+/* Halo ring around active cluster */
+.sr-device-cluster-marker::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 50%;
+  border: 1px solid rgba(60, 198, 208, 0.4);
+  pointer-events: none;
+}
+
+/* =========================================================================
+   5. SINGLE DEVICE NODE (Mesh Node)
+   ========================================================================= */
+
+.sr-device-node-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3CC6D0;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 8px rgba(60, 198, 208, 0.7);
+  cursor: pointer;
+}
+
+.sr-device-node-marker.online {
+  background: #4CD08A;
+  box-shadow: 0 0 8px rgba(76, 208, 138, 0.8);
+}
+
+.sr-device-node-marker.relay {
+  background: #3CC6D0;
+  box-shadow: 0 0 8px rgba(60, 198, 208, 0.8);
+}
+
+.sr-device-node-marker.offline {
+  background: #5F6E86;
+  border-color: #9FADC2;
+  box-shadow: none;
+}
+
+/* =========================================================================
+   6. SVG HATCH PATTERNS & VECTOR CANVASES
+   ========================================================================= */
+
+/* SVG Hatch pattern applied to Communication Gap polygons */
+.leaflet-interactive.comm-gap-hatched {
+  fill: url(#raksha-comm-gap-pattern) !important;
+}
+
+/* Search Zone styling */
+.leaflet-interactive.search-zone-dashed {
+  stroke-dasharray: 6, 6;
+  animation: sr-dash-march 30s linear infinite;
+}
+
+@keyframes sr-dash-march {
+  to {
+    stroke-dashoffset: -120;
+  }
+}
+
+/* Reduced Motion Mode (design.md Section 5 & SKILL) */
+@media (prefers-reduced-motion: reduce) {
+  .sr-sos-ripple.ring-1,
+  .sr-sos-ripple.ring-2,
+  .sr-sos-ripple.ring-3 {
+    animation: none !important;
+    opacity: 0.25 !important;
+    transform: translate(-50%, -50%) scale(0.9) !important;
+  }
+
+  .leaflet-interactive.search-zone-dashed {
+    animation: none !important;
+  }
+
+  .sr-badge-marker:hover,
+  .sr-device-cluster-marker:hover {
+    transform: none !important;
+  }
+}
+
+/* =========================================================================
+   7. OFFLINE PROCEDURAL VECTOR CANVAS GRID STYLES
+   ========================================================================= */
+
+.sr-offline-grid-tile {
+  box-sizing: border-box;
+}
+
+.sr-offline-watermark {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1000;
+  background: rgba(11, 18, 32, 0.88);
+  border: 1px solid #FFC400;
+  border-radius: 8px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #FFC400;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}

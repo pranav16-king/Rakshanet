@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
@@ -9,6 +10,7 @@ import '../models/missing_person.dart';
 import '../models/nearby_device.dart';
 import '../models/shelter_resource.dart';
 import '../models/user_profile.dart';
+import '../services/device_identity_service.dart';
 
 /// Database management for RakshaNet with:
 /// 1. Native SQLite via sqflite on supported platforms.
@@ -73,7 +75,7 @@ class AppDatabase {
 
       _db = await openDatabase(
         path,
-        version: 2,
+        version: 4,
         onCreate: (db, version) async {
           await _createTables(db);
           await _seedInitialData(db);
@@ -86,7 +88,9 @@ class AppDatabase {
       _isInMemory = false;
       debugPrint('[AppDatabase] Native SQLite connected at $path');
     } catch (e) {
-      debugPrint('[AppDatabase] Native SQLite driver unavailable ($e). Switching to in-memory fallback.');
+      debugPrint(
+        '[AppDatabase] Native SQLite driver unavailable ($e). Switching to in-memory fallback.',
+      );
       _activateInMemoryFallback();
     }
   }
@@ -102,6 +106,28 @@ class AppDatabase {
     for (final col in cols) {
       try {
         await db.execute('ALTER TABLE user_profile ADD COLUMN $col');
+      } catch (_) {}
+    }
+
+    // The initial messages table pre-dated attachments, targeting, and relay
+    // metadata.  Keep upgrades additive so a saved offline outbox is never
+    // discarded during an app update.
+    final messageCols = [
+      "message_type TEXT NOT NULL DEFAULT 'TEXT'",
+      'recipient_target TEXT',
+      'category TEXT',
+      'proximity TEXT',
+      'location_title TEXT',
+      'location_distance TEXT',
+      'created_at INTEGER',
+      'attachment_path TEXT',
+      'attachment_name TEXT',
+      'attachment_mime_type TEXT',
+      'attachment_bytes INTEGER',
+    ];
+    for (final col in messageCols) {
+      try {
+        await db.execute('ALTER TABLE messages ADD COLUMN $col');
       } catch (_) {}
     }
   }
@@ -172,12 +198,23 @@ class AppDatabase {
         sender_name TEXT NOT NULL,
         content TEXT NOT NULL,
         timestamp INTEGER NOT NULL,
+        created_at INTEGER,
         status TEXT NOT NULL,
         hop_count INTEGER DEFAULT 0,
         ttl INTEGER DEFAULT 5,
         is_location_shared INTEGER DEFAULT 0,
         latitude REAL,
-        longitude REAL
+        longitude REAL,
+        message_type TEXT NOT NULL DEFAULT 'TEXT',
+        recipient_target TEXT,
+        category TEXT,
+        proximity TEXT,
+        location_title TEXT,
+        location_distance TEXT,
+        attachment_path TEXT,
+        attachment_name TEXT,
+        attachment_mime_type TEXT,
+        attachment_bytes INTEGER
       )
     ''');
 
@@ -252,14 +289,19 @@ class AppDatabase {
       'title': 'Emergency Broadcast Channel',
       'created_at': DateTime.now().millisecondsSinceEpoch,
       'updated_at': DateTime.now().millisecondsSinceEpoch,
-      'last_message': 'Emergency mesh channel initialized. Transmitting on BLE 5.x.',
+      'last_message':
+          'Emergency mesh channel initialized. Transmitting on BLE 5.x.',
       'unread_count': 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
 
     // Seed default disaster shelters
     final defaultShelters = _getDefaultShelters();
     for (final shelter in defaultShelters) {
-      await db.insert('shelters', shelter.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.insert(
+        'shelters',
+        shelter.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
   }
 
@@ -272,7 +314,8 @@ class AppDatabase {
       'title': 'Emergency Broadcast Channel',
       'created_at': DateTime.now().millisecondsSinceEpoch,
       'updated_at': DateTime.now().millisecondsSinceEpoch,
-      'last_message': 'Emergency mesh channel initialized. Transmitting on BLE 5.x.',
+      'last_message':
+          'Emergency mesh channel initialized. Transmitting on BLE 5.x.',
       'unread_count': 0,
     });
 
@@ -291,7 +334,13 @@ class AppDatabase {
         openStatus: 'OPEN',
         capacity: 140,
         maxCapacity: 300,
-        supplies: ['Food', 'Clean Water', 'Medical Kits', 'Generators', 'Blankets'],
+        supplies: [
+          'Food',
+          'Clean Water',
+          'Medical Kits',
+          'Generators',
+          'Blankets',
+        ],
         address: 'Sector 4 Community Grounds, Gate 2',
         latitude: 28.6139,
         longitude: 77.2090,
@@ -303,7 +352,12 @@ class AppDatabase {
         openStatus: 'OPEN',
         capacity: 45,
         maxCapacity: 60,
-        supplies: ['First Aid', 'Oxygen Cylinders', 'IV Fluids', 'Doctor on duty'],
+        supplies: [
+          'First Aid',
+          'Oxygen Cylinders',
+          'IV Fluids',
+          'Doctor on duty',
+        ],
         address: 'District Stadium Parking Complex',
         latitude: 28.6250,
         longitude: 77.2180,
@@ -315,7 +369,12 @@ class AppDatabase {
         openStatus: 'OPEN',
         capacity: 220,
         maxCapacity: 500,
-        supplies: ['Tents', 'Dry Rations', 'Water Purification', 'Satellite Phone'],
+        supplies: [
+          'Tents',
+          'Dry Rations',
+          'Water Purification',
+          'Satellite Phone',
+        ],
         address: 'Hilltop Secondary School Campus',
         latitude: 28.6380,
         longitude: 77.1950,
@@ -335,15 +394,25 @@ class AppDatabase {
     await ensureInitialized();
     if (!_isInMemory && _db != null) {
       try {
-        return await _db!.insert(table, values, conflictAlgorithm: conflictAlgorithm);
+        return await _db!.insert(
+          table,
+          values,
+          conflictAlgorithm: conflictAlgorithm,
+        );
       } catch (e) {
-        debugPrint('[AppDatabase] Warning: insert into $table failed ($e). Attempting sanitized column insert.');
+        debugPrint(
+          '[AppDatabase] Warning: insert into $table failed ($e). Attempting sanitized column insert.',
+        );
         try {
           final info = await _db!.rawQuery('PRAGMA table_info($table)');
           final cols = info.map((r) => r['name'] as String).toSet();
           final sanitized = Map<String, dynamic>.from(values)
             ..removeWhere((k, _) => !cols.contains(k));
-          return await _db!.insert(table, sanitized, conflictAlgorithm: conflictAlgorithm);
+          return await _db!.insert(
+            table,
+            sanitized,
+            conflictAlgorithm: conflictAlgorithm,
+          );
         } catch (e2) {
           debugPrint('[AppDatabase] Secondary insert fallback failed: $e2');
         }
@@ -399,18 +468,23 @@ class AppDatabase {
     }
 
     final tableList = _memoryTables[table] ?? [];
-    var results = List<Map<String, dynamic>>.from(tableList.map((e) => Map<String, dynamic>.from(e)));
+    var results = List<Map<String, dynamic>>.from(
+      tableList.map((e) => Map<String, dynamic>.from(e)),
+    );
 
     // Apply where filter
     if (where != null && where.isNotEmpty) {
-      results = results.where((row) => _matchesWhere(row, where, whereArgs)).toList();
+      results = results
+          .where((row) => _matchesWhere(row, where, whereArgs))
+          .toList();
     }
 
     // Apply sorting
     if (orderBy != null && orderBy.isNotEmpty) {
       final parts = orderBy.split(' ');
       final col = parts.first.trim();
-      final isDesc = parts.length > 1 && parts[1].toUpperCase().contains('DESC');
+      final isDesc =
+          parts.length > 1 && parts[1].toUpperCase().contains('DESC');
 
       results.sort((a, b) {
         final valA = a[col];
@@ -477,11 +551,10 @@ class AppDatabase {
     final tableList = _memoryTables[table] ?? [];
     int count = 0;
     for (int i = 0; i < tableList.length; i++) {
-      if (where == null || where.isEmpty || _matchesWhere(tableList[i], where, whereArgs)) {
-        tableList[i] = {
-          ...tableList[i],
-          ...values,
-        };
+      if (where == null ||
+          where.isEmpty ||
+          _matchesWhere(tableList[i], where, whereArgs)) {
+        tableList[i] = {...tableList[i], ...values};
         count++;
       }
     }
@@ -510,7 +583,10 @@ class AppDatabase {
     return initialCount - tableList.length;
   }
 
-  Future<List<Map<String, dynamic>>> rawQuery(String sql, [List<Object?>? arguments]) async {
+  Future<List<Map<String, dynamic>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
     await ensureInitialized();
     if (!_isInMemory && _db != null) {
       return await _db!.rawQuery(sql, arguments);
@@ -552,7 +628,11 @@ class AppDatabase {
     }
   }
 
-  bool _matchesWhere(Map<String, dynamic> row, String whereClause, List<Object?>? args) {
+  bool _matchesWhere(
+    Map<String, dynamic> row,
+    String whereClause,
+    List<Object?>? args,
+  ) {
     final clean = whereClause.trim();
     if (clean.isEmpty) return true;
 
@@ -623,7 +703,14 @@ class AppDatabase {
       limit: limit,
       offset: offset,
     );
-    return rows.map((r) => ChatMessage.fromMap(r)).toList();
+    return rows
+        .map(
+          (r) => ChatMessage.fromMap(
+            r,
+            myDeviceId: DeviceIdentityService.instance.deviceId,
+          ),
+        )
+        .toList();
   }
 
   /// CRITICAL AXIOM: Save-Before-Send. Persist message to SQLite before radio broadcast.
@@ -665,15 +752,19 @@ class AppDatabase {
       whereArgs: ['SAVED', 'QUEUED', 'SENDING'],
       orderBy: 'timestamp ASC',
     );
-    return rows.map((r) => ChatMessage.fromMap(r)).toList();
+    return rows
+        .map(
+          (r) => ChatMessage.fromMap(
+            r,
+            myDeviceId: DeviceIdentityService.instance.deviceId,
+          ),
+        )
+        .toList();
   }
 
   /// Fetch all filed emergency reports
   Future<List<EmergencyReport>> getEmergencyReports() async {
-    final rows = await query(
-      'emergency_reports',
-      orderBy: 'timestamp DESC',
-    );
+    final rows = await query('emergency_reports', orderBy: 'timestamp DESC');
     return rows.map((r) => EmergencyReport.fromMap(r)).toList();
   }
 
@@ -688,10 +779,7 @@ class AppDatabase {
 
   /// Fetch nearby mesh devices
   Future<List<NearbyDevice>> getNearbyDevices() async {
-    final rows = await query(
-      'nearby_devices',
-      orderBy: 'last_seen DESC',
-    );
+    final rows = await query('nearby_devices', orderBy: 'last_seen DESC');
     return rows.map((r) => NearbyDevice.fromMap(r)).toList();
   }
 
@@ -740,10 +828,7 @@ class AppDatabase {
 
   /// Fetch all relief shelter resources
   Future<List<ShelterResource>> getShelters() async {
-    final rows = await query(
-      'shelters',
-      orderBy: 'distance ASC',
-    );
+    final rows = await query('shelters', orderBy: 'distance ASC');
     return rows.map((r) => ShelterResource.fromMap(r)).toList();
   }
 
@@ -758,10 +843,7 @@ class AppDatabase {
 
   /// Fetch missing person bulletins
   Future<List<MissingPerson>> getMissingPersons() async {
-    final rows = await query(
-      'missing_persons',
-      orderBy: 'last_seen_time DESC',
-    );
+    final rows = await query('missing_persons', orderBy: 'last_seen_time DESC');
     return rows.map((r) => MissingPerson.fromMap(r)).toList();
   }
 

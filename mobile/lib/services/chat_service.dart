@@ -1,10 +1,13 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+
 import '../models/chat_message.dart';
 import '../models/message_envelope.dart';
-import 'database_service.dart';
 import 'bluetooth_radio_service.dart';
+import 'database_service.dart';
+import 'media_storage_service.dart';
 import 'mesh_engine.dart';
 
 /// Chat Service with Save-Before-Send guarantee
@@ -14,6 +17,7 @@ class ChatService extends ChangeNotifier {
   final DatabaseService _dbService = DatabaseService();
   final BluetoothRadioService _radioService = BluetoothRadioService();
   final MeshEngine _meshEngine = MeshEngine();
+  final MediaStorageService _mediaStorage = MediaStorageService();
   final Uuid _uuid = const Uuid();
 
   List<ChatMessage> _messages = [];
@@ -28,7 +32,8 @@ class ChatService extends ChangeNotifier {
 
   StreamSubscription<ChatMessage>? _statusSubscription;
   StreamSubscription<MessageEnvelope>? _incomingSubscription;
-  StreamSubscription<Uint8List>? _radioSubscription;
+  StreamSubscription<IncomingMediaPayload>? _mediaSubscription;
+  late final Future<void> _initialization;
 
   List<ChatMessage> get allMessages => List.unmodifiable(_messages);
   bool get isLoading => _isLoading;
@@ -39,7 +44,7 @@ class ChatService extends ChangeNotifier {
   bool get isSyncing => _isSyncing;
 
   ChatService() {
-    _initialize();
+    _initialization = _initialize();
   }
 
   Future<void> _initialize() async {
@@ -59,14 +64,13 @@ class ChatService extends ChangeNotifier {
       _bloomFilter.add(msg.messageId);
     }
 
-    // 1. Listen to incoming packets directly from BluetoothRadioService().peerPayloadStream
-    _radioSubscription = _radioService.peerPayloadStream.listen((rawBytes) async {
-      await _handleIncomingPeerPayload(rawBytes);
-    });
-
-    // 2. Listen to real-time outbox status updates from MeshEngine (SAVED -> QUEUED -> SENT_NEARBY -> RELAYED -> DELIVERED)
+    // 1. MeshEngine is the only radio consumer. A second listener used to
+    // persist and forward every packet twice, creating duplicate broadcasts.
+    // Listen only to the durable mesh events here.
     _statusSubscription = _meshEngine.messageStatusUpdates.listen((updatedMsg) {
-      final index = _messages.indexWhere((m) => m.messageId == updatedMsg.messageId);
+      final index = _messages.indexWhere(
+        (m) => m.messageId == updatedMsg.messageId,
+      );
       if (index != -1) {
         _messages[index] = _messages[index].copyWith(
           status: updatedMsg.status,
@@ -76,10 +80,13 @@ class ChatService extends ChangeNotifier {
       }
     });
 
-    // 3. Listen to incoming envelopes from mesh engine
+    // 2. Listen to incoming envelopes from mesh engine
     _incomingSubscription = _meshEngine.incomingEnvelopes.listen((envelope) {
       _loadMessagesFromDb();
     });
+    _mediaSubscription = _radioService.incomingMediaStream.listen(
+      _handleIncomingMedia,
+    );
 
     _isLoading = false;
     notifyListeners();
@@ -90,110 +97,32 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Handles incoming RF byte payloads received from neighboring radio peers
-  Future<void> _handleIncomingPeerPayload(Uint8List rawBytes) async {
+  Future<void> _handleIncomingMedia(IncomingMediaPayload incoming) async {
     try {
-      final envelope = MessageEnvelope.tryFromBytes(rawBytes);
-      if (envelope == null) return;
-
-      // Check if packet is an ACK confirmation
-      if (envelope.type == 'ACK' || envelope.type == 'RELAY_ACK') {
-        final targetId = envelope.metadata?['ack_msg_id'] ?? envelope.payload;
-        await _dbService.updateMessageStatus(
-          messageId: targetId,
-          status: 'DELIVERED',
-        );
-        final index = _messages.indexWhere((m) => m.messageId == targetId);
-        if (index != -1) {
-          _messages[index] = _messages[index].copyWith(
-            status: MessageDeliveryStatus.delivered,
-          );
-          notifyListeners();
-        }
-        // If TTL > 1, decrement TTL and forward/relay ACK packet to other nearby peers
-        if (envelope.ttl > 1) {
-          final relayedAck = envelope.copyForRelay();
-          await _radioService.broadcastBytes(relayedAck.toBytes());
-        }
-        return;
-      }
-
-      // Check deduplication set / Bloom filter; if already seen, drop silently
-      final msgId = envelope.uuid;
-      if (_seenMessageIds.contains(msgId)) {
-        return;
-      }
-
-      if (_bloomFilter.mightContain(msgId)) {
-        final exists = await _dbService.messageExists(msgId);
-        if (exists) {
-          _seenMessageIds.add(msgId);
-          return;
-        }
-      }
-
-      // If new: mark seen in deduplication structures
-      _seenMessageIds.add(msgId);
-      _bloomFilter.add(msgId);
-
-      // Save to SQLite
-      final isMine = envelope.senderId == DatabaseService.myDeviceId;
-      final chatMsg = ChatMessage(
-        messageId: envelope.uuid,
-        conversationId: envelope.conversationId,
-        senderId: envelope.senderId,
-        senderName: envelope.senderName,
-        isMine: isMine,
-        content: envelope.payload,
-        timestamp: DateTime.fromMillisecondsSinceEpoch(envelope.timestamp),
-        status: envelope.hops > 0
-            ? MessageDeliveryStatus.relayed
-            : MessageDeliveryStatus.delivered,
-        hopCount: envelope.hops,
-        ttl: envelope.ttl,
-        messageType: envelope.type,
-        recipientTarget: envelope.recipientTarget,
-        location: envelope.metadata != null
-            ? LocationPreview.fromJson(envelope.metadata!)
-            : null,
-        category: envelope.metadata?['category'] as String?,
+      final envelope = MessageEnvelope.fromJson(incoming.envelope);
+      final destination = await _mediaStorage.createDestination(
+        incoming.fileName,
       );
-
-      await _dbService.insertMessage(chatMsg.toDbMap());
-
-      // Update ChatService messages list & notifyListeners()
-      final existingIndex = _messages.indexWhere((m) => m.messageId == msgId);
-      if (existingIndex == -1) {
-        _messages.add(chatMsg);
-      } else {
-        _messages[existingIndex] = chatMsg;
-      }
-      notifyListeners();
-
-      // If message is from a peer, return an ACK packet
-      if (!isMine) {
-        final ackEnvelope = MessageEnvelope(
-          uuid: 'ACK-${_uuid.v4().substring(0, 8).toUpperCase()}',
-          senderId: DatabaseService.myDeviceId,
-          senderName: DatabaseService.myDisplayName,
-          conversationId: envelope.conversationId,
-          timestamp: DateTime.now().millisecondsSinceEpoch,
-          ttl: 5,
-          hops: 0,
-          type: 'ACK',
-          payload: envelope.uuid,
-          metadata: {'ack_msg_id': envelope.uuid},
+      final copied = await _radioService.persistIncomingMedia(
+        incoming.sourceUri,
+        destination,
+      );
+      if (!copied) {
+        throw StateError(
+          'The received image could not be saved on this phone.',
         );
-        await _radioService.broadcastBytes(ackEnvelope.toBytes());
       }
-
-      // If TTL > 1, decrement TTL and forward/relay packet to other nearby peers
-      if (envelope.ttl > 1) {
-        final forwardedEnvelope = envelope.copyForRelay();
-        await _radioService.broadcastBytes(forwardedEnvelope.toBytes());
-      }
-    } catch (e) {
-      debugPrint('[ChatService] Error processing incoming peer packet: $e');
+      await _meshEngine.receiveMediaPacket(
+        envelope,
+        MediaAttachment(
+          localPath: destination,
+          fileName: incoming.fileName,
+          mimeType: incoming.mimeType,
+          byteLength: incoming.byteLength,
+        ),
+      );
+    } catch (error) {
+      debugPrint('[ChatService] Incoming media was not saved: $error');
     }
   }
 
@@ -204,46 +133,66 @@ class ChatService extends ChangeNotifier {
 
   /// Messages for Screen 5 (Community Chat filtered by selected tab)
   List<ChatMessage> get communityMessages {
-    final list = _messages.where((m) =>
-      m.conversationId == 'CONV_COMMUNITY' ||
-      m.conversationId == 'COMMUNITY_MESH' ||
-      m.conversationId == 'community' ||
-      m.conversationId == 'global_emergency' ||
-      m.conversationId.isEmpty
-    ).toList();
+    final list = _messages
+        .where(
+          (m) =>
+              m.conversationId == 'CONV_COMMUNITY' ||
+              m.conversationId == 'COMMUNITY_MESH' ||
+              m.conversationId == 'community' ||
+              m.conversationId == 'global_emergency' ||
+              m.conversationId.isEmpty,
+        )
+        .toList();
 
     if (_activeFilter == 'Nearby') {
       return list;
     } else if (_activeFilter == 'Group') {
-      return list.where((m) => m.category == 'Group' || m.messageType == 'GROUP').toList();
+      return list
+          .where((m) => m.category == 'Group' || m.messageType == 'GROUP')
+          .toList();
     } else if (_activeFilter == 'Rescue') {
-      return list.where((m) =>
-          m.content.toLowerCase().contains('help') ||
-          m.content.toLowerCase().contains('safe') ||
-          m.content.toLowerCase().contains('blocked') ||
-          m.content.toLowerCase().contains('sos') ||
-          m.messageType == 'SOS' ||
-          m.messageType == 'LOCATION' ||
-          (m.category != null && m.category!.toLowerCase().contains('rescue'))).toList();
+      return list
+          .where(
+            (m) =>
+                m.content.toLowerCase().contains('help') ||
+                m.content.toLowerCase().contains('safe') ||
+                m.content.toLowerCase().contains('blocked') ||
+                m.content.toLowerCase().contains('sos') ||
+                m.messageType == 'SOS' ||
+                m.messageType == 'LOCATION' ||
+                (m.category != null &&
+                    m.category!.toLowerCase().contains('rescue')),
+          )
+          .toList();
     } else if (_activeFilter == 'Saved') {
-      return list.where((m) => m.status == MessageDeliveryStatus.saved || m.isMine).toList();
+      return list
+          .where((m) => m.status == MessageDeliveryStatus.saved || m.isMine)
+          .toList();
     }
     return list;
   }
 
   /// Pending messages for Screen 10 (items with status SAVED or QUEUED waiting for sync)
   List<ChatMessage> get pendingMessages {
-    return _messages.where((m) =>
-        m.status == MessageDeliveryStatus.saved ||
-        m.status == MessageDeliveryStatus.queued).toList();
+    return _messages
+        .where(
+          (m) =>
+              m.status == MessageDeliveryStatus.saved ||
+              m.status == MessageDeliveryStatus.queued,
+        )
+        .toList();
   }
 
   /// Sent messages for Screen 10
   List<ChatMessage> get sentMessages {
-    return _messages.where((m) =>
-        m.isMine &&
-        m.status != MessageDeliveryStatus.saved &&
-        m.status != MessageDeliveryStatus.queued).toList();
+    return _messages
+        .where(
+          (m) =>
+              m.isMine &&
+              m.status != MessageDeliveryStatus.saved &&
+              m.status != MessageDeliveryStatus.queued,
+        )
+        .toList();
   }
 
   /// Received messages for Screen 10
@@ -255,18 +204,23 @@ class ChatService extends ChangeNotifier {
   /// Writes message record to SQLite with status 'SAVED' BEFORE any network attempt.
   Future<ChatMessage> sendMessage({
     required String content,
+    String? messageId,
     String conversationId = 'CONV_COMMUNITY',
     String messageType = 'TEXT',
     String? category,
     String? recipientTarget,
     LocationPreview? location,
+    MediaAttachment? attachment,
+    Map<String, dynamic>? metadata,
   }) async {
+    await _initialization;
     final now = DateTime.now();
-    final messageId = 'MSG-${_uuid.v4().substring(0, 8).toUpperCase()}';
+    final resolvedMessageId =
+        messageId ?? 'MSG-${_uuid.v4().substring(0, 8).toUpperCase()}';
 
     // 1. Construct local chat message object with status SAVED (Single grey tick)
     final chatMsg = ChatMessage(
-      messageId: messageId,
+      messageId: resolvedMessageId,
       conversationId: conversationId,
       senderId: DatabaseService.myDeviceId,
       senderName: DatabaseService.myDisplayName,
@@ -280,14 +234,15 @@ class ChatService extends ChangeNotifier {
       recipientTarget: recipientTarget,
       location: location,
       category: category ?? _activeFilter,
+      attachment: attachment,
     );
 
     // 2. CRITICAL AXIOM: Write to SQLite messages table with status 'SAVED'
     await _dbService.insertMessage(chatMsg.toDbMap());
 
     // Mark as seen in local deduplication filter
-    _seenMessageIds.add(messageId);
-    _bloomFilter.add(messageId);
+    _seenMessageIds.add(resolvedMessageId);
+    _bloomFilter.add(resolvedMessageId);
 
     // Render immediately in reactive UI with single grey tick ("Saved on phone")
     _messages.add(chatMsg);
@@ -295,7 +250,7 @@ class ChatService extends ChangeNotifier {
 
     // 3. Pack into MessageEnvelope (Kabootar/MeshChat DTN envelope with UUID, senderId, TTL=5, timestamp, payload)
     final envelope = MessageEnvelope(
-      uuid: messageId,
+      uuid: resolvedMessageId,
       senderId: DatabaseService.myDeviceId,
       senderName: DatabaseService.myDisplayName,
       conversationId: conversationId,
@@ -306,7 +261,13 @@ class ChatService extends ChangeNotifier {
       payload: content,
       recipientTarget: recipientTarget,
       metadata: {
+        ...?metadata,
         if (location != null) ...location.toJson(),
+        if (attachment != null) ...{
+          'attachment_name': attachment.fileName,
+          'attachment_mime_type': attachment.mimeType,
+          'attachment_bytes': attachment.byteLength,
+        },
         if (category != null || _activeFilter != 'Nearby')
           'category': category ?? _activeFilter,
       },
@@ -314,39 +275,26 @@ class ChatService extends ChangeNotifier {
 
     // 4. Update status to 'QUEUED'
     await _dbService.updateMessageStatus(
-      messageId: messageId,
+      messageId: resolvedMessageId,
       status: 'QUEUED',
     );
     _updateLocalMessageStatus(messageId, MessageDeliveryStatus.queued);
 
-    // 5. Transmit payload bytes via BluetoothRadioService().broadcastBytes(envelope.toBytes()) (or sendToPeers)
-    int peersReached = 0;
-    try {
-      peersReached = await _radioService.broadcastBytes(envelope.toBytes());
-      debugPrint('[ChatService] Transmitted $messageId to $peersReached peer(s)');
-    } catch (e) {
-      debugPrint('[ChatService] Radio broadcast exception: $e');
-    }
-
-    // 6. Update status to 'SENT_NEARBY'
-    await _dbService.updateMessageStatus(
-      messageId: messageId,
-      status: 'SENT_NEARBY',
-      hopCount: 0,
+    // 5. MeshEngine owns the one physical send path and advances the durable
+    // status only after Nearby Connections accepts a peer payload.
+    _meshEngine.queueOutboxMessage(
+      envelope,
+      attachmentPath: attachment?.localPath,
     );
-    _updateLocalMessageStatus(
-      messageId,
-      MessageDeliveryStatus.sentNearby,
-      hopCount: 0,
-    );
-
-    // Pass to MeshEngine Outbox Queue Manager for simulated multi-hop relay transitions
-    _meshEngine.queueOutboxMessage(envelope);
 
     return chatMsg;
   }
 
-  void _updateLocalMessageStatus(String messageId, MessageDeliveryStatus status, {int? hopCount}) {
+  void _updateLocalMessageStatus(
+    String messageId,
+    MessageDeliveryStatus status, {
+    int? hopCount,
+  }) {
     final index = _messages.indexWhere((m) => m.messageId == messageId);
     if (index != -1) {
       _messages[index] = _messages[index].copyWith(
@@ -366,40 +314,35 @@ class ChatService extends ChangeNotifier {
     );
   }
 
-  /// Screen 10 sync action: syncs all pending messages to government & rescue agencies
+  Future<ChatMessage> sendImage(String sourcePath) async {
+    await _initialization;
+    final attachment = await _mediaStorage.stageImage(sourcePath);
+    return sendMessage(
+      content: 'Image: ${attachment.fileName}',
+      messageType: 'IMAGE',
+      attachment: attachment,
+    );
+  }
+
+  /// Retries pending durable outbox items when the user requests a mesh sync.
   Future<void> syncAllPendingNow() async {
     if (_isSyncing) return;
     _isSyncing = true;
     notifyListeners();
-
-    // Simulate network handshake and automated relay to government & rescue
-    await Future.delayed(const Duration(milliseconds: 1200));
-
-    final pending = List<ChatMessage>.from(pendingMessages);
-    for (final msg in pending) {
-      await _dbService.updateMessageStatus(
-        messageId: msg.messageId,
-        status: 'DELIVERED',
-        hopCount: 2,
-      );
-      final index = _messages.indexWhere((m) => m.messageId == msg.messageId);
-      if (index != -1) {
-        _messages[index] = _messages[index].copyWith(
-          status: MessageDeliveryStatus.delivered,
-          hopCount: 2,
-        );
-      }
+    try {
+      await _initialization;
+      await _meshEngine.syncAllPendingMessages();
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
     }
-
-    _isSyncing = false;
-    notifyListeners();
   }
 
   @override
   void dispose() {
-    _radioSubscription?.cancel();
     _statusSubscription?.cancel();
     _incomingSubscription?.cancel();
+    _mediaSubscription?.cancel();
     super.dispose();
   }
 }

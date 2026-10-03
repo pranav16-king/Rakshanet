@@ -56,3 +56,60 @@ class IngestStats(BaseModel):
     active_mules: int
     sos_beacons_count: int
     active_incidents: int
+
+
+# =============================================================================
+# COMMAND CENTER & DUAL-PERSISTENCE API MODELS
+# =============================================================================
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+    password: str = Field(..., description="Account password")
+
+
+class AuthUser(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: str
+    agency: str
+    phone: Optional[str] = None
+    status: Optional[str] = "Active"
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: AuthUser
+
+
+class UserCreateRequest(BaseModel):
+    email: str
+    name: str
+    role: str = "Responder"
+    agency: str = "Disaster Response Force"
+    phone: Optional[str] = None
+    password: Optional[str] = "SignalRescue@2026"
+
+
+class AssignTeamRequest(BaseModel):
+    team_id: Optional[str] = None
+    team_name: Optional[str] = None
+
+
+class DashboardOverview(BaseModel):
+    total_active_users: int
+    active_incidents: int
+    critical_incidents: int
+    connected_devices: int
+    messages_relayed: int
+    incident_distribution: Dict[str, int]
+    recent_incidents: List[Dict[str, Any]]
+
+
+class DeviceStats(BaseModel):
+    total: int
+    online: int
+    relay: int
+    offline: int
+

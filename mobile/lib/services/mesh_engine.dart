@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+
 import '../models/message_envelope.dart';
 import '../models/chat_message.dart';
 import 'database_service.dart';
@@ -14,6 +16,13 @@ enum RelayAction {
   deliveredToMe,
 }
 
+class _OutboxItem {
+  const _OutboxItem(this.envelope, {this.attachmentPath});
+
+  final MessageEnvelope envelope;
+  final String? attachmentPath;
+}
+
 /// Space-efficient Bloom filter for mesh loop suppression & deduplication
 class BloomFilter {
   final int size;
@@ -21,7 +30,7 @@ class BloomFilter {
   final int hashFunctions;
 
   BloomFilter({this.size = 2048, this.hashFunctions = 3})
-      : _bits = List.filled(size, false);
+    : _bits = List.filled(size, false);
 
   void add(String item) {
     for (int i = 0; i < hashFunctions; i++) {
@@ -66,13 +75,15 @@ class MeshEngine extends ChangeNotifier {
   final DatabaseService _dbService = DatabaseService();
   final BluetoothRadioService _radioService = BluetoothRadioService();
   StreamSubscription<Uint8List>? _radioSubscription;
+  StreamSubscription? _peerSubscription;
 
   // Deduplication structures (Bloom filter + in-memory Set)
   final BloomFilter _bloomFilter = BloomFilter();
   final Set<String> _seenMessageIds = <String>{};
 
   // Outbox transmission queue
-  final List<MessageEnvelope> _outboxQueue = [];
+  final List<_OutboxItem> _outboxQueue = [];
+  final Set<String> _queuedMessageIds = <String>{};
   bool _isProcessingOutbox = false;
 
   // Stream controller for real-time mesh events
@@ -81,7 +92,8 @@ class MeshEngine extends ChangeNotifier {
 
   // Outbox delivery status update callbacks
   final _statusUpdateController = StreamController<ChatMessage>.broadcast();
-  Stream<ChatMessage> get messageStatusUpdates => _statusUpdateController.stream;
+  Stream<ChatMessage> get messageStatusUpdates =>
+      _statusUpdateController.stream;
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -95,7 +107,9 @@ class MeshEngine extends ChangeNotifier {
     _isInitialized = true;
 
     // 1. Hook physical Bluetooth radio incoming stream
-    _radioSubscription = _radioService.incomingPayloadStream.listen((rawBytes) async {
+    _radioSubscription = _radioService.incomingPayloadStream.listen((
+      rawBytes,
+    ) async {
       try {
         final jsonStr = utf8.decode(rawBytes);
         final jsonMap = jsonDecode(jsonStr) as Map<String, dynamic>;
@@ -103,6 +117,11 @@ class MeshEngine extends ChangeNotifier {
         await receivePacket(envelope);
       } catch (e) {
         debugPrint('[MeshEngine] Malformed RF packet dropped: $e');
+      }
+    });
+    _peerSubscription = _radioService.peerUpdateStream.listen((peers) {
+      if (peers.isNotEmpty) {
+        syncAllPendingMessages();
       }
     });
 
@@ -130,7 +149,9 @@ class MeshEngine extends ChangeNotifier {
           recipientTarget: p.recipientTarget,
           metadata: p.location?.toJson(),
         );
-        _outboxQueue.add(env);
+        _outboxQueue.add(
+          _OutboxItem(env, attachmentPath: p.attachment?.localPath),
+        );
       }
 
       if (_outboxQueue.isNotEmpty) {
@@ -168,8 +189,15 @@ class MeshEngine extends ChangeNotifier {
     _seenMessageIds.add(msgId);
     _bloomFilter.add(msgId);
 
+    if (envelope.type == 'ACK' ||
+        envelope.type == 'RELAY_ACK' ||
+        envelope.type == 'DELIVERY_ACK') {
+      return _receiveAcknowledgement(envelope);
+    }
+
     // 2. Persist to SQLite
-    final isForMe = envelope.conversationId == 'CONV_COMMUNITY' ||
+    final isForMe =
+        envelope.conversationId == 'CONV_COMMUNITY' ||
         envelope.senderId != DatabaseService.myDeviceId;
 
     final chatMessage = ChatMessage(
@@ -203,9 +231,15 @@ class MeshEngine extends ChangeNotifier {
       status: 'RECEIVED',
     );
 
+    // Receiving a packet is evidence of a real mesh hop. It is not evidence
+    // that a rescue endpoint has received it, so acknowledge it as RELAYED.
+    await _sendRelayAcknowledgement(envelope);
+
     // 4. Automatic TTL decrement & forwarding rule (TTL expiration guard)
     if (envelope.ttl <= 1) {
-      debugPrint('[MeshEngine] TTL expired (${envelope.ttl}). Stored locally; halted radio forward.');
+      debugPrint(
+        '[MeshEngine] TTL expired (${envelope.ttl}). Stored locally; halted radio forward.',
+      );
       _envelopeController.add(envelope);
       notifyListeners();
       return RelayAction.storedTtlExpired;
@@ -225,8 +259,12 @@ class MeshEngine extends ChangeNotifier {
 
     // Physically re-broadcast forwarded packet over Bluetooth RF airwaves
     try {
-      final relayedTo = await _radioService.broadcastJson(forwardedEnvelope.toJson());
-      debugPrint('[MeshEngine] Relayed ${forwardedEnvelope.uuid} to $relayedTo Bluetooth peer(s)');
+      final relayedTo = await _radioService.broadcastJson(
+        forwardedEnvelope.toJson(),
+      );
+      debugPrint(
+        '[MeshEngine] Relayed ${forwardedEnvelope.uuid} to $relayedTo Bluetooth peer(s)',
+      );
     } catch (e) {
       debugPrint('[MeshEngine] Radio relay broadcast error: $e');
     }
@@ -236,27 +274,87 @@ class MeshEngine extends ChangeNotifier {
     notifyListeners();
 
     debugPrint(
-        '[MeshEngine] Forwarded packet ${envelope.uuid}: hops=${forwardedEnvelope.hops}, ttl=${forwardedEnvelope.ttl}');
+      '[MeshEngine] Forwarded packet ${envelope.uuid}: hops=${forwardedEnvelope.hops}, ttl=${forwardedEnvelope.ttl}',
+    );
     return isForMe ? RelayAction.deliveredToMe : RelayAction.forwarded;
+  }
+
+  /// Persists an incoming image after the radio layer has copied it into the
+  /// app's private storage, then treats it as a normal delay-tolerant packet.
+  Future<RelayAction> receiveMediaPacket(
+    MessageEnvelope envelope,
+    MediaAttachment attachment,
+  ) async {
+    final messageId = envelope.uuid;
+    if (_seenMessageIds.contains(messageId)) {
+      return RelayAction.droppedDuplicate;
+    }
+    if (_bloomFilter.mightContain(messageId) &&
+        await _dbService.messageExists(messageId)) {
+      _seenMessageIds.add(messageId);
+      return RelayAction.droppedDuplicate;
+    }
+
+    _seenMessageIds.add(messageId);
+    _bloomFilter.add(messageId);
+    await _dbService.insertMessage(
+      ChatMessage(
+        messageId: messageId,
+        conversationId: envelope.conversationId,
+        senderId: envelope.senderId,
+        senderName: envelope.senderName,
+        isMine: envelope.senderId == DatabaseService.myDeviceId,
+        content: envelope.payload,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(envelope.timestamp),
+        status: MessageDeliveryStatus.delivered,
+        hopCount: envelope.hops,
+        ttl: envelope.ttl,
+        messageType: envelope.type,
+        recipientTarget: envelope.recipientTarget,
+        location: envelope.metadata != null
+            ? LocationPreview.fromJson(envelope.metadata!)
+            : null,
+        category: envelope.metadata?['category']?.toString(),
+        attachment: attachment,
+      ).toDbMap(),
+    );
+    await _dbService.recordRelayAudit(
+      messageId: messageId,
+      fromDeviceId: envelope.senderId,
+      toDeviceId: DatabaseService.myDeviceId,
+      hopNumber: envelope.hops + 1,
+      status: 'RECEIVED_MEDIA',
+    );
+    await relayReceivedMedia(envelope, attachment.localPath);
+    _envelopeController.add(envelope);
+    notifyListeners();
+    return envelope.ttl <= 1
+        ? RelayAction.storedTtlExpired
+        : RelayAction.deliveredToMe;
   }
 
   /// Outbox Queue Manager:
   /// Enqueues message already written to SQLite with status 'SAVED'
   /// Attempts local BLE broadcast, advancing to SENT_NEARBY -> RELAYED -> DELIVERED
-  void queueOutboxMessage(MessageEnvelope envelope) {
+  void queueOutboxMessage(MessageEnvelope envelope, {String? attachmentPath}) {
     _seenMessageIds.add(envelope.uuid);
     _bloomFilter.add(envelope.uuid);
-    _outboxQueue.add(envelope);
+    if (_queuedMessageIds.contains(envelope.uuid)) return;
+    _queuedMessageIds.add(envelope.uuid);
+    _outboxQueue.add(_OutboxItem(envelope, attachmentPath: attachmentPath));
     _processOutboxQueue();
   }
 
-  /// Outbox processing worker with simulated disaster mesh transitions
+  /// Outbox processing worker. Status only advances when a physical peer
+  /// accepted bytes; relayed and delivered are driven by real ACK frames.
   Future<void> _processOutboxQueue() async {
     if (_isProcessingOutbox || _outboxQueue.isEmpty) return;
     _isProcessingOutbox = true;
 
     while (_outboxQueue.isNotEmpty) {
-      final envelope = _outboxQueue.removeAt(0);
+      final item = _outboxQueue.removeAt(0);
+      final envelope = item.envelope;
+      _queuedMessageIds.remove(envelope.uuid);
 
       try {
         // Step 1: Update status to QUEUED in SQLite
@@ -264,76 +362,53 @@ class MeshEngine extends ChangeNotifier {
           messageId: envelope.uuid,
           status: 'QUEUED',
         );
+        await _publishStatus(envelope, MessageDeliveryStatus.queued);
 
         // Step 2: Physically broadcast envelope over Bluetooth RF airwaves
         int peerCount = 0;
         try {
-          peerCount = await _radioService.broadcastJson(envelope.toJson());
-          debugPrint('[MeshEngine] Outbox RF broadcast: ${envelope.uuid} pushed to $peerCount physical peer(s)');
+          if (item.attachmentPath != null) {
+            final message = await _dbService.getMessageById(envelope.uuid);
+            final attachment = message?.attachment;
+            if (attachment == null) {
+              throw StateError(
+                'The queued media attachment is no longer available.',
+              );
+            }
+            peerCount = await _radioService.broadcastMedia(
+              filePath: item.attachmentPath!,
+              envelope: envelope.toJson(),
+              fileName: attachment.fileName,
+              mimeType: attachment.mimeType,
+              byteLength: attachment.byteLength,
+            );
+          } else {
+            peerCount = await _radioService.broadcastJson(envelope.toJson());
+          }
+          debugPrint(
+            '[MeshEngine] Outbox RF broadcast: ${envelope.uuid} pushed to $peerCount physical peer(s)',
+          );
         } catch (e) {
           debugPrint('[MeshEngine] Outbox RF broadcast exception: $e');
         }
 
-        // Brief delay for radio transceiver stabilization
-        await Future.delayed(const Duration(milliseconds: 300));
+        if (peerCount == 0) {
+          // The durable row remains QUEUED and will be retried when a peer
+          // appears or after an explicit sync. Never invent delivery progress.
+          continue;
+        }
+
         await _dbService.updateMessageStatus(
           messageId: envelope.uuid,
           status: 'SENT_NEARBY',
           hopCount: 0,
         );
 
-        final sentNearbyMsg = ChatMessage(
-          messageId: envelope.uuid,
-          conversationId: envelope.conversationId,
-          senderId: envelope.senderId,
-          senderName: envelope.senderName,
-          isMine: true,
-          content: envelope.payload,
-          timestamp: DateTime.fromMillisecondsSinceEpoch(envelope.timestamp),
-          status: MessageDeliveryStatus.sentNearby,
-          hopCount: 0,
-          ttl: envelope.ttl,
-          messageType: envelope.type,
-          recipientTarget: envelope.recipientTarget,
-          location: envelope.metadata != null
-              ? LocationPreview.fromJson(envelope.metadata!)
-              : null,
-        );
-        _statusUpdateController.add(sentNearbyMsg);
-        notifyListeners();
-
-        // Step 3: Simulate multi-hop mesh relay ACK from intermediate peer (1.5s delay)
-        await Future.delayed(const Duration(milliseconds: 1500));
-        await _dbService.updateMessageStatus(
-          messageId: envelope.uuid,
-          status: 'RELAYED',
-          hopCount: 2,
-        );
-
-        final relayedMsg = sentNearbyMsg.copyWith(
-          status: MessageDeliveryStatus.relayed,
-          hopCount: 2,
-          ttl: envelope.ttl > 2 ? envelope.ttl - 2 : 1,
-        );
-        _statusUpdateController.add(relayedMsg);
-        _relayedMessagesCount++;
-        notifyListeners();
-
-        // Step 4: Final delivery confirmation (1.5s delay)
-        await Future.delayed(const Duration(milliseconds: 1500));
-        await _dbService.updateMessageStatus(
-          messageId: envelope.uuid,
-          status: 'DELIVERED',
-          hopCount: 2,
-        );
-
-        final deliveredMsg = relayedMsg.copyWith(
-          status: MessageDeliveryStatus.delivered,
-        );
-        _statusUpdateController.add(deliveredMsg);
-        notifyListeners();
+        await _publishStatus(envelope, MessageDeliveryStatus.sentNearby);
       } catch (e) {
-        debugPrint('[MeshEngine] Outbox processing error for ${envelope.uuid}: $e');
+        debugPrint(
+          '[MeshEngine] Outbox processing error for ${envelope.uuid}: $e',
+        );
         await _dbService.updateMessageStatus(
           messageId: envelope.uuid,
           status: 'FAILED',
@@ -344,6 +419,82 @@ class MeshEngine extends ChangeNotifier {
     _isProcessingOutbox = false;
   }
 
+  Future<RelayAction> _receiveAcknowledgement(
+    MessageEnvelope acknowledgement,
+  ) async {
+    final targetId =
+        acknowledgement.metadata?['ack_msg_id']?.toString() ??
+        acknowledgement.payload;
+    final isDeliveryAck = acknowledgement.type == 'DELIVERY_ACK';
+    final status = isDeliveryAck
+        ? MessageDeliveryStatus.delivered
+        : MessageDeliveryStatus.relayed;
+    final existing = await _dbService.getMessageById(targetId);
+    if (existing != null && existing.isMine) {
+      await _dbService.updateMessageStatus(
+        messageId: targetId,
+        status: status.name.toUpperCase(),
+        hopCount: acknowledgement.hops,
+      );
+      _statusUpdateController.add(
+        existing.copyWith(status: status, hopCount: acknowledgement.hops),
+      );
+      notifyListeners();
+    }
+
+    if (acknowledgement.ttl <= 1) {
+      return RelayAction.storedTtlExpired;
+    }
+
+    final relayed = acknowledgement.copyForRelay();
+    await _radioService.broadcastBytes(relayed.toBytes());
+    return RelayAction.forwarded;
+  }
+
+  Future<void> _sendRelayAcknowledgement(MessageEnvelope received) async {
+    final acknowledgement = MessageEnvelope(
+      uuid: 'ACK-${received.uuid}-${DateTime.now().microsecondsSinceEpoch}',
+      senderId: DatabaseService.myDeviceId,
+      senderName: DatabaseService.myDisplayName,
+      conversationId: received.conversationId,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      ttl: received.ttl,
+      hops: received.hops + 1,
+      type: 'RELAY_ACK',
+      payload: received.uuid,
+      metadata: {'ack_msg_id': received.uuid},
+    );
+    await _radioService.broadcastBytes(acknowledgement.toBytes());
+  }
+
+  /// Used by the media receiver after its file is durably stored. The file is
+  /// then eligible for store-and-forward just like a text envelope.
+  Future<void> relayReceivedMedia(
+    MessageEnvelope received,
+    String attachmentPath,
+  ) async {
+    await _sendRelayAcknowledgement(received);
+    if (received.ttl > 1) {
+      queueOutboxMessage(
+        received.copyForRelay(),
+        attachmentPath: attachmentPath,
+      );
+    }
+  }
+
+  Future<void> _publishStatus(
+    MessageEnvelope envelope,
+    MessageDeliveryStatus status,
+  ) async {
+    final persisted = await _dbService.getMessageById(envelope.uuid);
+    if (persisted != null) {
+      _statusUpdateController.add(
+        persisted.copyWith(status: status, hopCount: envelope.hops),
+      );
+    }
+    notifyListeners();
+  }
+
   /// Multi-hop simulation method: simulateRelay(message, intermediateNodeIds)
   /// Demonstrates Phone A -> Phone B -> Phone C -> Phone D packet delivery
   /// with hop count increment and TTL decrement.
@@ -351,11 +502,9 @@ class MeshEngine extends ChangeNotifier {
     ChatMessage message, [
     List<String>? intermediateNodeIds,
   ]) async {
-    final nodes = intermediateNodeIds ?? [
-      'Phone B (Relay 1)',
-      'Phone C (Relay 2)',
-      'Phone D (Rescue HQ)',
-    ];
+    final nodes =
+        intermediateNodeIds ??
+        ['Phone B (Relay 1)', 'Phone C (Relay 2)', 'Phone D (Rescue HQ)'];
 
     final results = <ChatMessage>[];
     var currentHop = message.hopCount;
@@ -375,7 +524,8 @@ class MeshEngine extends ChangeNotifier {
       // Check TTL guard
       if (currentTtl <= 1) {
         debugPrint(
-            '[MeshEngine.simulateRelay] TTL exhausted ($currentTtl) before $nextNode. Halting relay.');
+          '[MeshEngine.simulateRelay] TTL exhausted ($currentTtl) before $nextNode. Halting relay.',
+        );
         break;
       }
 
@@ -424,14 +574,11 @@ class MeshEngine extends ChangeNotifier {
   /// Convenience 4-Phone multi-hop relay simulation
   /// Phone A (Origin) -> Phone B (Relay 1) -> Phone C (Relay 2) -> Phone D (Rescue Station)
   Future<List<ChatMessage>> simulate4PhoneRelay(ChatMessage initialMessage) {
-    return simulateRelay(
-      initialMessage,
-      [
-        'Phone B (Relay 1)',
-        'Phone C (Relay 2)',
-        'Phone D (Rescue Station)',
-      ],
-    );
+    return simulateRelay(initialMessage, [
+      'Phone B (Relay 1)',
+      'Phone C (Relay 2)',
+      'Phone D (Rescue Station)',
+    ]);
   }
 
   /// Trigger manual synchronization of all pending outbox items
@@ -451,13 +598,14 @@ class MeshEngine extends ChangeNotifier {
         recipientTarget: p.recipientTarget,
         metadata: p.location?.toJson(),
       );
-      queueOutboxMessage(env);
+      queueOutboxMessage(env, attachmentPath: p.attachment?.localPath);
     }
   }
 
   @override
   void dispose() {
     _radioSubscription?.cancel();
+    _peerSubscription?.cancel();
     _envelopeController.close();
     _statusUpdateController.close();
     super.dispose();

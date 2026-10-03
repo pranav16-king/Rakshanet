@@ -1,12 +1,15 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../database/app_database.dart';
 import '../../models/emergency_report.dart';
 import '../../models/mesh_device.dart';
 import '../../models/shelter_resource.dart';
 import '../../providers/emergency_report_provider.dart';
 import '../../providers/mesh_provider.dart';
+import '../../providers/telemetry_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
@@ -35,7 +38,13 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       TransformationController();
 
   // Active filter chip keys
-  final Set<String> _activeFilters = {'You', 'Nearby', 'SOS', 'Rescue', 'Shelter'};
+  final Set<String> _activeFilters = {
+    'You',
+    'Nearby',
+    'SOS',
+    'Rescue',
+    'Shelter',
+  };
 
   // Layer settings
   bool _showContours = true;
@@ -78,6 +87,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   List<_MapNode> _computeNodes(
     MeshProvider mesh,
     List<EmergencyReport> emergencyReports,
+    TelemetryProvider telemetry,
   ) {
     final List<_MapNode> result = [];
 
@@ -87,15 +97,33 @@ class _LiveMapScreenState extends State<LiveMapScreen>
         id: 'node-you',
         label: 'You',
         type: _NodeType.you,
-        offset: const Offset(400, 480),
-        statusText: 'My Device (Mesh Relay Active)',
+        offset: const Offset(450, 450),
+        statusText: 'Mesh relay active • GPS status in header',
         distance: '0 m',
         lastSeen: 'Now',
       ),
     );
 
+    final originLatitude = telemetry.latitude;
+    final originLongitude = telemetry.longitude;
+    if (!telemetry.hasGpsFix ||
+        originLatitude == null ||
+        originLongitude == null) {
+      // Bluetooth tells us that peers are nearby, not their bearing. Do not
+      // draw made-up positions when this device has no GPS reference.
+      return result;
+    }
+    final pixelsPerMeter = _pixelsPerMeter(
+      originLatitude,
+      originLongitude,
+      emergencyReports,
+    );
+
     // 2. Real BLE peers dynamically from MeshProvider
-    final peers = mesh.nearbyDevices;
+    // Nearby Connections exposes no peer direction or peer GPS coordinate.
+    // Connected peers remain visible in the Network tab instead of being
+    // placed arbitrarily on a geographic map.
+    const peers = <MeshDevice>[];
     for (int i = 0; i < peers.length; i++) {
       final dev = peers[i];
       final angle = (dev.deviceId.hashCode.abs() % 360) * math.pi / 180;
@@ -127,11 +155,13 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     if (emergencyReports.isNotEmpty) {
       for (int i = 0; i < emergencyReports.length; i++) {
         final rep = emergencyReports[i];
-        final angle = ((rep.id.hashCode.abs() + (i * 73)) % 360) * math.pi / 180;
-        final radius = 160.0 + ((rep.id.hashCode.abs() % 3) * 35.0);
-        final pos = Offset(
-          400 + math.cos(angle) * radius,
-          480 + math.sin(angle) * radius,
+        if (rep.latitude == null || rep.longitude == null) continue;
+        final pos = _projectCoordinate(
+          originLatitude: originLatitude,
+          originLongitude: originLongitude,
+          latitude: rep.latitude!,
+          longitude: rep.longitude!,
+          pixelsPerMeter: pixelsPerMeter,
         );
         result.add(
           _MapNode(
@@ -141,7 +171,14 @@ class _LiveMapScreenState extends State<LiveMapScreen>
             offset: pos,
             statusText:
                 '${rep.peopleCount} ${rep.peopleCount == 1 ? 'person needs' : 'people need'} help • ${rep.notes.isNotEmpty ? rep.notes : rep.type.label}',
-            distance: '~${(0.7 + (rep.id.hashCode.abs() % 16) / 10.0).toStringAsFixed(1)} km',
+            distance: _formatDistance(
+              _distanceMeters(
+                originLatitude,
+                originLongitude,
+                rep.latitude!,
+                rep.longitude!,
+              ),
+            ),
             lastSeen: _formatTimeAgo(rep.timestamp),
             peopleCount: rep.peopleCount,
             emergencyReport: rep,
@@ -154,11 +191,13 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     if (_shelterResources.isNotEmpty) {
       for (int i = 0; i < _shelterResources.length; i++) {
         final s = _shelterResources[i];
-        final angle = ((s.id.hashCode.abs() + (i * 127)) % 360) * math.pi / 180;
-        final radius = 130.0 + ((s.id.hashCode.abs() % 4) * 30.0);
-        final pos = Offset(
-          400 + math.cos(angle) * radius,
-          480 + math.sin(angle) * radius,
+        if (s.latitude == null || s.longitude == null) continue;
+        final pos = _projectCoordinate(
+          originLatitude: originLatitude,
+          originLongitude: originLongitude,
+          latitude: s.latitude!,
+          longitude: s.longitude!,
+          pixelsPerMeter: pixelsPerMeter,
         );
 
         result.add(
@@ -168,7 +207,14 @@ class _LiveMapScreenState extends State<LiveMapScreen>
             type: _NodeType.shelter,
             offset: pos,
             statusText: '${s.name} • ${s.capacity}/${s.maxCapacity} spaces',
-            distance: '~${s.distance.toStringAsFixed(1)} km',
+            distance: _formatDistance(
+              _distanceMeters(
+                originLatitude,
+                originLongitude,
+                s.latitude!,
+                s.longitude!,
+              ),
+            ),
             lastSeen: s.isOpen ? 'Open' : (s.isFull ? 'Full' : 'Closed'),
             shelterResource: s,
           ),
@@ -178,6 +224,73 @@ class _LiveMapScreenState extends State<LiveMapScreen>
 
     return result;
   }
+
+  double _pixelsPerMeter(
+    double originLatitude,
+    double originLongitude,
+    List<EmergencyReport> reports,
+  ) {
+    final distances = <double>[
+      for (final report in reports)
+        if (report.latitude != null && report.longitude != null)
+          _distanceMeters(
+            originLatitude,
+            originLongitude,
+            report.latitude!,
+            report.longitude!,
+          ),
+      for (final shelter in _shelterResources)
+        if (shelter.latitude != null && shelter.longitude != null)
+          _distanceMeters(
+            originLatitude,
+            originLongitude,
+            shelter.latitude!,
+            shelter.longitude!,
+          ),
+    ];
+    final maximum = distances.isEmpty
+        ? 1.0
+        : distances.reduce(math.max).clamp(1.0, 100000.0).toDouble();
+    return math.min(0.35, 320 / maximum);
+  }
+
+  Offset _projectCoordinate({
+    required double originLatitude,
+    required double originLongitude,
+    required double latitude,
+    required double longitude,
+    required double pixelsPerMeter,
+  }) {
+    const metersPerLatitudeDegree = 111320.0;
+    final north = (latitude - originLatitude) * metersPerLatitudeDegree;
+    final east =
+        (longitude - originLongitude) *
+        metersPerLatitudeDegree *
+        math.cos(originLatitude * math.pi / 180);
+    return Offset(450 + east * pixelsPerMeter, 450 - north * pixelsPerMeter);
+  }
+
+  double _distanceMeters(
+    double latitudeA,
+    double longitudeA,
+    double latitudeB,
+    double longitudeB,
+  ) {
+    const earthRadius = 6371000.0;
+    final latDelta = (latitudeB - latitudeA) * math.pi / 180;
+    final lonDelta = (longitudeB - longitudeA) * math.pi / 180;
+    final a =
+        math.sin(latDelta / 2) * math.sin(latDelta / 2) +
+        math.cos(latitudeA * math.pi / 180) *
+            math.cos(latitudeB * math.pi / 180) *
+            math.sin(lonDelta / 2) *
+            math.sin(lonDelta / 2);
+    return earthRadius * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
+  String _formatDistance(double meters) => meters < 1000
+      ? 'about ${meters.round()} m'
+      : 'about ${(meters / 1000).toStringAsFixed(1)} km';
 
   @override
   void initState() {
@@ -204,7 +317,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
 
   void _centerOnUser() {
     final Size size = MediaQuery.of(context).size;
-    const Offset userPos = Offset(400, 480);
+    const Offset userPos = Offset(450, 450);
     const double scale = 1.0;
     final double dx = (size.width / 2) - (userPos.dx * scale);
     final double dy = (size.height / 2) - (userPos.dy * scale) - 40;
@@ -234,7 +347,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       context: context,
       backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTokens.radiusLg),
+        ),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSheetState) => Padding(
@@ -264,10 +379,14 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 activeThumbColor: AppTokens.signalYellow,
-                title: Text('Topographical Elevation Contours',
-                    style: TextStyle(color: theme.text)),
-                subtitle: Text('Cached terrain relief vectors',
-                    style: TextStyle(color: theme.textMuted, fontSize: 13)),
+                title: Text(
+                  'Topographical Elevation Contours',
+                  style: TextStyle(color: theme.text),
+                ),
+                subtitle: Text(
+                  'Local visual reference only; not a surveyed terrain layer',
+                  style: TextStyle(color: theme.textMuted, fontSize: 13),
+                ),
                 value: _showContours,
                 onChanged: (val) {
                   setSheetState(() => _showContours = val);
@@ -277,10 +396,14 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 activeThumbColor: AppTokens.signalYellow,
-                title: Text('Mesh Network Link Lines',
-                    style: TextStyle(color: theme.text)),
-                subtitle: Text('Direct BLE / Wi-Fi peer connectivity',
-                    style: TextStyle(color: theme.textMuted, fontSize: 13)),
+                title: Text(
+                  'Mesh Network Link Lines',
+                  style: TextStyle(color: theme.text),
+                ),
+                subtitle: Text(
+                  'Direct BLE / Wi-Fi peer connectivity',
+                  style: TextStyle(color: theme.textMuted, fontSize: 13),
+                ),
                 value: _showMeshLinks,
                 onChanged: (val) {
                   setSheetState(() => _showMeshLinks = val);
@@ -290,10 +413,14 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 activeThumbColor: AppTokens.signalYellow,
-                title: Text('Tactical Coordinates Grid',
-                    style: TextStyle(color: theme.text)),
-                subtitle: Text('Military MGRS / Lat-Long overlay',
-                    style: TextStyle(color: theme.textMuted, fontSize: 13)),
+                title: Text(
+                  'Tactical Coordinates Grid',
+                  style: TextStyle(color: theme.text),
+                ),
+                subtitle: Text(
+                  'GPS-based local coordinate reference',
+                  style: TextStyle(color: theme.textMuted, fontSize: 13),
+                ),
                 value: _showGrid,
                 onChanged: (val) {
                   setSheetState(() => _showGrid = val);
@@ -314,7 +441,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     required ThemeProvider theme,
   }) {
     final rep = report ?? node.emergencyReport;
-    final int people = rep?.peopleCount ?? (node.peopleCount > 0 ? node.peopleCount : 1);
+    final int people =
+        rep?.peopleCount ?? (node.peopleCount > 0 ? node.peopleCount : 1);
     final String category = rep?.category ?? 'Emergency SOS';
     final String severity = rep?.severity ?? 'CRITICAL';
     final repNotes = rep?.notes;
@@ -327,14 +455,16 @@ class _LiveMapScreenState extends State<LiveMapScreen>
         ? '${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E'
         : (rep?.location.isNotEmpty == true && rep?.location != 'Unknown'
             ? rep!.location
-            : 'Local Mesh Coordinates');
+            : 'No shared GPS coordinate');
     final String status = rep?.status ?? 'SAVED';
 
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTokens.radiusLg),
+        ),
       ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -350,8 +480,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                   color: theme.isLightMode
                       ? AppTokens.lightBorderStrong
                       : (theme.isLowPower
-                          ? AppTokens.oledBorderStrong
-                          : AppTokens.darkBorderStrong),
+                            ? AppTokens.oledBorderStrong
+                            : AppTokens.darkBorderStrong),
                   borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                 ),
               ),
@@ -365,8 +495,11 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                     color: AppTokens.sosRed.withValues(alpha: 0.18),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.warning_amber_rounded,
-                      color: AppTokens.sosRed, size: 28),
+                  child: const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppTokens.sosRed,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -384,10 +517,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                       const SizedBox(height: 4),
                       Text(
                         'Distance: ${node.distance} • Reported: ${node.lastSeen}',
-                        style: TextStyle(
-                          color: theme.textMuted,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: theme.textMuted, fontSize: 13),
                       ),
                     ],
                   ),
@@ -398,7 +528,10 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: theme.surfaceSunken,
                   borderRadius: BorderRadius.circular(AppTokens.radiusSm),
@@ -427,36 +560,54 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Mesh Status:', style: TextStyle(color: theme.textMuted)),
-                      Text('$status (BLE Relay)',
-                          style: const TextStyle(
-                              color: AppTokens.beaconTeal,
-                              fontWeight: FontWeight.bold)),
+                      Text(
+                        'Mesh Status:',
+                        style: TextStyle(color: theme.textMuted),
+                      ),
+                      Text(
+                        '$status (BLE Relay)',
+                        style: const TextStyle(
+                          color: AppTokens.beaconTeal,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Coordinates:', style: TextStyle(color: theme.textMuted)),
-                      Text(coords,
-                          style: TextStyle(
-                              color: theme.text,
-                              fontFamily: 'monospace',
-                              fontWeight: FontWeight.w500)),
+                      Text(
+                        'Coordinates:',
+                        style: TextStyle(color: theme.textMuted),
+                      ),
+                      Text(
+                        coords,
+                        style: TextStyle(
+                          color: theme.text,
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Severity Level:', style: TextStyle(color: theme.textMuted)),
-                      Text('$severity (Priority Aid)',
-                          style: TextStyle(
-                              color: theme.isLightMode
-                                  ? AppTokens.lightSos
-                                  : AppTokens.darkSos,
-                              fontWeight: FontWeight.bold)),
+                      Text(
+                        'Severity Level:',
+                        style: TextStyle(color: theme.textMuted),
+                      ),
+                      Text(
+                        '$severity (Priority Aid)',
+                        style: TextStyle(
+                          color: theme.isLightMode
+                              ? AppTokens.lightSos
+                              : AppTokens.darkSos,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -474,13 +625,18 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                         foregroundColor: AppTokens.lightOnPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusMd,
+                          ),
                         ),
                       ),
                       icon: const Icon(Icons.navigation_rounded, size: 20),
                       label: const Text(
                         'Navigate to Location',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                       onPressed: () {
                         Navigator.pop(ctx);
@@ -488,7 +644,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                           SnackBar(
                             backgroundColor: AppTokens.beaconTeal,
                             content: Text(
-                                'Offline compass navigation engaged for ${node.distance}'),
+                              'Offline compass navigation engaged for ${node.distance}',
+                            ),
                           ),
                         );
                       },
@@ -516,7 +673,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       context: context,
       backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTokens.radiusLg),
+        ),
       ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -532,8 +691,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                   color: theme.isLightMode
                       ? AppTokens.lightBorderStrong
                       : (theme.isLowPower
-                          ? AppTokens.oledBorderStrong
-                          : AppTokens.darkBorderStrong),
+                            ? AppTokens.oledBorderStrong
+                            : AppTokens.darkBorderStrong),
                   borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                 ),
               ),
@@ -547,8 +706,11 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                     color: AppTokens.signalYellow.withValues(alpha: 0.18),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.home_rounded,
-                      color: AppTokens.signalYellow, size: 28),
+                  child: const Icon(
+                    Icons.home_rounded,
+                    color: AppTokens.signalYellow,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -567,7 +729,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                       Text(
                         'Distance: ${node.distance} • Status: ${s.openStatus}',
                         style: TextStyle(
-                          color: s.isOpen ? AppTokens.beaconTeal : theme.textMuted,
+                          color: s.isOpen
+                              ? AppTokens.beaconTeal
+                              : theme.textMuted,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -590,9 +754,17 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Capacity Occupancy:', style: TextStyle(color: theme.textMuted)),
-                      Text('${s.capacity} / ${s.maxCapacity} (${s.availableSpots} spots left)',
-                          style: TextStyle(color: theme.text, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Capacity Occupancy:',
+                        style: TextStyle(color: theme.textMuted),
+                      ),
+                      Text(
+                        '${s.capacity} / ${s.maxCapacity} (${s.availableSpots} spots left)',
+                        style: TextStyle(
+                          color: theme.text,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   if (s.supplies.isNotEmpty) ...[
@@ -600,11 +772,17 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Available Supplies:', style: TextStyle(color: theme.textMuted)),
-                        Text(s.supplies.join(', '),
-                            style: const TextStyle(
-                                color: AppTokens.beaconTeal,
-                                fontWeight: FontWeight.w600)),
+                        Text(
+                          'Available Supplies:',
+                          style: TextStyle(color: theme.textMuted),
+                        ),
+                        Text(
+                          s.supplies.join(', '),
+                          style: const TextStyle(
+                            color: AppTokens.beaconTeal,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -613,11 +791,16 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Address:', style: TextStyle(color: theme.textMuted)),
+                        Text(
+                          'Address:',
+                          style: TextStyle(color: theme.textMuted),
+                        ),
                         Flexible(
-                          child: Text(s.address!,
-                              textAlign: TextAlign.end,
-                              style: TextStyle(color: theme.text, fontSize: 13)),
+                          child: Text(
+                            s.address!,
+                            textAlign: TextAlign.end,
+                            style: TextStyle(color: theme.text, fontSize: 13),
+                          ),
                         ),
                       ],
                     ),
@@ -637,13 +820,18 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                         foregroundColor: AppTokens.lightOnPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusMd,
+                          ),
                         ),
                       ),
                       icon: const Icon(Icons.navigation_rounded, size: 20),
                       label: const Text(
                         'Route to Shelter',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                       onPressed: () {
                         Navigator.pop(ctx);
@@ -651,7 +839,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                           SnackBar(
                             backgroundColor: AppTokens.beaconTeal,
                             content: Text(
-                                'Offline directions engaged for ${s.name} (${node.distance})'),
+                              'Offline directions engaged for ${s.name} (${node.distance})',
+                            ),
                           ),
                         );
                       },
@@ -675,7 +864,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
           const SnackBar(
             backgroundColor: AppTokens.beaconTeal,
             content: Text(
-                'All clear in local mesh range. No active distress alerts.'),
+              'All clear in local mesh range. No active distress alerts.',
+            ),
             duration: Duration(seconds: 2),
           ),
         );
@@ -694,7 +884,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               : [
                   BoxShadow(
                     color: Colors.black.withValues(
-                        alpha: theme.isLightMode ? 0.08 : 0.4),
+                      alpha: theme.isLightMode ? 0.08 : 0.4,
+                    ),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -781,7 +972,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
 
     return InkWell(
       borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-      onTap: () => _showIncidentDetailsModal(sosNode, report: report, theme: theme),
+      onTap: () =>
+          _showIncidentDetailsModal(sosNode, report: report, theme: theme),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
@@ -796,7 +988,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               : [
                   BoxShadow(
                     color: Colors.black.withValues(
-                        alpha: theme.isLightMode ? 0.1 : 0.5),
+                      alpha: theme.isLightMode ? 0.1 : 0.5,
+                    ),
                     blurRadius: 14,
                     offset: const Offset(0, 6),
                   ),
@@ -849,11 +1042,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: theme.textMuted,
-              size: 26,
-            ),
+            Icon(Icons.chevron_right_rounded, color: theme.textMuted, size: 26),
           ],
         ),
       ),
@@ -878,7 +1067,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
             : [
                 BoxShadow(
                   color: Colors.black.withValues(
-                      alpha: theme.isLightMode ? 0.08 : 0.35),
+                    alpha: theme.isLightMode ? 0.08 : 0.35,
+                  ),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -915,7 +1105,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
           decoration: BoxDecoration(
             color: isSelected
                 ? theme.surface
-                : theme.surface.withValues(alpha: theme.isLightMode ? 0.6 : 0.4),
+                : theme.surface.withValues(
+                    alpha: theme.isLightMode ? 0.6 : 0.4,
+                  ),
             borderRadius: BorderRadius.circular(AppTokens.radiusPill),
             border: Border.all(
               color: isSelected ? color : theme.border,
@@ -925,11 +1117,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? color : theme.textMuted,
-              ),
+              Icon(icon, size: 16, color: isSelected ? color : theme.textMuted),
               const SizedBox(width: 6),
               Text(
                 label,
@@ -950,11 +1138,12 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
     final mesh = context.watch<MeshProvider>();
+    final telemetry = context.watch<TelemetryProvider>();
     final emergencyProvider = context.watch<EmergencyReportProvider>();
     final activeReports = emergencyProvider.reports.isNotEmpty
         ? emergencyProvider.reports
         : _emergencyReports;
-    final nodes = _computeNodes(mesh, activeReports);
+    final nodes = _computeNodes(mesh, activeReports, telemetry);
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -966,10 +1155,15 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               child: GestureDetector(
                 onTapUp: (details) {
                   final RenderBox box = context.findRenderObject() as RenderBox;
-                  final Offset local = box.globalToLocal(details.globalPosition);
+                  final Offset local = box.globalToLocal(
+                    details.globalPosition,
+                  );
                   final Matrix4 transform = _transformController.value;
                   final Matrix4 inverse = Matrix4.inverted(transform);
-                  final Offset mapCoord = MatrixUtils.transformPoint(inverse, local);
+                  final Offset mapCoord = MatrixUtils.transformPoint(
+                    inverse,
+                    local,
+                  );
 
                   _MapNode? hit;
                   for (final node in nodes) {
@@ -998,7 +1192,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                         SnackBar(
                           backgroundColor: AppTokens.beaconTeal,
                           content: Text(
-                              '${hit.label} • ${hit.statusText} (${hit.distance})'),
+                            '${hit.label} • ${hit.statusText} (${hit.distance})',
+                          ),
                           duration: const Duration(seconds: 2),
                         ),
                       );
@@ -1040,14 +1235,18 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               left: 16,
               right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: (theme.isLightMode
-                          ? AppTokens.lightSurface
-                          : (theme.isLowPower
-                              ? AppTokens.oledSurface
-                              : AppTokens.darkBg))
-                      .withValues(alpha: 0.94),
+                  color:
+                      (theme.isLightMode
+                              ? AppTokens.lightSurface
+                              : (theme.isLowPower
+                                    ? AppTokens.oledSurface
+                                    : AppTokens.darkBg))
+                          .withValues(alpha: 0.94),
                   borderRadius: BorderRadius.circular(AppTokens.radiusMd),
                   border: Border.all(color: theme.border),
                   boxShadow: theme.isLowPower
@@ -1055,7 +1254,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                       : [
                           BoxShadow(
                             color: Colors.black.withValues(
-                                alpha: theme.isLightMode ? 0.08 : 0.4),
+                              alpha: theme.isLightMode ? 0.08 : 0.4,
+                            ),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -1099,11 +1299,15 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                           Row(
                             children: [
                               Icon(
-                                mesh.nearbyDevices.isEmpty
-                                    ? Icons.radar_rounded
-                                    : Icons.wifi_off_rounded,
+                                telemetry.hasGpsFix
+                                    ? Icons.location_on_rounded
+                                    : Icons.location_off_rounded,
                                 size: 13,
-                                color: theme.textMuted,
+                                color: telemetry.hasGpsFix
+                                    ? (theme.isLightMode
+                                          ? AppTokens.lightSuccess
+                                          : AppTokens.darkSuccess)
+                                    : theme.warning,
                               ),
                               const SizedBox(width: 4),
                               Flexible(
@@ -1171,8 +1375,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                     tooltip: 'Zoom Out',
                     onTap: () {
                       _transformController.value =
-                          _transformController.value.clone()
-                            ..multiply(Matrix4.diagonal3Values(0.83, 0.83, 1.0));
+                          _transformController.value.clone()..multiply(
+                            Matrix4.diagonal3Values(0.83, 0.83, 1.0),
+                          );
                     },
                     theme: theme,
                   ),
@@ -1193,30 +1398,44 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        _buildFilterChip('You', Icons.person_pin_circle_rounded,
-                            const Color(0xFF2F80ED), theme),
-                        const SizedBox(width: 8),
-                        _buildFilterChip('Nearby', Icons.location_on,
-                            AppTokens.beaconTeal, theme),
-                        const SizedBox(width: 8),
-                        _buildFilterChip('SOS', Icons.warning_rounded,
-                            AppTokens.sosRed, theme),
+                        _buildFilterChip(
+                          'You',
+                          Icons.person_pin_circle_rounded,
+                          const Color(0xFF2F80ED),
+                          theme,
+                        ),
                         const SizedBox(width: 8),
                         _buildFilterChip(
-                            'Rescue',
-                            Icons.shield_rounded,
-                            theme.isLightMode
-                                ? AppTokens.lightSuccess
-                                : AppTokens.darkSuccess,
-                            theme),
+                          'Nearby',
+                          Icons.location_on,
+                          AppTokens.beaconTeal,
+                          theme,
+                        ),
                         const SizedBox(width: 8),
                         _buildFilterChip(
-                            'Shelter',
-                            Icons.home_rounded,
-                            theme.isLightMode
-                                ? AppTokens.lightPrimaryInk
-                                : AppTokens.signalYellow,
-                            theme),
+                          'SOS',
+                          Icons.warning_rounded,
+                          AppTokens.sosRed,
+                          theme,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          'Rescue',
+                          Icons.shield_rounded,
+                          theme.isLightMode
+                              ? AppTokens.lightSuccess
+                              : AppTokens.darkSuccess,
+                          theme,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          'Shelter',
+                          Icons.home_rounded,
+                          theme.isLightMode
+                              ? AppTokens.lightPrimaryInk
+                              : AppTokens.signalYellow,
+                          theme,
+                        ),
                       ],
                     ),
                   ),
@@ -1297,7 +1516,8 @@ class _MapCanvasPainter extends CustomPainter {
     final bool isOled = themeMode == AppThemeMode.lowPower;
 
     final Color canvasBg = isOled
-        ? AppTokens.oledBg // True #000000 Black
+        ? AppTokens
+              .oledBg // True #000000 Black
         : (isLight ? AppTokens.lightBg : const Color(0xFF0B1424));
 
     final Color contourColor = isOled
@@ -1307,14 +1527,14 @@ class _MapCanvasPainter extends CustomPainter {
     final Color riverColor = isOled
         ? const Color(0xFF0A121A).withValues(alpha: 0.5)
         : (isLight
-            ? const Color(0xFFD0E3F3).withValues(alpha: 0.75)
-            : const Color(0xFF0F263E).withValues(alpha: 0.6));
+              ? const Color(0xFFD0E3F3).withValues(alpha: 0.75)
+              : const Color(0xFF0F263E).withValues(alpha: 0.6));
 
     final Color gridColor = isOled
         ? const Color(0xFF141414).withValues(alpha: 0.45)
         : (isLight
-            ? const Color(0xFFDCD296).withValues(alpha: 0.4)
-            : const Color(0xFF1E2D47).withValues(alpha: 0.35));
+              ? const Color(0xFFDCD296).withValues(alpha: 0.4)
+              : const Color(0xFF1E2D47).withValues(alpha: 0.35));
 
     final Color meshLinkColor = isLight
         ? AppTokens.lightInfo
@@ -1465,13 +1685,15 @@ class _MapCanvasPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final visibleNodes = nodes.where((n) => _isNodeVisible(n)).toList();
-    final youNode =
-        visibleNodes.where((n) => n.type == _NodeType.you).firstOrNull;
+    final youNode = visibleNodes
+        .where((n) => n.type == _NodeType.you)
+        .firstOrNull;
 
     if (youNode != null) {
       // Connect 'You' to visible peers in radio proximity
-      for (final peer in visibleNodes.where((n) =>
-          n.type == _NodeType.peerTeal || n.type == _NodeType.peerYellow)) {
+      for (final peer in visibleNodes.where(
+        (n) => n.type == _NodeType.peerTeal || n.type == _NodeType.peerYellow,
+      )) {
         final dist = (youNode.offset - peer.offset).distance;
         if (dist <= 280) {
           _drawDashedLine(canvas, youNode.offset, peer.offset, linkPaint);
@@ -1481,8 +1703,9 @@ class _MapCanvasPainter extends CustomPainter {
 
     // Connect peers to neighboring peers
     final peers = visibleNodes
-        .where((n) =>
-            n.type == _NodeType.peerTeal || n.type == _NodeType.peerYellow)
+        .where(
+          (n) => n.type == _NodeType.peerTeal || n.type == _NodeType.peerYellow,
+        )
         .toList();
     for (int i = 0; i < peers.length; i++) {
       for (int j = i + 1; j < peers.length; j++) {
@@ -1493,8 +1716,9 @@ class _MapCanvasPainter extends CustomPainter {
     }
 
     // Connect SOS nodes to the nearest peer or You relay
-    final sosNodes =
-        visibleNodes.where((n) => n.type == _NodeType.sos).toList();
+    final sosNodes = visibleNodes
+        .where((n) => n.type == _NodeType.sos)
+        .toList();
     for (final sos in sosNodes) {
       _MapNode? nearestRelay;
       double minDist = double.infinity;
@@ -1512,8 +1736,9 @@ class _MapCanvasPainter extends CustomPainter {
     }
 
     // Connect shelters to nearest mesh relay
-    final shelterNodes =
-        visibleNodes.where((n) => n.type == _NodeType.shelter).toList();
+    final shelterNodes = visibleNodes
+        .where((n) => n.type == _NodeType.shelter)
+        .toList();
     for (final shelter in shelterNodes) {
       _MapNode? nearest;
       double minDist = double.infinity;
@@ -1597,7 +1822,10 @@ class _MapCanvasPainter extends CustomPainter {
     )..layout();
     textPainter.paint(
       canvas,
-      Offset(pos.dx - (textPainter.width / 2), pos.dy - (textPainter.height / 2)),
+      Offset(
+        pos.dx - (textPainter.width / 2),
+        pos.dy - (textPainter.height / 2),
+      ),
     );
   }
 
@@ -1606,7 +1834,8 @@ class _MapCanvasPainter extends CustomPainter {
 
     // Accuracy / coverage pulse ring
     final pulsePaint = Paint()
-      ..color = const Color(0xFF2F80ED).withValues(alpha: (1.0 - pulseValue) * 0.4)
+      ..color = const Color(0xFF2F80ED)
+          .withValues(alpha: (1.0 - pulseValue) * 0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     canvas.drawCircle(pos, 16.0 + (pulseValue * 18.0), pulsePaint);
@@ -1658,10 +1887,11 @@ class _MapCanvasPainter extends CustomPainter {
     );
 
     final bgPaint = Paint()
-      ..color = (isLight
-              ? AppTokens.lightSurface
-              : (isOled ? AppTokens.oledSurface : AppTokens.darkBg))
-          .withValues(alpha: 0.92)
+      ..color =
+          (isLight
+                  ? AppTokens.lightSurface
+                  : (isOled ? AppTokens.oledSurface : AppTokens.darkBg))
+              .withValues(alpha: 0.92)
       ..style = PaintingStyle.fill;
     canvas.drawRRect(bubbleRect, bgPaint);
 
@@ -1688,16 +1918,14 @@ class _MapCanvasPainter extends CustomPainter {
     )..layout();
     textPainter.paint(
       canvas,
-      Offset(pos.dx - (textPainter.width / 2), pos.dy - (textPainter.height / 2)),
+      Offset(
+        pos.dx - (textPainter.width / 2),
+        pos.dy - (textPainter.height / 2),
+      ),
     );
   }
 
-  void _drawPeerNode(
-    Canvas canvas,
-    _MapNode node,
-    Color color,
-    bool isLight,
-  ) {
+  void _drawPeerNode(Canvas canvas, _MapNode node, Color color, bool isLight) {
     final Offset pos = node.offset;
 
     final glowPaint = Paint()
@@ -1738,9 +1966,15 @@ class _MapCanvasPainter extends CustomPainter {
       ..color = Colors.white
       ..strokeWidth = 2.0;
     canvas.drawLine(
-        Offset(pos.dx - 4, pos.dy), Offset(pos.dx + 4, pos.dy), crossPaint);
+      Offset(pos.dx - 4, pos.dy),
+      Offset(pos.dx + 4, pos.dy),
+      crossPaint,
+    );
     canvas.drawLine(
-        Offset(pos.dx, pos.dy - 4), Offset(pos.dx, pos.dy + 4), crossPaint);
+      Offset(pos.dx, pos.dy - 4),
+      Offset(pos.dx, pos.dy + 4),
+      crossPaint,
+    );
   }
 
   void _drawShelterNode(Canvas canvas, _MapNode node, bool isLight) {

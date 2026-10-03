@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'providers/theme_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/mesh_provider.dart';
@@ -9,6 +10,7 @@ import 'providers/device_status_provider.dart';
 import 'providers/emergency_report_provider.dart';
 import 'providers/telemetry_provider.dart';
 import 'services/chat_service.dart';
+import 'services/device_identity_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/profile/profile_setup_screen.dart';
 import 'screens/shell/main_shell.dart';
@@ -20,8 +22,9 @@ import 'screens/tools/live_map_screen.dart';
 import 'screens/tools/ai_assistant_screen.dart';
 import 'screens/settings/settings_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await DeviceIdentityService.instance.initialize();
   runApp(
     MultiProvider(
       providers: [

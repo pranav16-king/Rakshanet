@@ -1,0 +1,109 @@
+@import "leaflet/dist/leaflet.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #FFFCEB;
+    --bg-alt: #FFF5C2;
+    --bg-surface: #FFFFFF;
+    --bg-sunken: #F6F0D4;
+    --border-color: #E6DCA8;
+    --border-strong: #C9BB6E;
+    --text-primary: #16202D;
+    --text-muted: #566070;
+    --brand-primary: #FFC400;
+    --brand-primary-ink: #8A5A00;
+    --brand-primary-soft: #FFEFA6;
+    --brand-sos: #D92D20;
+    --brand-sos-soft: #FDE2DF;
+    --brand-info: #0E8A94;
+    --brand-info-soft: #D6F1F3;
+    --brand-success: #1E8E4E;
+    --brand-success-soft: #D9F2E3;
+    --brand-warning: #E07B00;
+    --brand-warning-soft: #FFE6C7;
+  }
+
+  .dark {
+    --bg-primary: #0B1220;
+    --bg-alt: #111A2C;
+    --bg-surface: #162036;
+    --bg-sunken: #0E1627;
+    --border-color: #26344F;
+    --border-strong: #3A4C70;
+    --text-primary: #EEF2F8;
+    --text-muted: #9FADC2;
+    --brand-primary: #FFD21F;
+    --brand-primary-ink: #FFD21F;
+    --brand-primary-soft: #3A3010;
+    --brand-sos: #FF5A4E;
+    --brand-sos-soft: #3A1512;
+    --brand-info: #3CC6D0;
+    --brand-info-soft: #0F3037;
+    --brand-success: #4CD08A;
+    --brand-success-soft: #0F3322;
+    --brand-warning: #FFA033;
+    --brand-warning-soft: #3A2508;
+  }
+
+  .oled {
+    --bg-primary: #000000;
+    --bg-alt: #0A0A0A;
+    --bg-surface: #0E1627;
+    --bg-sunken: #000000;
+    --border-color: #26344F;
+    --border-strong: #3A4C70;
+    --text-primary: #EEF2F8;
+    --text-muted: #9FADC2;
+    --brand-primary: #FFD21F;
+    --brand-primary-ink: #FFD21F;
+    --brand-primary-soft: #251F08;
+    --brand-sos: #FF5A4E;
+    --brand-sos-soft: #250C0A;
+    --brand-info: #3CC6D0;
+    --brand-info-soft: #0A2025;
+    --brand-success: #4CD08A;
+    --brand-success-soft: #0A2217;
+    --brand-warning: #FFA033;
+    --brand-warning-soft: #261805;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-long {
+  animation: fadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}

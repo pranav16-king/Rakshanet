@@ -1,8 +1,11 @@
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../database/app_database.dart';
 import '../models/user_profile.dart';
+import '../services/device_identity_service.dart';
 
 class UserProfileProvider extends ChangeNotifier {
   UserProfile? _profile;
@@ -12,7 +15,10 @@ class UserProfileProvider extends ChangeNotifier {
   UserProfile? get profile => _profile;
   bool get isLoading => _isLoading;
   bool get hasSeenOnboarding => _hasSeenOnboarding;
-  bool get isRegistered => _profile != null && _profile!.isRegistered && _profile!.name.trim().isNotEmpty;
+  bool get isRegistered =>
+      _profile != null &&
+      _profile!.isRegistered &&
+      _profile!.name.trim().isNotEmpty;
 
   UserProfileProvider() {
     loadProfile();
@@ -23,6 +29,7 @@ class UserProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await DeviceIdentityService.instance.initialize();
       final prefs = await SharedPreferences.getInstance();
       _hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
 
@@ -43,6 +50,7 @@ class UserProfileProvider extends ChangeNotifier {
           loaded = UserProfile(
             id: id,
             name: name,
+            deviceId: DeviceIdentityService.instance.deviceId,
             bloodGroup: blood,
             emergencyContact: phone,
             preferredLanguage: lang,
@@ -75,8 +83,14 @@ class UserProfileProvider extends ChangeNotifier {
   String _generateAnonymousId() {
     const chars = '0123456789ABCDEF';
     final random = Random();
-    String part1 = List.generate(4, (_) => chars[random.nextInt(chars.length)]).join();
-    String part2 = List.generate(4, (_) => chars[random.nextInt(chars.length)]).join();
+    String part1 = List.generate(
+      4,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
+    String part2 = List.generate(
+      4,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
     return 'SR-$part1-$part2';
   }
 
@@ -89,17 +103,24 @@ class UserProfileProvider extends ChangeNotifier {
     String? anonymousId,
   }) async {
     try {
-      final id = anonymousId ??
-          (_profile?.id.isNotEmpty == true ? _profile!.id : _generateAnonymousId());
+      await DeviceIdentityService.instance.initialize();
+      final id =
+          anonymousId ??
+          (_profile?.id.isNotEmpty == true
+              ? _profile!.id
+              : _generateAnonymousId());
       final now = DateTime.now().millisecondsSinceEpoch;
 
       final newProfile = UserProfile(
         id: id,
         name: name.trim(),
+        deviceId: DeviceIdentityService.instance.deviceId,
         bloodGroup: bloodGroup.trim(),
         emergencyContact: emergencyContact.trim(),
         preferredLanguage: preferredLanguage.trim(),
-        medicalNotes: medicalNotes?.trim().isNotEmpty == true ? medicalNotes!.trim() : null,
+        medicalNotes: medicalNotes?.trim().isNotEmpty == true
+            ? medicalNotes!.trim()
+            : null,
         isRegistered: true,
         createdAt: _profile?.createdAt ?? now,
         updatedAt: now,
@@ -115,11 +136,15 @@ class UserProfileProvider extends ChangeNotifier {
       await prefs.setString('user_id', id);
       await prefs.setString('user_name', newProfile.name);
       await prefs.setString('user_blood_group', newProfile.bloodGroup);
-      await prefs.setString('user_emergency_contact', newProfile.emergencyContact);
+      await prefs.setString(
+        'user_emergency_contact',
+        newProfile.emergencyContact,
+      );
       await prefs.setString('user_language', newProfile.preferredLanguage);
       if (newProfile.medicalNotes.isNotEmpty) {
         await prefs.setString('user_medical_notes', newProfile.medicalNotes);
       }
+      await DeviceIdentityService.instance.updateDisplayName(newProfile.name);
 
       _profile = newProfile;
       _hasSeenOnboarding = true;

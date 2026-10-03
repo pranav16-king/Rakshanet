@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 import '../models/user_profile.dart';
 import '../database/app_database.dart';
 import '../database/repositories/profile_repository.dart';
+import '../services/device_identity_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   static const String _prefRegisteredKey = 'rakshanet_user_registered';
@@ -69,9 +69,8 @@ class ProfileProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    // Generate canonical anonymous ID format: SR-XXXX-XXXX
-    final fullUuid = const Uuid().v4().toUpperCase().replaceAll('-', '');
-    final meshId = 'SR-${fullUuid.substring(0, 4)}-${fullUuid.substring(4, 8)}';
+    await DeviceIdentityService.instance.initialize();
+    final meshId = DeviceIdentityService.instance.deviceId;
     final now = DateTime.now().millisecondsSinceEpoch;
 
     final newProfile = UserProfile(
@@ -107,6 +106,7 @@ class ProfileProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefRegisteredKey, true);
       await prefs.setString(_prefUserIdKey, newProfile.id);
+      await DeviceIdentityService.instance.updateDisplayName(newProfile.name);
     } catch (e) {
       debugPrint('[ProfileProvider] Error saving to SharedPreferences: $e');
     }
