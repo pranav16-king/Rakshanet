@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/user_profile.dart';
 import '../database/app_database.dart';
 import '../database/repositories/profile_repository.dart';
 import '../services/device_identity_service.dart';
+import '../services/user_auth_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   static const String _prefRegisteredKey = 'rakshanet_user_registered';
@@ -32,7 +34,9 @@ class ProfileProvider extends ChangeNotifier {
       final hasRegisteredFlag = prefs.getBool(_prefRegisteredKey);
 
       // Check SQLite durable source of truth first via ProfileRepository
-      final dbProfile = await _profileRepo.getProfile() ?? await AppDatabase.instance.getUserProfile();
+      final dbProfile =
+          await _profileRepo.getProfile() ??
+          await AppDatabase.instance.getUserProfile();
 
       if (dbProfile != null && dbProfile.isRegistered) {
         _profile = dbProfile;
@@ -61,6 +65,7 @@ class ProfileProvider extends ChangeNotifier {
   Future<void> registerUser({
     required String name,
     required String phone,
+    String? email,
     String? bloodGroup,
     String? medicalNotes,
     String? preferredLanguage,
@@ -72,9 +77,12 @@ class ProfileProvider extends ChangeNotifier {
     await DeviceIdentityService.instance.initialize();
     final meshId = DeviceIdentityService.instance.deviceId;
     final now = DateTime.now().millisecondsSinceEpoch;
+    final cleanEmail = email?.trim().toLowerCase() ?? '';
+    final uniqueId = cleanEmail.isNotEmpty ? cleanEmail : 'usr-$now';
 
     final newProfile = UserProfile(
-      id: 'usr-$now',
+      id: uniqueId,
+      email: cleanEmail,
       name: name.trim(),
       deviceId: meshId,
       language: preferredLanguage ?? 'en',
@@ -107,6 +115,10 @@ class ProfileProvider extends ChangeNotifier {
       await prefs.setBool(_prefRegisteredKey, true);
       await prefs.setString(_prefUserIdKey, newProfile.id);
       await DeviceIdentityService.instance.updateDisplayName(newProfile.name);
+      // Mark offline login as available for future app launches
+      await UserAuthService.instance.markOfflineLoginAvailable(cleanEmail);
+      // Attempt background cloud sync when online
+      UserAuthService.instance.syncNow();
     } catch (e) {
       debugPrint('[ProfileProvider] Error saving to SharedPreferences: $e');
     }

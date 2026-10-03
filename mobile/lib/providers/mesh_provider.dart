@@ -144,14 +144,14 @@ class MeshProvider extends ChangeNotifier {
     _isScanning = true;
     notifyListeners();
 
-    // Trigger physical Bluetooth radio scanning
+    // Trigger physical Bluetooth radio - both advertise AND discover
     try {
-      await _radioService.startDiscovery(
+      await _radioService.initialize(
         deviceId: DatabaseService.myDeviceId,
         displayName: DatabaseService.myDisplayName,
       );
     } catch (e) {
-      debugPrint('[MeshProvider] Physical scan error: $e');
+      debugPrint('[MeshProvider] Physical scan+advertise error: $e');
     }
 
     _scanTimer?.cancel();

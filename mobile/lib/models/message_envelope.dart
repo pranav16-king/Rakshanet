@@ -17,9 +17,11 @@ class MessageEnvelope {
   final int timestamp; // Milliseconds since epoch
   final int ttl; // Default 5
   final int hops; // Default 0
-  final String type; // 'TEXT', 'LOCATION', 'SOS', 'REPORT', 'RELAY_ACK'
+  final String type; // 'TEXT', 'LOCATION', 'SOS', 'REPORT', 'RELAY_ACK', 'DELIVERY_ACK'
   final String payload;
   final String? recipientTarget; // 'Nearby devices', 'Rescue Team', 'Government'
+  final String? recipientUserId; // Recipient user email for targeted delivery
+  final String? recipientDeviceId; // Recipient device ID for targeted delivery
   final Map<String, dynamic>? metadata;
   final String? checksum;
 
@@ -34,6 +36,8 @@ class MessageEnvelope {
     this.type = 'TEXT',
     required this.payload,
     this.recipientTarget,
+    this.recipientUserId,
+    this.recipientDeviceId,
     this.metadata,
     this.checksum,
   });
@@ -55,6 +59,8 @@ class MessageEnvelope {
       'type': type,
       'payload': payload,
       if (recipientTarget != null) 'recipient_target': recipientTarget,
+      if (recipientUserId != null) 'recipient_user_id': recipientUserId,
+      if (recipientDeviceId != null) 'recipient_device_id': recipientDeviceId,
       if (metadata != null) 'meta': metadata,
       if (checksum != null) 'chk': checksum,
     };
@@ -65,15 +71,33 @@ class MessageEnvelope {
     return MessageEnvelope(
       uuid: (json['msg_id'] ?? json['uuid'] ?? json['id'] ?? '') as String,
       senderId: (json['sender_id'] ?? json['senderId'] ?? '') as String,
-      senderName: (json['sender_name'] ?? json['senderName'] ?? 'Unknown') as String,
-      conversationId: (json['conv_id'] ?? json['conversationId'] ?? 'CONV_COMMUNITY') as String,
-      timestamp: (json['ts'] ?? json['timestamp'] ?? DateTime.now().millisecondsSinceEpoch) as int,
+      senderName:
+          (json['sender_name'] ?? json['senderName'] ?? 'Unknown') as String,
+      conversationId:
+          (json['conv_id'] ?? json['conversationId'] ?? 'CONV_COMMUNITY')
+              as String,
+      timestamp:
+          (json['ts'] ?? json['timestamp'] ?? DateTime.now().millisecondsSinceEpoch)
+              as int,
       ttl: (json['ttl'] as num?)?.toInt() ?? 5,
       hops: (json['hops'] as num?)?.toInt() ?? 0,
       type: (json['type'] ?? 'TEXT') as String,
       payload: (json['payload'] ?? json['content'] ?? '') as String,
-      recipientTarget: (json['recipient_target'] ?? json['recipientTarget']) as String?,
-      metadata: json['meta'] != null ? Map<String, dynamic>.from(json['meta'] as Map) : null,
+      recipientTarget:
+          (json['recipient_target'] ?? json['recipientTarget']) as String?,
+      recipientUserId:
+          (json['recipient_user_id'] ??
+                  json['recipientUserId'] ??
+                  json['meta']?['recipient_user_id'])
+              as String?,
+      recipientDeviceId:
+          (json['recipient_device_id'] ??
+                  json['recipientDeviceId'] ??
+                  json['meta']?['recipient_device_id'])
+              as String?,
+      metadata: json['meta'] != null
+          ? Map<String, dynamic>.from(json['meta'] as Map)
+          : null,
       checksum: (json['chk'] ?? json['checksum']) as String?,
     );
   }
@@ -91,6 +115,8 @@ class MessageEnvelope {
       type: type,
       payload: payload,
       recipientTarget: recipientTarget,
+      recipientUserId: recipientUserId,
+      recipientDeviceId: recipientDeviceId,
       metadata: metadata != null ? Map<String, dynamic>.from(metadata!) : null,
       checksum: checksum,
     );
@@ -107,6 +133,8 @@ class MessageEnvelope {
     String? type,
     String? payload,
     String? recipientTarget,
+    String? recipientUserId,
+    String? recipientDeviceId,
     Map<String, dynamic>? metadata,
     String? checksum,
   }) {
@@ -121,6 +149,8 @@ class MessageEnvelope {
       type: type ?? this.type,
       payload: payload ?? this.payload,
       recipientTarget: recipientTarget ?? this.recipientTarget,
+      recipientUserId: recipientUserId ?? this.recipientUserId,
+      recipientDeviceId: recipientDeviceId ?? this.recipientDeviceId,
       metadata: metadata ?? this.metadata,
       checksum: checksum ?? this.checksum,
     );

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_tokens.dart';
 
 class StatusCard extends StatelessWidget {
@@ -19,13 +21,17 @@ class StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+    final cardBg = theme.surface;
+    final textColor = theme.text;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppTokens.radiusMd),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: AppTokens.darkSurface,
+          color: cardBg,
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           border: Border.all(
             color: accentColor.withValues(alpha: 0.35),
@@ -64,8 +70,8 @@ class StatusCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: AppTokens.darkText,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.1,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/app_bar_actions.dart';
 
 /// Screen 7: AI Assistant (Offline)
 /// Matches Mockup Screen 7:
@@ -510,6 +511,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
             tooltip: 'Offline Engine Status',
             onPressed: () => _showOfflineEngineInfo(theme),
           ),
+          const ThemeToggleButton(compact: true),
+          const ProfileAvatarButton(compact: true),
         ],
       ),
     );

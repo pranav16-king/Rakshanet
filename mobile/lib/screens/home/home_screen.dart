@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/mesh_provider.dart';
 import '../../providers/telemetry_provider.dart';
-import '../../providers/user_profile_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/app_bar_actions.dart';
 import '../../widgets/beacon_sos_button.dart';
 import '../../widgets/status_card.dart';
 import '../../widgets/offline_banner.dart';
+import '../settings/settings_screen.dart';
 import 'emergency_report_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -33,99 +35,9 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _showSettingsDialog(BuildContext context) {
-    final profileProvider = Provider.of<UserProfileProvider>(context, listen: false);
-    final telemetryProvider = Provider.of<TelemetryProvider>(context, listen: false);
-    final meshProvider = Provider.of<MeshProvider>(context, listen: false);
-
-    final peerCount = meshProvider.nearbyDevices.isNotEmpty
-        ? meshProvider.nearbyDevices.length
-        : meshProvider.connectedPeerCount;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTokens.darkBg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Device & Profile Quick Info',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    icon: const Icon(Icons.close_rounded, color: Colors.white),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppTokens.darkSurface,
-                  borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-                  border: Border.all(color: AppTokens.darkBorder),
-                ),
-                child: Column(
-                  children: [
-                    _buildInfoRow('Registered User', profileProvider.profile?.name.isNotEmpty == true ? profileProvider.profile!.name : 'Anonymous / Not Registered'),
-                    const Divider(color: AppTokens.darkBorder, height: 16),
-                    _buildInfoRow('Mesh Node ID', profileProvider.profile?.id.isNotEmpty == true ? profileProvider.profile!.id : 'SR-UNASSIGNED'),
-                    const Divider(color: AppTokens.darkBorder, height: 16),
-                    _buildInfoRow('Blood Group', profileProvider.profile?.bloodGroup.isNotEmpty == true ? profileProvider.profile!.bloodGroup : 'Unknown'),
-                    const Divider(color: AppTokens.darkBorder, height: 16),
-                    _buildInfoRow('Battery Level', '${telemetryProvider.batteryLevel}%'),
-                    const Divider(color: AppTokens.darkBorder, height: 16),
-                    _buildInfoRow('Mesh Peers', '$peerCount Connected'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: AppTokens.buttonPrimary,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTokens.signalYellow,
-                    foregroundColor: AppTokens.nightNavy,
-                  ),
-                  child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w800)),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(color: AppTokens.darkTextMuted, fontSize: 13.5)),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     final meshProvider = Provider.of<MeshProvider>(context);
     final telemetryProvider = Provider.of<TelemetryProvider>(context);
 
@@ -139,10 +51,11 @@ class HomeScreen extends StatelessWidget {
     final int batteryLevel = telemetryProvider.batteryLevel;
 
     return Scaffold(
-      backgroundColor: AppTokens.nightNavy,
+      backgroundColor: theme.bg,
       appBar: AppBar(
-        backgroundColor: AppTokens.nightNavy,
+        backgroundColor: theme.bg,
         elevation: 0,
+        centerTitle: false,
         title: Row(
           children: [
             ClipOval(
@@ -163,11 +76,11 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               'SignalRescue AI',
               style: TextStyle(
-                color: AppTokens.signalYellow,
-                fontSize: 22,
+                color: theme.isLight ? AppTokens.lightPrimaryInk : AppTokens.signalYellow,
+                fontSize: 20,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.2,
               ),
@@ -175,11 +88,23 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          // Theme changes button (Light / Dark / Low-Power OLED)
+          const ThemeToggleButton(),
+
+          // Profile icon button (navigates to Screen 13 Profile & Volunteer)
+          const ProfileAvatarButton(),
+
+          // Settings button
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 26),
+            icon: Icon(Icons.settings_outlined, color: theme.text, size: 24),
             tooltip: 'Settings',
-            onPressed: onOpenSettings ?? () => _showSettingsDialog(context),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: SafeArea(
@@ -247,26 +172,28 @@ class HomeScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppTokens.darkSurface,
+                    color: theme.surface,
                     borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-                    border: Border.all(color: AppTokens.darkBorder),
+                    border: Border.all(color: theme.border),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: AppTokens.signalYellow,
+                          color: theme.isLight
+                              ? AppTokens.lightPrimaryInk
+                              : AppTokens.signalYellow,
                         ),
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'No nearby mesh peers detected yet. Scanning...',
                           style: TextStyle(
-                            color: AppTokens.darkTextMuted,
+                            color: theme.textMuted,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),

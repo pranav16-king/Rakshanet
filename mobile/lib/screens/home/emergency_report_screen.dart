@@ -149,7 +149,6 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
         'location_method': latitude != null ? 'GPS' : 'UNAVAILABLE',
       },
     );
-    MeshEngine().queueOutboxMessage(envelope);
 
     // 3. Update in-memory emergency report provider if active
     try {

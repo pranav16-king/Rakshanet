@@ -1,6 +1,7 @@
 /// Civilian / Volunteer User Profile for RakshaNet
 class UserProfile {
   final String id;
+  final String email; // Email as the unique user identity key
   final String name;
   final String deviceId; // Canonical device identifier, e.g. SR-284739
   final String bloodGroup;
@@ -18,6 +19,7 @@ class UserProfile {
 
   UserProfile({
     required this.id,
+    this.email = '',
     required this.name,
     String? deviceId,
     String? meshId,
@@ -77,6 +79,7 @@ class UserProfile {
     final now = DateTime.now().millisecondsSinceEpoch;
     return UserProfile(
       id: 'unregistered',
+      email: '',
       name: '',
       deviceId: '',
       language: 'en',
@@ -92,6 +95,7 @@ class UserProfile {
 
   UserProfile copyWith({
     String? id,
+    String? email,
     String? name,
     String? deviceId,
     String? meshId,
@@ -118,6 +122,7 @@ class UserProfile {
 
     return UserProfile(
       id: id ?? this.id,
+      email: email ?? this.email,
       name: name ?? this.name,
       deviceId: deviceId ?? meshId ?? this.deviceId,
       bloodGroup: bloodGroup ?? this.bloodGroup,
@@ -138,6 +143,7 @@ class UserProfile {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'email': email,
       'name': name,
       'device_id': deviceId,
       'blood_group': bloodGroup,
@@ -164,6 +170,7 @@ class UserProfile {
 
     return UserProfile(
       id: map['id']?.toString() ?? '',
+      email: map['email']?.toString() ?? map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
       deviceId: map['device_id']?.toString() ?? map['deviceId']?.toString() ?? map['mesh_id']?.toString() ?? '',
       bloodGroup: map['blood_group']?.toString() ?? map['bloodGroup']?.toString() ?? '',

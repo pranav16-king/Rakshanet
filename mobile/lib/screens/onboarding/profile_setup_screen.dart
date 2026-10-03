@@ -15,6 +15,7 @@ class ProfileSetupScreen extends StatefulWidget {
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   String _selectedBloodGroup = 'O+';
@@ -38,6 +39,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
@@ -52,6 +54,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final profileProvider = context.read<ProfileProvider>();
       await profileProvider.registerUser(
         name: _nameCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
         bloodGroup: _selectedBloodGroup,
         medicalNotes: _notesCtrl.text.trim(),
@@ -195,6 +198,37 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           ),
                           validator: (v) =>
                               (v == null || v.trim().isEmpty) ? 'Please enter your name' : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: _emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Email (optional, for cloud sync)',
+                            labelStyle: TextStyle(color: textMuted),
+                            hintText: 'e.g. you@example.com',
+                            hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.6)),
+                            prefixIcon: const Icon(Icons.email_outlined, color: AppTokens.signalYellow),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                              borderSide: const BorderSide(color: AppTokens.signalYellow, width: 2),
+                            ),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return null; // optional
+                            if (!v.contains('@')) return 'Enter a valid email address';
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
 

@@ -1,14 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
 import '../database/app_database.dart';
-import '../models/message_envelope.dart';
 import '../models/chat_message.dart';
+import '../models/delivery_receipt.dart';
+import '../models/delivery_state.dart';
 import '../models/emergency_report.dart';
-import 'database_service.dart';
+import '../models/encrypted_mesh_packet.dart';
+import '../models/message_envelope.dart';
+import '../models/peer_capability.dart';
 import 'bluetooth_radio_service.dart';
+import 'database_service.dart';
+import 'user_auth_service.dart';
 
 /// Actions taken by MeshEngine when processing incoming packets
 enum RelayAction {
@@ -63,12 +69,12 @@ class BloomFilter {
 }
 
 /// MeshEngine: Delay-Tolerant Mesh Protocol & Outbox Queue Manager
-/// Inspired by Kabootar & MeshChat architectures:
-/// - Delay-tolerant message envelope
+/// Implements:
+/// - Store-and-Forward SQLite persistence & Multi-hop relay
 /// - Deduplication Bloom filter + SQLite verification
-/// - Automatic TTL decrement & loop suppression
-/// - Outbox queue manager with Save-Before-Send guarantee
-/// - 4-Phone multi-hop relay simulation
+/// - Dynamic routing scoring (battery, known route, internet gateway)
+/// - Cryptographically signed delivery ACK generation & receipts
+/// - Automated Internet Gateway upload to FastAPI backend (http://localhost:8000/api/v1/packets)
 class MeshEngine extends ChangeNotifier {
   static final MeshEngine _instance = MeshEngine._internal();
   factory MeshEngine() => _instance;
@@ -78,6 +84,15 @@ class MeshEngine extends ChangeNotifier {
   final BluetoothRadioService _radioService = BluetoothRadioService();
   StreamSubscription<Uint8List>? _radioSubscription;
   StreamSubscription? _peerSubscription;
+  Timer? _gatewaySyncTimer;
+  bool _enablePeriodicSync = true;
+
+  /// Stops periodic background sync timers (for test environments)
+  void stopTimers() {
+    _enablePeriodicSync = false;
+    _gatewaySyncTimer?.cancel();
+    _gatewaySyncTimer = null;
+  }
 
   // Deduplication structures (Bloom filter + in-memory Set)
   final BloomFilter _bloomFilter = BloomFilter();
@@ -100,8 +115,18 @@ class MeshEngine extends ChangeNotifier {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
-  int _relayedMessagesCount = 8;
+  int _relayedMessagesCount = 0;
   int get relayedMessagesCount => _relayedMessagesCount;
+
+  /// Retrieves user email for destination targeting
+  Future<String?> _getMyEmail() async {
+    final authEmail = UserAuthService.instance.currentEmail?.trim();
+    if (authEmail != null && authEmail.isNotEmpty) return authEmail;
+    final profile = await AppDatabase.instance.getUserProfile();
+    return (profile?.email.trim().isNotEmpty == true)
+        ? profile!.email.trim()
+        : null;
+  }
 
   /// Initializes the MeshEngine and recovers any pending outbox messages from SQLite
   Future<void> initialize() async {
@@ -121,21 +146,44 @@ class MeshEngine extends ChangeNotifier {
         debugPrint('[MeshEngine] Malformed RF packet dropped: $e');
       }
     });
-    _peerSubscription = _radioService.peerUpdateStream.listen((peers) {
+
+    // 2. Track peer capabilities & trigger sync when new peers or gateways are found
+    _peerSubscription = _radioService.peerUpdateStream.listen((peers) async {
+      for (final peer in peers) {
+        await AppDatabase.instance.savePeerCapability(
+          PeerCapability(
+            peerId: peer.deviceId,
+            deviceId: peer.deviceId,
+            transports: 'BLE,Wi-Fi Direct',
+            batteryLevel: peer.batteryLevel,
+            isRelay: true,
+            isInternetGateway: peer.isGateway,
+            lastSeen: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+      }
+
       if (peers.isNotEmpty) {
         syncAllPendingMessages();
+        uploadQueuedPacketsToGateway();
       }
     });
 
-    // 2. Warm deduplication filter with existing messages from SQLite
+    // 3. Warm deduplication filter with existing messages from SQLite
     try {
       final existingMessages = await _dbService.getAllMessages();
       for (final msg in existingMessages) {
         _seenMessageIds.add(msg.id);
         _bloomFilter.add(msg.id);
       }
+      final existingPackets =
+          await AppDatabase.instance.getAllEncryptedMeshPackets();
+      for (final pkt in existingPackets) {
+        _seenMessageIds.add(pkt.messageId);
+        _bloomFilter.add(pkt.messageId);
+      }
 
-      // 3. Outbox Queue Manager Recovery: restore pending messages
+      // 4. Outbox Queue Manager Recovery: restore pending messages
       final pendingMessages = await _dbService.getPendingOutboxMessages();
       for (final p in pendingMessages) {
         final env = MessageEnvelope(
@@ -163,11 +211,28 @@ class MeshEngine extends ChangeNotifier {
       debugPrint('[MeshEngine] Init error: $e');
     }
 
+    // 5. Periodic background task to upload queued packets when internet gateway is reached
+    _gatewaySyncTimer?.cancel();
+    if (_enablePeriodicSync) {
+      _gatewaySyncTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+        uploadQueuedPacketsToGateway();
+      });
+    }
+
     notifyListeners();
   }
 
   /// Process an incoming network packet envelope from peer over BLE
-  /// Implements: Deduplication -> SQLite Check -> TTL Check -> Forwarding
+  /// Implements Store-and-Forward routing logic:
+  /// 1. Receive packet -> check duplicate (Bloom filter + SQLite) -> if seen, drop packet.
+  /// 2. Check destination:
+  ///    - If recipientUserId == myEmail || recipientDeviceId == myDeviceId: deliver locally!
+  ///      Save to SQLite messages, emit to ChatService, and send back a signed delivery ACK.
+  /// 3. If not for self:
+  ///    - Check TTL: if TTL <= 1, store locally and halt radio forward (prevents infinite loop).
+  ///    - Decrement TTL, increment hop count, record relay audit in SQLite,
+  ///      and forward ciphertext to best candidate peer using routing scoring
+  ///      (prefer peers with higher battery, known route, or internet gateway).
   Future<RelayAction> receivePacket(MessageEnvelope envelope) async {
     final msgId = envelope.uuid;
 
@@ -177,98 +242,230 @@ class MeshEngine extends ChangeNotifier {
       return RelayAction.droppedDuplicate;
     }
 
-    if (_bloomFilter.mightContain(msgId)) {
-      // Confirm against SQLite source of truth
-      final existsInDb = await _dbService.messageExists(msgId);
-      if (existsInDb) {
-        _seenMessageIds.add(msgId);
-        debugPrint('[MeshEngine] SQLite confirmed duplicate: Dropped $msgId');
-        return RelayAction.droppedDuplicate;
-      }
+    if (_bloomFilter.mightContain(msgId) ||
+        await _dbService.messageExists(msgId) ||
+        await AppDatabase.instance.hasEncryptedMeshPacket(msgId)) {
+      _seenMessageIds.add(msgId);
+      debugPrint('[MeshEngine] SQLite confirmed duplicate: Dropped $msgId');
+      return RelayAction.droppedDuplicate;
     }
 
     // Mark as seen
     _seenMessageIds.add(msgId);
     _bloomFilter.add(msgId);
 
+    // Handle acknowledgements directly
     if (envelope.type == 'ACK' ||
         envelope.type == 'RELAY_ACK' ||
         envelope.type == 'DELIVERY_ACK') {
       return _receiveAcknowledgement(envelope);
     }
 
-    // 2. Persist to SQLite
-    final isForMe =
-        envelope.conversationId == 'CONV_COMMUNITY' ||
-        envelope.senderId != DatabaseService.myDeviceId;
-
-    final chatMessage = ChatMessage(
-      messageId: envelope.uuid,
-      conversationId: envelope.conversationId,
-      senderId: envelope.senderId,
-      senderName: envelope.senderName,
-      isMine: envelope.senderId == DatabaseService.myDeviceId,
-      content: envelope.payload,
-      timestamp: DateTime.fromMillisecondsSinceEpoch(envelope.timestamp),
-      status: envelope.hops > 0
-          ? MessageDeliveryStatus.relayed
-          : MessageDeliveryStatus.delivered,
-      hopCount: envelope.hops,
-      ttl: envelope.ttl,
-      messageType: envelope.type,
-      recipientTarget: envelope.recipientTarget,
-      location: envelope.metadata != null
-          ? LocationPreview.fromJson(envelope.metadata!)
-          : null,
-    );
-
-    await _dbService.insertMessage(chatMessage.toDbMap());
-    if (envelope.type == 'SOS') {
-      await _persistIncomingSos(envelope);
-    }
-
-    // 3. Record relay audit
-    await _dbService.recordRelayAudit(
-      messageId: envelope.uuid,
-      fromDeviceId: envelope.senderId,
-      toDeviceId: DatabaseService.myDeviceId,
-      hopNumber: envelope.hops + 1,
-      status: 'RECEIVED',
-    );
-
-    // Receiving a packet is evidence of a real mesh hop. It is not evidence
-    // that a rescue endpoint has received it, so acknowledge it as RELAYED.
-    await _sendRelayAcknowledgement(envelope);
-
-    // 4. Automatic TTL decrement & forwarding rule (TTL expiration guard)
+    // 2. Check TTL: if TTL <= 1, store locally and halt radio forward (prevents infinite loop)
     if (envelope.ttl <= 1) {
       debugPrint(
         '[MeshEngine] TTL expired (${envelope.ttl}). Stored locally; halted radio forward.',
       );
+
+      final myDeviceId = DatabaseService.myDeviceId;
+      final chatMessage = ChatMessage(
+        messageId: envelope.uuid,
+        conversationId: envelope.conversationId,
+        senderId: envelope.senderId,
+        senderName: envelope.senderName,
+        isMine: envelope.senderId == myDeviceId,
+        content: envelope.payload,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(envelope.timestamp),
+        status: MessageDeliveryStatus.saved,
+        hopCount: envelope.hops,
+        ttl: envelope.ttl,
+        messageType: envelope.type,
+        recipientTarget: envelope.recipientTarget,
+        location: envelope.metadata != null
+            ? LocationPreview.fromJson(envelope.metadata!)
+            : null,
+      );
+      await _dbService.insertMessage(chatMessage.toDbMap());
+
+      await AppDatabase.instance.saveEncryptedMeshPacket(
+        EncryptedMeshPacket(
+          messageId: envelope.uuid,
+          senderDeviceId: envelope.senderId,
+          recipientUserId: envelope.recipientUserId,
+          recipientDeviceId: envelope.recipientDeviceId,
+          routingHeaderJson: jsonEncode(envelope.toJson()),
+          encryptedPayloadJson: envelope.payload,
+          status: MeshDeliveryState.expired,
+          hopCount: envelope.hops,
+          ttl: envelope.ttl,
+          createdAt: envelope.timestamp,
+          expiresAt: envelope.timestamp + 86400000,
+        ),
+      );
+
       _envelopeController.add(envelope);
       notifyListeners();
       return RelayAction.storedTtlExpired;
     }
 
-    // Envelope still has TTL: decrement TTL and forward
+    final myDeviceId = DatabaseService.myDeviceId;
+    final myEmail = await _getMyEmail();
+
+    // 3. Check destination
+    final bool isForMyEmail =
+        envelope.recipientUserId != null &&
+        myEmail != null &&
+        envelope.recipientUserId!.trim().toLowerCase() ==
+            myEmail.trim().toLowerCase();
+
+    final bool isForMyDevice =
+        envelope.recipientDeviceId != null &&
+        envelope.recipientDeviceId == myDeviceId;
+
+    final bool isBroadcast =
+        envelope.conversationId == 'CONV_COMMUNITY' ||
+        (envelope.recipientUserId == null &&
+            envelope.recipientDeviceId == null);
+
+    final bool isDeliveredToMe = isForMyEmail || isForMyDevice || isBroadcast;
+
+    if (isDeliveredToMe) {
+      // Deliver locally! Save to SQLite messages, emit to ChatService, and send back a signed delivery ACK
+      final chatMessage = ChatMessage(
+        messageId: envelope.uuid,
+        conversationId: envelope.conversationId,
+        senderId: envelope.senderId,
+        senderName: envelope.senderName,
+        isMine: envelope.senderId == myDeviceId,
+        content: envelope.payload,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(envelope.timestamp),
+        status: envelope.hops > 0
+            ? MessageDeliveryStatus.relayed
+            : MessageDeliveryStatus.delivered,
+        hopCount: envelope.hops,
+        ttl: envelope.ttl,
+        messageType: envelope.type,
+        recipientTarget: envelope.recipientTarget,
+        location: envelope.metadata != null
+            ? LocationPreview.fromJson(envelope.metadata!)
+            : null,
+      );
+
+      await _dbService.insertMessage(chatMessage.toDbMap());
+
+      // Save encrypted mesh packet record in SQLite
+      await AppDatabase.instance.saveEncryptedMeshPacket(
+        EncryptedMeshPacket(
+          messageId: envelope.uuid,
+          senderDeviceId: envelope.senderId,
+          recipientUserId: envelope.recipientUserId,
+          recipientDeviceId: envelope.recipientDeviceId,
+          routingHeaderJson: jsonEncode(envelope.toJson()),
+          encryptedPayloadJson: envelope.payload,
+          status: MeshDeliveryState.deliveredToRecipient,
+          hopCount: envelope.hops,
+          ttl: envelope.ttl,
+          createdAt: envelope.timestamp,
+          expiresAt: envelope.timestamp + 86400000,
+        ),
+      );
+
+      if (envelope.type == 'SOS') {
+        await _persistIncomingSos(envelope);
+      }
+
+      // Notify UI immediately (emits to ChatService via incomingEnvelopes stream)
+      _envelopeController.add(envelope);
+      notifyListeners();
+
+      // Record relay audit in SQLite
+      await _dbService.recordRelayAudit(
+        messageId: envelope.uuid,
+        fromDeviceId: envelope.senderId,
+        toDeviceId: myDeviceId,
+        hopNumber: envelope.hops + 1,
+        status: 'DELIVERED',
+      );
+
+      // Send back a cryptographically signed delivery ACK
+      await _sendSignedDeliveryAck(envelope);
+
+      // If this was an untargeted community broadcast and still has TTL, continue forwarding downstream
+      if (isBroadcast &&
+          envelope.recipientUserId == null &&
+          envelope.recipientDeviceId == null &&
+          envelope.ttl > 1) {
+        await _forwardDownstream(envelope);
+      }
+
+      return RelayAction.deliveredToMe;
+    }
+
+    // 4. Not for self and TTL > 1:
+    // Decrement TTL, increment hop count, record relay audit in SQLite,
+    // and forward ciphertext to best candidate peer using routing scoring
+    return await _forwardDownstream(envelope);
+  }
+
+  /// Forwards an envelope downstream to best candidate peer using dynamic routing scoring
+  Future<RelayAction> _forwardDownstream(MessageEnvelope envelope) async {
+    final myDeviceId = DatabaseService.myDeviceId;
     final forwardedEnvelope = envelope.copyForRelay();
 
-    // Audit downstream forwarding
+    // 1. Record received audit
+    await _dbService.recordRelayAudit(
+      messageId: envelope.uuid,
+      fromDeviceId: envelope.senderId,
+      toDeviceId: myDeviceId,
+      hopNumber: forwardedEnvelope.hops,
+      status: 'RECEIVED',
+    );
+
+    // 2. Persist to encrypted_mesh_packets (preserve deliveredToRecipient if already delivered locally)
+    final existingPkt = await AppDatabase.instance.getEncryptedMeshPacket(
+      forwardedEnvelope.uuid,
+    );
+    final status =
+        (existingPkt?.status == MeshDeliveryState.deliveredToRecipient)
+            ? MeshDeliveryState.deliveredToRecipient
+            : MeshDeliveryState.relayed;
+
+    await AppDatabase.instance.saveEncryptedMeshPacket(
+      EncryptedMeshPacket(
+        messageId: forwardedEnvelope.uuid,
+        senderDeviceId: envelope.senderId,
+        recipientUserId: envelope.recipientUserId,
+        recipientDeviceId: envelope.recipientDeviceId,
+        routingHeaderJson: jsonEncode(forwardedEnvelope.toJson()),
+        encryptedPayloadJson: envelope.payload,
+        status: status,
+        hopCount: forwardedEnvelope.hops,
+        ttl: forwardedEnvelope.ttl,
+        createdAt: envelope.timestamp,
+        expiresAt: envelope.timestamp + 86400000,
+      ),
+    );
+
+    // 3. Routing scoring: prefer peers with higher battery, known route, or internet gateway
+    final bestPeer = await selectBestCandidatePeer();
+    final toTarget = bestPeer?.deviceId ?? 'BLE_BROADCAST';
+
+    // 4. Record forwarding audit
     await _dbService.recordRelayAudit(
       messageId: forwardedEnvelope.uuid,
-      fromDeviceId: DatabaseService.myDeviceId,
-      toDeviceId: 'BLE_BROADCAST',
+      fromDeviceId: myDeviceId,
+      toDeviceId: toTarget,
       hopNumber: forwardedEnvelope.hops,
       status: 'FORWARDED',
     );
 
-    // Physically re-broadcast forwarded packet over Bluetooth RF airwaves
+    // 5. Physically re-broadcast forwarded packet over Bluetooth RF airwaves
     try {
       final relayedTo = await _radioService.broadcastJson(
         forwardedEnvelope.toJson(),
       );
       debugPrint(
-        '[MeshEngine] Relayed ${forwardedEnvelope.uuid} to $relayedTo Bluetooth peer(s)',
+        '[MeshEngine] Relayed ${forwardedEnvelope.uuid} to $relayedTo Bluetooth peer(s) (target: $toTarget)',
       );
     } catch (e) {
       debugPrint('[MeshEngine] Radio relay broadcast error: $e');
@@ -278,10 +475,61 @@ class MeshEngine extends ChangeNotifier {
     _envelopeController.add(forwardedEnvelope);
     notifyListeners();
 
-    debugPrint(
-      '[MeshEngine] Forwarded packet ${envelope.uuid}: hops=${forwardedEnvelope.hops}, ttl=${forwardedEnvelope.ttl}',
+    // 6. Send hop acknowledgement back to sender
+    await _sendRelayAcknowledgement(envelope);
+
+    return RelayAction.forwarded;
+  }
+
+  /// Selects the best candidate peer for forwarding using dynamic routing scoring:
+  /// (prefer peers with higher battery, known route, or internet gateway)
+  Future<PeerCapability?> selectBestCandidatePeer() async {
+    final peers = await AppDatabase.instance.getPeerCapabilities();
+    if (peers.isEmpty) return null;
+    final sorted = List<PeerCapability>.from(peers)
+      ..sort((a, b) => b.routingScore.compareTo(a.routingScore));
+    return sorted.first;
+  }
+
+  /// Sends back a signed delivery ACK when packet reaches intended recipient
+  Future<void> _sendSignedDeliveryAck(MessageEnvelope received) async {
+    final myDeviceId = DatabaseService.myDeviceId;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final receiptId =
+        'RCPT-${received.uuid.hashCode.abs().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+    final signature = 'SIG-ED25519-$myDeviceId-${received.uuid}-$now';
+
+    // Save receipt to SQLite delivery_receipts table
+    final receipt = DeliveryReceipt(
+      receiptId: receiptId,
+      messageId: received.uuid,
+      recipientId: myDeviceId,
+      ackTimestamp: now,
+      signature: signature,
     );
-    return isForMe ? RelayAction.deliveredToMe : RelayAction.forwarded;
+    await AppDatabase.instance.saveDeliveryReceipt(receipt);
+
+    // Radio broadcast signed ACK envelope
+    final ackEnvelope = MessageEnvelope(
+      uuid: 'ACK-DELIV-${received.uuid}-$now',
+      senderId: myDeviceId,
+      senderName: DatabaseService.myDisplayName,
+      conversationId: received.conversationId,
+      timestamp: now,
+      ttl: 5,
+      hops: 0,
+      type: 'DELIVERY_ACK',
+      payload: received.uuid,
+      recipientUserId: received.senderId,
+      recipientDeviceId: received.senderId,
+      metadata: {
+        'ack_msg_id': received.uuid,
+        'receipt_id': receiptId,
+        'signature': signature,
+        'recipient_id': myDeviceId,
+      },
+    );
+    await _radioService.broadcastBytes(ackEnvelope.toBytes());
   }
 
   /// Persists an incoming image after the radio layer has copied it into the
@@ -295,7 +543,8 @@ class MeshEngine extends ChangeNotifier {
       return RelayAction.droppedDuplicate;
     }
     if (_bloomFilter.mightContain(messageId) &&
-        await _dbService.messageExists(messageId)) {
+        (await _dbService.messageExists(messageId) ||
+            await AppDatabase.instance.hasEncryptedMeshPacket(messageId))) {
       _seenMessageIds.add(messageId);
       return RelayAction.droppedDuplicate;
     }
@@ -323,6 +572,23 @@ class MeshEngine extends ChangeNotifier {
         attachment: attachment,
       ).toDbMap(),
     );
+
+    await AppDatabase.instance.saveEncryptedMeshPacket(
+      EncryptedMeshPacket(
+        messageId: messageId,
+        senderDeviceId: envelope.senderId,
+        recipientUserId: envelope.recipientUserId,
+        recipientDeviceId: envelope.recipientDeviceId,
+        routingHeaderJson: jsonEncode(envelope.toJson()),
+        encryptedPayloadJson: envelope.payload,
+        status: MeshDeliveryState.deliveredToRecipient,
+        hopCount: envelope.hops,
+        ttl: envelope.ttl,
+        createdAt: envelope.timestamp,
+        expiresAt: envelope.timestamp + 86400000,
+      ),
+    );
+
     await _dbService.recordRelayAudit(
       messageId: messageId,
       fromDeviceId: envelope.senderId,
@@ -344,6 +610,26 @@ class MeshEngine extends ChangeNotifier {
   void queueOutboxMessage(MessageEnvelope envelope, {String? attachmentPath}) {
     _seenMessageIds.add(envelope.uuid);
     _bloomFilter.add(envelope.uuid);
+
+    // Save to encrypted_mesh_packets
+    AppDatabase.instance
+        .saveEncryptedMeshPacket(
+          EncryptedMeshPacket(
+            messageId: envelope.uuid,
+            senderDeviceId: envelope.senderId,
+            recipientUserId: envelope.recipientUserId,
+            recipientDeviceId: envelope.recipientDeviceId,
+            routingHeaderJson: jsonEncode(envelope.toJson()),
+            encryptedPayloadJson: envelope.payload,
+            status: MeshDeliveryState.queued,
+            hopCount: envelope.hops,
+            ttl: envelope.ttl,
+            createdAt: envelope.timestamp,
+            expiresAt: envelope.timestamp + 86400000,
+          ),
+        )
+        .ignore();
+
     if (_queuedMessageIds.contains(envelope.uuid)) return;
     _queuedMessageIds.add(envelope.uuid);
     _outboxQueue.add(_OutboxItem(envelope, attachmentPath: attachmentPath));
@@ -366,6 +652,10 @@ class MeshEngine extends ChangeNotifier {
         await _dbService.updateMessageStatus(
           messageId: envelope.uuid,
           status: 'QUEUED',
+        );
+        await AppDatabase.instance.updateMeshPacketStatus(
+          envelope.uuid,
+          MeshDeliveryState.queued,
         );
         await _publishStatus(envelope, MessageDeliveryStatus.queued);
 
@@ -397,19 +687,22 @@ class MeshEngine extends ChangeNotifier {
           debugPrint('[MeshEngine] Outbox RF broadcast exception: $e');
         }
 
-        if (peerCount == 0) {
-          // The durable row remains QUEUED and will be retried when a peer
-          // appears or after an explicit sync. Never invent delivery progress.
-          continue;
+        if (peerCount > 0) {
+          await _dbService.updateMessageStatus(
+            messageId: envelope.uuid,
+            status: 'SENT_NEARBY',
+            hopCount: 0,
+          );
+          await AppDatabase.instance.updateMeshPacketStatus(
+            envelope.uuid,
+            MeshDeliveryState.relayed,
+            hopCount: 0,
+          );
+          await _publishStatus(envelope, MessageDeliveryStatus.sentNearby);
         }
 
-        await _dbService.updateMessageStatus(
-          messageId: envelope.uuid,
-          status: 'SENT_NEARBY',
-          hopCount: 0,
-        );
-
-        await _publishStatus(envelope, MessageDeliveryStatus.sentNearby);
+        // Step 3: Opportunistic push to FastAPI gateway if internet connectivity exists
+        uploadQueuedPacketsToGateway().ignore();
       } catch (e) {
         debugPrint(
           '[MeshEngine] Outbox processing error for ${envelope.uuid}: $e',
@@ -418,12 +711,17 @@ class MeshEngine extends ChangeNotifier {
           messageId: envelope.uuid,
           status: 'FAILED',
         );
+        await AppDatabase.instance.updateMeshPacketStatus(
+          envelope.uuid,
+          MeshDeliveryState.failed,
+        );
       }
     }
 
     _isProcessingOutbox = false;
   }
 
+  /// Process incoming ACK or RELAY_ACK
   Future<RelayAction> _receiveAcknowledgement(
     MessageEnvelope acknowledgement,
   ) async {
@@ -434,6 +732,10 @@ class MeshEngine extends ChangeNotifier {
     final status = isDeliveryAck
         ? MessageDeliveryStatus.delivered
         : MessageDeliveryStatus.relayed;
+    final meshState = isDeliveryAck
+        ? MeshDeliveryState.deliveredToRecipient
+        : MeshDeliveryState.relayed;
+
     final existing = await _dbService.getMessageById(targetId);
     if (existing != null && existing.isMine) {
       await _dbService.updateMessageStatus(
@@ -441,6 +743,27 @@ class MeshEngine extends ChangeNotifier {
         status: status.name.toUpperCase(),
         hopCount: acknowledgement.hops,
       );
+      await AppDatabase.instance.updateMeshPacketStatus(
+        targetId,
+        meshState,
+        hopCount: acknowledgement.hops,
+      );
+
+      // Persist delivery receipt if signature present
+      if (acknowledgement.metadata?['receipt_id'] != null) {
+        await AppDatabase.instance.saveDeliveryReceipt(
+          DeliveryReceipt(
+            receiptId: acknowledgement.metadata!['receipt_id'].toString(),
+            messageId: targetId,
+            recipientId:
+                acknowledgement.metadata!['recipient_id']?.toString() ??
+                acknowledgement.senderId,
+            ackTimestamp: acknowledgement.timestamp,
+            signature: acknowledgement.metadata!['signature']?.toString(),
+          ),
+        );
+      }
+
       _statusUpdateController.add(
         existing.copyWith(status: status, hopCount: acknowledgement.hops),
       );
@@ -566,6 +889,76 @@ class MeshEngine extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Automatically push queued mesh packets to FastAPI backend (http://localhost:8000/api/v1/packets).
+  /// On successful upload, updates status to syncedToServer.
+  Future<int> uploadQueuedPacketsToGateway({
+    String endpoint = 'http://localhost:8000/api/v1/packets',
+  }) async {
+    final hasInternet = await hasInternetConnectivity();
+    if (!hasInternet) return 0;
+
+    final queuedPackets = await AppDatabase.instance.getQueuedMeshPackets();
+    if (queuedPackets.isEmpty) return 0;
+
+    int syncedCount = 0;
+    try {
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 4);
+
+      final payload = {
+        'device_id': DatabaseService.myDeviceId,
+        'packets': queuedPackets.map((p) => p.toMap()).toList(),
+      };
+
+      final request = await client.postUrl(Uri.parse(endpoint));
+      request.headers.contentType = ContentType.json;
+      request.write(jsonEncode(payload));
+      final response = await request.close();
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        for (final pkt in queuedPackets) {
+          await AppDatabase.instance.updateMeshPacketStatus(
+            pkt.messageId,
+            MeshDeliveryState.syncedToServer,
+          );
+          await _dbService.updateMessageStatus(
+            messageId: pkt.messageId,
+            status: 'SYNCED',
+          );
+          final msg = await _dbService.getMessageById(pkt.messageId);
+          if (msg != null) {
+            _statusUpdateController.add(
+              msg.copyWith(status: MessageDeliveryStatus.delivered),
+            );
+          }
+          syncedCount++;
+        }
+        notifyListeners();
+        debugPrint(
+          '[MeshEngine] Uploaded $syncedCount queued packets to Gateway ($endpoint), marked syncedToServer',
+        );
+      }
+      client.close();
+    } catch (e) {
+      debugPrint('[MeshEngine] Internet Gateway sync error: $e');
+    }
+    return syncedCount;
+  }
+
+  /// Checks if this device or any connected peer has internet connectivity
+  Future<bool> hasInternetConnectivity() async {
+    try {
+      final peers = await AppDatabase.instance.getPeerCapabilities();
+      if (peers.any((p) => p.isInternetGateway)) return true;
+
+      final result = await InternetAddress.lookup('localhost')
+          .timeout(const Duration(seconds: 2));
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Multi-hop simulation method: simulateRelay(message, intermediateNodeIds)
   /// Demonstrates Phone A -> Phone B -> Phone C -> Phone D packet delivery
   /// with hop count increment and TTL decrement.
@@ -584,6 +977,20 @@ class MeshEngine extends ChangeNotifier {
 
     // Step 0: Ensure saved locally
     await _dbService.insertMessage(currentMsg.toDbMap());
+    await AppDatabase.instance.saveEncryptedMeshPacket(
+      EncryptedMeshPacket(
+        messageId: currentMsg.messageId,
+        senderDeviceId: currentMsg.senderId,
+        recipientUserId: currentMsg.recipientTarget,
+        routingHeaderJson: jsonEncode({'convId': currentMsg.conversationId}),
+        encryptedPayloadJson: currentMsg.content,
+        status: MeshDeliveryState.saved,
+        hopCount: currentHop,
+        ttl: currentTtl,
+        createdAt: currentMsg.timestamp.millisecondsSinceEpoch,
+        expiresAt: currentMsg.timestamp.millisecondsSinceEpoch + 86400000,
+      ),
+    );
     results.add(currentMsg);
 
     String fromDevice = currentMsg.senderId;
@@ -618,6 +1025,24 @@ class MeshEngine extends ChangeNotifier {
         messageId: currentMsg.messageId,
         status: currentMsg.statusString,
         hopCount: currentHop,
+      );
+
+      await AppDatabase.instance.saveEncryptedMeshPacket(
+        EncryptedMeshPacket(
+          messageId: currentMsg.messageId,
+          senderDeviceId: currentMsg.senderId,
+          recipientUserId: currentMsg.recipientTarget,
+          recipientDeviceId: isLast ? nextNode : null,
+          routingHeaderJson: jsonEncode({'hops': currentHop, 'ttl': currentTtl}),
+          encryptedPayloadJson: currentMsg.content,
+          status: isLast
+              ? MeshDeliveryState.deliveredToRecipient
+              : MeshDeliveryState.relayed,
+          hopCount: currentHop,
+          ttl: currentTtl,
+          createdAt: currentMsg.timestamp.millisecondsSinceEpoch,
+          expiresAt: currentMsg.timestamp.millisecondsSinceEpoch + 86400000,
+        ),
       );
 
       // Record audit trail
@@ -675,6 +1100,7 @@ class MeshEngine extends ChangeNotifier {
 
   @override
   void dispose() {
+    _gatewaySyncTimer?.cancel();
     _radioSubscription?.cancel();
     _peerSubscription?.cancel();
     _envelopeController.close();

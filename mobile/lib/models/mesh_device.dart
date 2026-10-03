@@ -22,6 +22,7 @@ class MeshDevice {
   final int batteryLevel;
   final DateTime lastSeen;
   final bool isConnected;
+  final bool isGateway;
 
   const MeshDevice({
     required this.id,
@@ -34,6 +35,7 @@ class MeshDevice {
     this.batteryLevel = 80,
     required this.lastSeen,
     this.isConnected = true,
+    this.isGateway = false,
   });
 
   String get proximityDisplay {
@@ -58,6 +60,7 @@ class MeshDevice {
     int? batteryLevel,
     DateTime? lastSeen,
     bool? isConnected,
+    bool? isGateway,
   }) {
     return MeshDevice(
       id: id ?? this.id,
@@ -70,6 +73,7 @@ class MeshDevice {
       batteryLevel: batteryLevel ?? this.batteryLevel,
       lastSeen: lastSeen ?? this.lastSeen,
       isConnected: isConnected ?? this.isConnected,
+      isGateway: isGateway ?? this.isGateway,
     );
   }
 
@@ -85,6 +89,7 @@ class MeshDevice {
       'battery_level': batteryLevel,
       'last_seen': lastSeen.millisecondsSinceEpoch,
       'is_connected': isConnected ? 1 : 0,
+      'is_gateway': isGateway ? 1 : 0,
     };
   }
 

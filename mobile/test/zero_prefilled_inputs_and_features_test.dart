@@ -45,6 +45,9 @@ Widget _buildTestApp({
   final deviceStatus = deviceStatusProvider ?? DeviceStatusProvider();
   deviceStatus.stopPolling();
 
+  final chat = chatService ?? ChatService();
+  chat.stopTimers();
+
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<ThemeProvider>.value(
@@ -60,7 +63,7 @@ Widget _buildTestApp({
         value: chatProvider ?? ChatProvider(),
       ),
       ChangeNotifierProvider<ChatService>.value(
-        value: chatService ?? ChatService(),
+        value: chat,
       ),
       ChangeNotifierProvider<EmergencyReportProvider>.value(
         value: emergencyReportProvider ?? EmergencyReportProvider(),
@@ -113,8 +116,8 @@ void main() {
           final textFormFields = tester.widgetList<TextFormField>(
             find.byType(TextFormField),
           );
-          expect(textFormFields.length, equals(3),
-              reason: 'Should contain Name, Phone, and Medical Notes fields');
+          expect(textFormFields.length, equals(4),
+              reason: 'Should contain Name, Email, Phone, and Medical Notes fields');
 
           for (final field in textFormFields) {
             expect(field.controller?.text, isEmpty,
@@ -145,7 +148,7 @@ void main() {
           final textFormFields = tester.widgetList<TextFormField>(
             find.byType(TextFormField),
           );
-          expect(textFormFields.length, equals(3));
+          expect(textFormFields.length, equals(4));
 
           for (final field in textFormFields) {
             expect(field.controller?.text, isEmpty,
@@ -284,16 +287,18 @@ void main() {
           );
           await tester.pump();
 
-          // Find the 3 TextFormFields
+          // Find the 4 TextFormFields
           final textFormFields = find.byType(TextFormField);
-          expect(textFormFields, findsNWidgets(3));
+          expect(textFormFields, findsNWidgets(4));
 
           // 1. Enter Real Name
           await tester.enterText(textFormFields.at(0), 'Dr. Priya Sharma');
-          // 2. Enter Real Phone
-          await tester.enterText(textFormFields.at(1), '+91 9811223344');
-          // 3. Enter Real Medical Notes
-          await tester.enterText(textFormFields.at(2), 'Trauma First-aid Certified');
+          // 2. Enter Real Email
+          await tester.enterText(textFormFields.at(1), 'priya.sharma@rakshanet.org');
+          // 3. Enter Real Phone
+          await tester.enterText(textFormFields.at(2), '+91 9811223344');
+          // 4. Enter Real Medical Notes
+          await tester.enterText(textFormFields.at(3), 'Trauma First-aid Certified');
           await tester.pump();
 
           // Tap Join Mesh & Continue

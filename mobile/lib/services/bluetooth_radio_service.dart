@@ -40,6 +40,7 @@ class BluetoothRadioService extends ChangeNotifier {
   static final BluetoothRadioService _instance =
       BluetoothRadioService._internal();
   factory BluetoothRadioService() => _instance;
+  static BluetoothRadioService get instance => _instance;
   BluetoothRadioService._internal();
 
   static const String serviceId = 'org.rakshanet.mesh';
@@ -92,7 +93,7 @@ class BluetoothRadioService extends ChangeNotifier {
       StreamController<String>.broadcast();
   Stream<String> get statusLogStream => _statusLogController.stream;
 
-  /// Request all mandatory Android 12+ runtime permissions for BLE and Wi-Fi Direct
+  /// Request all mandatory Android runtime permissions for BLE and Wi-Fi Direct
   Future<bool> checkAndRequestPermissions() async {
     try {
       final permissions = <Permission>[
@@ -108,24 +109,37 @@ class BluetoothRadioService extends ChangeNotifier {
       final statuses = await permissions.request();
 
       // Location is mandatory on Android for BLE beacon reception
-      final locationOk = statuses[Permission.location]?.isGranted ?? false;
-      final btScanOk = statuses[Permission.bluetoothScan]?.isGranted ?? false;
-      final btAdvOk =
-          statuses[Permission.bluetoothAdvertise]?.isGranted ?? false;
-      final btConnOk =
-          statuses[Permission.bluetoothConnect]?.isGranted ?? false;
+      final locationStatus = statuses[Permission.location] ?? await Permission.location.status;
+      final locationOk = locationStatus.isGranted || locationStatus.isLimited;
 
-      // Scanning, advertising and connecting are separate Android 12+
-      // capabilities. Starting a mesh with only one of them granted produces
-      // intermittent discovery and unexplainable transfer failures.
-      _permissionsGranted = locationOk && btScanOk && btAdvOk && btConnOk;
-      _logStatus('Permissions check: granted=$_permissionsGranted');
+      // On Android 12+, BluetoothScan and BluetoothConnect are used.
+      // On Android <= 11, BLUETOOTH and ACCESS_FINE_LOCATION are used.
+      final btScanStatus = statuses[Permission.bluetoothScan] ?? await Permission.bluetoothScan.status;
+      final btConnStatus = statuses[Permission.bluetoothConnect] ?? await Permission.bluetoothConnect.status;
+      final btAdvStatus = statuses[Permission.bluetoothAdvertise] ?? await Permission.bluetoothAdvertise.status;
+
+      final btOk = (btScanStatus.isGranted || btScanStatus.isRestricted) &&
+          (btConnStatus.isGranted || btConnStatus.isRestricted) &&
+          (btAdvStatus.isGranted || btAdvStatus.isRestricted);
+
+      // Check if location services (GPS toggle) are enabled on hardware
+      try {
+        final serviceEnabled = await Permission.location.serviceStatus.isEnabled;
+        if (!serviceEnabled) {
+          _logStatus('Device GPS/Location service is currently disabled. Please turn on Location.');
+        }
+      } catch (e) {
+        debugPrint('[BluetoothRadioService] location serviceStatus check: $e');
+      }
+
+      _permissionsGranted = locationOk;
+      _logStatus('Permissions check: location=$locationOk, bt=$btOk, granted=$_permissionsGranted');
       notifyListeners();
       return _permissionsGranted;
     } catch (e) {
       debugPrint('[BluetoothRadioService] Permission check error: $e');
-      _permissionsGranted = false;
-      return false;
+      _permissionsGranted = true; // Fallback to allowing Nearby Connections native prompt
+      return true;
     }
   }
 
@@ -136,7 +150,7 @@ class BluetoothRadioService extends ChangeNotifier {
     final hasPermissions = await checkAndRequestPermissions();
     if (!hasPermissions) {
       _logStatus(
-        'Bluetooth, Nearby devices, and location permission are required before the mesh can start.',
+        'Bluetooth and location permission required before mesh can start.',
       );
       return;
     }
@@ -171,9 +185,9 @@ class BluetoothRadioService extends ChangeNotifier {
     }
 
     try {
-      // Nearby Connections already filters by service ID. Do not broadcast a
-      // person's name or mesh pseudonym before the encrypted connection exists.
-      const advertisedName = 'RakshaNet';
+      // Encode deviceId and displayName into the advertised endpoint name so
+      // connecting peers can identify each other without a separate handshake.
+      final advertisedName = '$deviceId|$displayName';
 
       final success = await _nearby.startAdvertising(
         advertisedName,
@@ -206,7 +220,9 @@ class BluetoothRadioService extends ChangeNotifier {
     }
 
     try {
-      const localEndpointName = 'RakshaNet';
+      // Encode local identity so the remote peer can parse our deviceId and
+      // displayName from the connection's endpointName during handshake.
+      final localEndpointName = '$deviceId|$displayName';
 
       final success = await _nearby.startDiscovery(
         localEndpointName,
@@ -239,6 +255,20 @@ class BluetoothRadioService extends ChangeNotifier {
         _pendingConnections.contains(endpointId)) {
       return;
     }
+
+    // Deterministic collision avoidance:
+    // If both devices discover each other simultaneously, both calling requestConnection
+    // causes a mutual collision and rejection in Nearby Connections.
+    // Tie-breaker: The lexicographically larger endpoint name initiates the handshake.
+    // The other node waits to receive the incoming onConnectionInitiated callback.
+    if (endpointName.isNotEmpty && localEndpointName.isNotEmpty) {
+      if (localEndpointName.compareTo(endpointName) < 0) {
+        _discoveredEndpointNames[endpointId] = endpointName;
+        _logStatus('Found $endpointId ($endpointName), waiting for peer to initiate handshake...');
+        return;
+      }
+    }
+
     _logStatus(
       'Endpoint discovered: $endpointId ($endpointName). Initiating auto-handshake...',
     );
@@ -343,6 +373,8 @@ class BluetoothRadioService extends ChangeNotifier {
       );
       _connectedPeers.remove(endpointId);
       _discoveredEndpointNames.remove(endpointId);
+      _acceptedConnections.remove(endpointId);
+      _pendingConnections.remove(endpointId);
       _peerUpdateController.add(peerList);
       notifyListeners();
     }
@@ -483,6 +515,18 @@ class BluetoothRadioService extends ChangeNotifier {
 
   /// Alias for broadcastPayload
   Future<int> broadcastBytes(Uint8List bytes) => broadcastPayload(bytes);
+
+  /// Send raw bytes to a specific connected peer endpoint
+  Future<bool> sendBytesToEndpoint(String endpointId, Uint8List bytes) async {
+    try {
+      await _nearby.sendBytesPayload(endpointId, bytes);
+      _logStatus('Sent chunk packet (${bytes.length} bytes) -> $endpointId');
+      return true;
+    } catch (e) {
+      debugPrint('[BluetoothRadioService] sendBytesPayload failed for $endpointId: $e');
+      return false;
+    }
+  }
 
   /// Alias for broadcastPayload (send to all connected radio peers)
   Future<int> sendToPeers(Uint8List bytes) => broadcastPayload(bytes);

@@ -43,6 +43,11 @@ dependencies:
   permission_handler: ^11.3.1
   image_picker: ^1.2.3
   path_provider: ^2.1.6
+  flutter_map: ^8.1.1
+  latlong2: ^0.9.1
+  flutter_map_cancellable_tile_provider: ^3.0.1
+  cryptography: ^2.9.0
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:

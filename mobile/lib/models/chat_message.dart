@@ -16,17 +16,16 @@ extension MessageDeliveryStatusExtension on MessageDeliveryStatus {
   String get label {
     switch (this) {
       case MessageDeliveryStatus.saved:
-        return 'Saved on phone';
+        return '✓ Saved on this phone';
       case MessageDeliveryStatus.queued:
-        return 'Queued';
       case MessageDeliveryStatus.sending:
-        return 'Sending...';
+        return 'Queued in outbox';
       case MessageDeliveryStatus.sentNearby:
         return 'Sent to nearby';
       case MessageDeliveryStatus.relayed:
         return 'Relayed';
       case MessageDeliveryStatus.delivered:
-        return 'Delivered';
+        return '✓ Reached recipient';
       case MessageDeliveryStatus.failed:
         return 'Failed';
     }

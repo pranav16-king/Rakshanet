@@ -5,9 +5,14 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import '../models/chat_message.dart';
+import '../models/delivery_receipt.dart';
+import '../models/delivery_state.dart';
 import '../models/emergency_report.dart';
+import '../models/encrypted_mesh_packet.dart';
+import '../models/mesh_message.dart';
 import '../models/missing_person.dart';
 import '../models/nearby_device.dart';
+import '../models/peer_capability.dart';
 import '../models/shelter_resource.dart';
 import '../models/user_profile.dart';
 import '../services/device_identity_service.dart';
@@ -15,7 +20,7 @@ import '../services/device_identity_service.dart';
 /// Database management for RakshaNet with:
 /// 1. Native SQLite via sqflite on supported platforms.
 /// 2. Resilient in-memory fallback if native sqflite driver is unavailable.
-/// 3. Seed data for offline disaster shelters and global emergency channel.
+/// 3. A local source of truth for user- or mesh-reported records.
 class AppDatabase {
   static final AppDatabase instance = AppDatabase._internal();
 
@@ -34,9 +39,26 @@ class AppDatabase {
     'emergency_reports': [],
     'shelters': [],
     'missing_persons': [],
+    'groups': [],
+    'group_members': [],
+    'group_invites': [],
+    'attachment_chunks': [],
+    'encrypted_mesh_packets': [],
+    'peer_capabilities': [],
+    'delivery_receipts': [],
   };
 
   AppDatabase._internal();
+
+  /// Create an isolated in-memory database instance (for multi-phone simulations & testing)
+  static AppDatabase createIsolated() {
+    final db = AppDatabase._internal();
+    db._activateInMemoryFallback();
+    if (!db._initCompleter.isCompleted) {
+      db._initCompleter.complete();
+    }
+    return db;
+  }
 
   bool get isInMemoryFallback => _isInMemory;
 
@@ -75,7 +97,7 @@ class AppDatabase {
 
       _db = await openDatabase(
         path,
-        version: 4,
+        version: 6,
         onCreate: (db, version) async {
           await _createTables(db);
           await _seedInitialData(db);
@@ -102,6 +124,7 @@ class AppDatabase {
       'sos_forwarded INTEGER DEFAULT 0',
       'missing_found INTEGER DEFAULT 0',
       'age INTEGER',
+      "email TEXT NOT NULL DEFAULT ''",
     ];
     for (final col in cols) {
       try {
@@ -130,6 +153,143 @@ class AppDatabase {
         await db.execute('ALTER TABLE messages ADD COLUMN $col');
       } catch (_) {}
     }
+
+    // Earlier builds inserted demonstration shelters with invented capacities
+    // and coordinates. Remove only those known IDs; user- and mesh-reported
+    // shelter records remain untouched.
+    await db.delete(
+      'shelters',
+      where: 'id IN (?, ?, ?)',
+      whereArgs: const ['shelter_01', 'shelter_02', 'shelter_03'],
+    );
+
+    // Fix conversation_id mismatch: unify legacy 'global_emergency' → 'CONV_COMMUNITY'
+    try {
+      await db.update(
+        'conversations',
+        {'conversation_id': 'CONV_COMMUNITY'},
+        where: 'conversation_id = ?',
+        whereArgs: ['global_emergency'],
+      );
+    } catch (_) {}
+
+    // Ensure the community conversation row always exists with the correct ID
+    try {
+      await db.insert('conversations', {
+        'id': 'conv_community',
+        'conversation_id': 'CONV_COMMUNITY',
+        'type': 'BROADCAST',
+        'title': 'Community Chat',
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'last_message': 'Offline mesh channel active.',
+        'unread_count': 0,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    } catch (_) {}
+
+    // Create groups tables if missing
+    try {
+      await db.execute(
+        'CREATE TABLE IF NOT EXISTS groups ('
+        'id TEXT PRIMARY KEY, '
+        'name TEXT NOT NULL, '
+        'description TEXT, '
+        'creator_id TEXT NOT NULL, '
+        'created_at INTEGER NOT NULL, '
+        'updated_at INTEGER NOT NULL, '
+        'conversation_id TEXT NOT NULL, '
+        'member_count INTEGER DEFAULT 1'
+        ')',
+      );
+    } catch (_) {}
+    try {
+      await db.execute(
+        'CREATE TABLE IF NOT EXISTS group_members ('
+        'id TEXT PRIMARY KEY, '
+        'group_id TEXT NOT NULL, '
+        'member_device_id TEXT NOT NULL, '
+        'member_name TEXT NOT NULL, '
+        "status TEXT NOT NULL DEFAULT 'PENDING', "
+        'joined_at INTEGER, '
+        'invited_at INTEGER NOT NULL'
+        ')',
+      );
+    } catch (_) {}
+    try {
+      await db.execute(
+        'CREATE TABLE IF NOT EXISTS group_invites ('
+        'id TEXT PRIMARY KEY, '
+        'group_id TEXT NOT NULL, '
+        'group_name TEXT NOT NULL, '
+        'inviter_id TEXT NOT NULL, '
+        'inviter_name TEXT NOT NULL, '
+        'invitee_device_id TEXT NOT NULL, '
+        "status TEXT NOT NULL DEFAULT 'PENDING', "
+        'sent_at INTEGER NOT NULL, '
+        'responded_at INTEGER'
+        ')',
+      );
+    } catch (_) {}
+
+    // Attachment Chunks table for offline-first encrypted image transfer
+    try {
+      await db.execute(
+        'CREATE TABLE IF NOT EXISTS attachment_chunks ('
+        'id TEXT PRIMARY KEY, '
+        'message_id TEXT NOT NULL, '
+        'attachment_id TEXT NOT NULL, '
+        'chunk_index INTEGER NOT NULL, '
+        'total_chunks INTEGER NOT NULL, '
+        'chunk_path TEXT, '
+        'checksum TEXT NOT NULL, '
+        'status TEXT NOT NULL, '
+        'updated_at INTEGER NOT NULL'
+        ')',
+      );
+    } catch (_) {}
+
+    // Version 6: Store-and-forward mesh packet tables, peer capabilities, delivery receipts
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS encrypted_mesh_packets (
+          message_id TEXT PRIMARY KEY,
+          sender_device_id TEXT NOT NULL,
+          recipient_user_id TEXT,
+          recipient_device_id TEXT,
+          routing_header_json TEXT NOT NULL,
+          encrypted_payload_json TEXT NOT NULL,
+          status TEXT NOT NULL,
+          hop_count INTEGER DEFAULT 0,
+          ttl INTEGER DEFAULT 5,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL
+        )
+      ''');
+    } catch (_) {}
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS peer_capabilities (
+          peer_id TEXT PRIMARY KEY,
+          device_id TEXT NOT NULL,
+          transports TEXT,
+          battery_level INTEGER,
+          is_relay INTEGER,
+          is_internet_gateway INTEGER,
+          last_seen INTEGER
+        )
+      ''');
+    } catch (_) {}
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS delivery_receipts (
+          receipt_id TEXT PRIMARY KEY,
+          message_id TEXT NOT NULL,
+          recipient_id TEXT NOT NULL,
+          ack_timestamp INTEGER NOT NULL,
+          signature TEXT
+        )
+      ''');
+    } catch (_) {}
   }
 
   void _activateInMemoryFallback() {
@@ -143,6 +303,7 @@ class AppDatabase {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS user_profile (
         id TEXT PRIMARY KEY,
+        email TEXT NOT NULL DEFAULT '',
         name TEXT NOT NULL,
         device_id TEXT NOT NULL,
         blood_group TEXT,
@@ -278,108 +439,90 @@ class AppDatabase {
         contact_phone TEXT
       )
     ''');
+
+    // 9. Attachment Chunks (Offline-First encrypted chunked image transfer)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS attachment_chunks (
+        id TEXT PRIMARY KEY,
+        message_id TEXT NOT NULL,
+        attachment_id TEXT NOT NULL,
+        chunk_index INTEGER NOT NULL,
+        total_chunks INTEGER NOT NULL,
+        chunk_path TEXT,
+        checksum TEXT NOT NULL,
+        status TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+
+    // 10. Encrypted Mesh Packets (Store-and-forward relay queue & persistence)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS encrypted_mesh_packets (
+        message_id TEXT PRIMARY KEY,
+        sender_device_id TEXT NOT NULL,
+        recipient_user_id TEXT,
+        recipient_device_id TEXT,
+        routing_header_json TEXT NOT NULL,
+        encrypted_payload_json TEXT NOT NULL,
+        status TEXT NOT NULL,
+        hop_count INTEGER DEFAULT 0,
+        ttl INTEGER DEFAULT 5,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+      )
+    ''');
+
+    // 11. Peer Capabilities (Hardware/transports & routing scoring table)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS peer_capabilities (
+        peer_id TEXT PRIMARY KEY,
+        device_id TEXT NOT NULL,
+        transports TEXT,
+        battery_level INTEGER,
+        is_relay INTEGER,
+        is_internet_gateway INTEGER,
+        last_seen INTEGER
+      )
+    ''');
+
+    // 12. Delivery Receipts (Cryptographic ACK audit trail)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS delivery_receipts (
+        receipt_id TEXT PRIMARY KEY,
+        message_id TEXT NOT NULL,
+        recipient_id TEXT NOT NULL,
+        ack_timestamp INTEGER NOT NULL,
+        signature TEXT
+      )
+    ''');
   }
 
   Future<void> _seedInitialData(Database db) async {
-    // Seed default global emergency broadcast conversation
+    // Seed default community broadcast conversation
     await db.insert('conversations', {
-      'id': 'conv_broadcast_sos',
-      'conversation_id': 'global_emergency',
+      'id': 'conv_community',
+      'conversation_id': 'CONV_COMMUNITY',
       'type': 'BROADCAST',
-      'title': 'Emergency Broadcast Channel',
+      'title': 'Community Chat',
       'created_at': DateTime.now().millisecondsSinceEpoch,
       'updated_at': DateTime.now().millisecondsSinceEpoch,
-      'last_message':
-          'Emergency mesh channel initialized. Transmitting on BLE 5.x.',
+      'last_message': 'Offline mesh channel active.',
       'unread_count': 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
-
-    // Seed default disaster shelters
-    final defaultShelters = _getDefaultShelters();
-    for (final shelter in defaultShelters) {
-      await db.insert(
-        'shelters',
-        shelter.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
   }
 
   void _seedInMemoryData() {
     _memoryTables['conversations']!.clear();
     _memoryTables['conversations']!.add({
-      'id': 'conv_broadcast_sos',
-      'conversation_id': 'global_emergency',
+      'id': 'conv_community',
+      'conversation_id': 'CONV_COMMUNITY',
       'type': 'BROADCAST',
-      'title': 'Emergency Broadcast Channel',
+      'title': 'Community Chat',
       'created_at': DateTime.now().millisecondsSinceEpoch,
       'updated_at': DateTime.now().millisecondsSinceEpoch,
-      'last_message':
-          'Emergency mesh channel initialized. Transmitting on BLE 5.x.',
+      'last_message': 'Offline mesh channel active.',
       'unread_count': 0,
     });
-
-    _memoryTables['shelters']!.clear();
-    for (final shelter in _getDefaultShelters()) {
-      _memoryTables['shelters']!.add(shelter.toMap());
-    }
-  }
-
-  List<ShelterResource> _getDefaultShelters() {
-    return [
-      const ShelterResource(
-        id: 'shelter_01',
-        name: 'Community Relief Center - Sector 4',
-        distance: 1.2,
-        openStatus: 'OPEN',
-        capacity: 140,
-        maxCapacity: 300,
-        supplies: [
-          'Food',
-          'Clean Water',
-          'Medical Kits',
-          'Generators',
-          'Blankets',
-        ],
-        address: 'Sector 4 Community Grounds, Gate 2',
-        latitude: 28.6139,
-        longitude: 77.2090,
-      ),
-      const ShelterResource(
-        id: 'shelter_02',
-        name: 'Red Cross Mobile Medical Station',
-        distance: 2.8,
-        openStatus: 'OPEN',
-        capacity: 45,
-        maxCapacity: 60,
-        supplies: [
-          'First Aid',
-          'Oxygen Cylinders',
-          'IV Fluids',
-          'Doctor on duty',
-        ],
-        address: 'District Stadium Parking Complex',
-        latitude: 28.6250,
-        longitude: 77.2180,
-      ),
-      const ShelterResource(
-        id: 'shelter_03',
-        name: 'Highland Evacuation Camp',
-        distance: 4.5,
-        openStatus: 'OPEN',
-        capacity: 220,
-        maxCapacity: 500,
-        supplies: [
-          'Tents',
-          'Dry Rations',
-          'Water Purification',
-          'Satellite Phone',
-        ],
-        address: 'Hilltop Secondary School Campus',
-        latitude: 28.6380,
-        longitude: 77.1950,
-      ),
-    ];
   }
 
   // =========================================================================
@@ -623,6 +766,14 @@ class AppDatabase {
         return 'id';
       case 'missing_persons':
         return 'id';
+      case 'attachment_chunks':
+        return 'id';
+      case 'encrypted_mesh_packets':
+        return 'message_id';
+      case 'peer_capabilities':
+        return 'peer_id';
+      case 'delivery_receipts':
+        return 'receipt_id';
       default:
         return 'id';
     }
@@ -636,25 +787,25 @@ class AppDatabase {
     final clean = whereClause.trim();
     if (clean.isEmpty) return true;
 
-    // Handle single column equality: "column = ?"
-    final eqMatch = RegExp(r'^(\w+)\s*=\s*\?$').firstMatch(clean);
-    if (eqMatch != null && args != null && args.isNotEmpty) {
-      final col = eqMatch.group(1)!;
-      final target = args.first;
-      return _compareEquals(row[col], target);
+    bool evalCondition(String condition, Object? arg) {
+      final match =
+          RegExp(r'^(\w+)\s*(=|!=|<>)\s*\?$').firstMatch(condition.trim());
+      if (match == null) return true;
+      final col = match.group(1)!;
+      final op = match.group(2)!;
+      final eq = _compareEquals(row[col], arg);
+      if (op == '!=' || op == '<>') {
+        return !eq;
+      }
+      return eq;
     }
 
-    // Handle compound with AND: "col1 = ? AND col2 = ?"
+    // Handle compound with AND: "col1 = ? AND col2 != ?"
     final andParts = clean.split(RegExp(r'\s+AND\s+', caseSensitive: false));
     if (andParts.length > 1 && args != null && args.length == andParts.length) {
       for (int i = 0; i < andParts.length; i++) {
-        final subPart = andParts[i].trim();
-        final subMatch = RegExp(r'^(\w+)\s*=\s*\?$').firstMatch(subPart);
-        if (subMatch != null) {
-          final col = subMatch.group(1)!;
-          if (!_compareEquals(row[col], args[i])) {
-            return false;
-          }
+        if (!evalCondition(andParts[i], args[i])) {
+          return false;
         }
       }
       return true;
@@ -664,16 +815,16 @@ class AppDatabase {
     final orParts = clean.split(RegExp(r'\s+OR\s+', caseSensitive: false));
     if (orParts.length > 1 && args != null && args.length == orParts.length) {
       for (int i = 0; i < orParts.length; i++) {
-        final subPart = orParts[i].trim();
-        final subMatch = RegExp(r'^(\w+)\s*=\s*\?$').firstMatch(subPart);
-        if (subMatch != null) {
-          final col = subMatch.group(1)!;
-          if (_compareEquals(row[col], args[i])) {
-            return true;
-          }
+        if (evalCondition(orParts[i], args[i])) {
+          return true;
         }
       }
       return false;
+    }
+
+    // Handle single condition
+    if (args != null && args.isNotEmpty) {
+      return evalCondition(clean, args.first);
     }
 
     return true;
@@ -855,4 +1006,282 @@ class AppDatabase {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  // =========================================================================
+  // Attachment Chunks Operations (Image Transfer with Resumption)
+  // =========================================================================
+
+  /// Save or replace an image attachment chunk record
+  Future<void> saveAttachmentChunk(Map<String, dynamic> chunkData) async {
+    await insert(
+      'attachment_chunks',
+      Map<String, dynamic>.from(chunkData),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Fetch all chunks for a message
+  Future<List<Map<String, dynamic>>> getAttachmentChunksForMessage(
+    String messageId,
+  ) async {
+    return await query(
+      'attachment_chunks',
+      where: 'message_id = ?',
+      whereArgs: [messageId],
+      orderBy: 'chunk_index ASC',
+    );
+  }
+
+  /// Fetch unsent chunks for transmission resumption
+  Future<List<Map<String, dynamic>>> getUnsentChunks(String messageId) async {
+    return await query(
+      'attachment_chunks',
+      where: 'message_id = ? AND status != ?',
+      whereArgs: [messageId, 'SENT'],
+      orderBy: 'chunk_index ASC',
+    );
+  }
+
+  /// Fetch received chunks for reassembly
+  Future<List<Map<String, dynamic>>> getReceivedChunks(
+    String attachmentId,
+  ) async {
+    return await query(
+      'attachment_chunks',
+      where: 'attachment_id = ? AND status = ?',
+      whereArgs: [attachmentId, 'RECEIVED'],
+      orderBy: 'chunk_index ASC',
+    );
+  }
+
+  /// Update status of a specific chunk
+  Future<void> updateChunkStatus(String chunkId, String status) async {
+    await update(
+      'attachment_chunks',
+      {
+        'status': status,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      where: 'id = ?',
+      whereArgs: [chunkId],
+    );
+  }
+
+  // =========================================================================
+  // Encrypted Mesh Packets & Store-and-Forward Relay Queue
+  // =========================================================================
+
+  /// Save or replace an encrypted mesh packet in SQLite outbox/relay store
+  Future<void> saveEncryptedMeshPacket(dynamic packet) async {
+    final Map<String, dynamic> row = packet is EncryptedMeshPacket
+        ? packet.toMap()
+        : Map<String, dynamic>.from(packet as Map);
+    await insert(
+      'encrypted_mesh_packets',
+      row,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Fetch a single encrypted packet by message ID
+  Future<EncryptedMeshPacket?> getEncryptedMeshPacket(String messageId) async {
+    final rows = await query(
+      'encrypted_mesh_packets',
+      where: 'message_id = ?',
+      whereArgs: [messageId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return EncryptedMeshPacket.fromMap(rows.first);
+  }
+
+  /// Check whether an encrypted packet already exists in local SQLite
+  Future<bool> hasEncryptedMeshPacket(String messageId) async {
+    final rows = await query(
+      'encrypted_mesh_packets',
+      columns: const ['message_id'],
+      where: 'message_id = ?',
+      whereArgs: [messageId],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
+  /// Fetch all packets pending transmission or server sync (SAVED / QUEUED)
+  Future<List<EncryptedMeshPacket>> getQueuedMeshPackets() async {
+    final rows = await query(
+      'encrypted_mesh_packets',
+      where: "status = ? OR status = ?",
+      whereArgs: const ['SAVED', 'QUEUED'],
+      orderBy: 'created_at ASC',
+    );
+    return rows.map((r) => EncryptedMeshPacket.fromMap(r)).toList();
+  }
+
+  /// Fetch all encrypted mesh packets in local storage
+  Future<List<EncryptedMeshPacket>> getAllEncryptedMeshPackets() async {
+    final rows = await query(
+      'encrypted_mesh_packets',
+      orderBy: 'created_at ASC',
+    );
+    return rows.map((r) => EncryptedMeshPacket.fromMap(r)).toList();
+  }
+
+  /// Update lifecycle status of an encrypted mesh packet
+  Future<void> updateMeshPacketStatus(
+    String messageId,
+    dynamic status, {
+    int? hopCount,
+    int? ttl,
+  }) async {
+    final statusStr = status is MeshDeliveryState
+        ? status.toDbString()
+        : status.toString();
+    final values = <String, dynamic>{'status': statusStr};
+    if (hopCount != null) values['hop_count'] = hopCount;
+    if (ttl != null) values['ttl'] = ttl;
+    await update(
+      'encrypted_mesh_packets',
+      values,
+      where: 'message_id = ?',
+      whereArgs: [messageId],
+    );
+  }
+
+  // =========================================================================
+  // Peer Capabilities & Dynamic Routing Scoring
+  // =========================================================================
+
+  /// Save or update peer device capabilities
+  Future<void> savePeerCapability(dynamic peer) async {
+    final Map<String, dynamic> row = peer is PeerCapability
+        ? peer.toMap()
+        : Map<String, dynamic>.from(peer as Map);
+    await insert(
+      'peer_capabilities',
+      row,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Fetch all known peers sorted by last seen
+  Future<List<PeerCapability>> getPeerCapabilities() async {
+    final rows = await query(
+      'peer_capabilities',
+      orderBy: 'last_seen DESC',
+    );
+    return rows.map((r) => PeerCapability.fromMap(r)).toList();
+  }
+
+  /// Fetch a specific peer capability by peer ID or device ID
+  Future<PeerCapability?> getPeerCapability(String peerOrDeviceId) async {
+    final rows = await query(
+      'peer_capabilities',
+      where: 'peer_id = ? OR device_id = ?',
+      whereArgs: [peerOrDeviceId, peerOrDeviceId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return PeerCapability.fromMap(rows.first);
+  }
+
+  // =========================================================================
+  // Delivery Receipts & Cryptographic Acks
+  // =========================================================================
+
+  /// Persist a delivery receipt / ACK
+  Future<void> saveDeliveryReceipt(dynamic receipt) async {
+    final Map<String, dynamic> row = receipt is DeliveryReceipt
+        ? receipt.toMap()
+        : Map<String, dynamic>.from(receipt as Map);
+    await insert(
+      'delivery_receipts',
+      row,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Fetch delivery receipts for a message
+  Future<List<DeliveryReceipt>> getDeliveryReceipts(String messageId) async {
+    final rows = await query(
+      'delivery_receipts',
+      where: 'message_id = ?',
+      whereArgs: [messageId],
+      orderBy: 'ack_timestamp DESC',
+    );
+    return rows.map((r) => DeliveryReceipt.fromMap(r)).toList();
+  }
+
+  // =========================================================================
+  // Compatibility & Multi-Node Simulation Helpers
+  // =========================================================================
+
+  Future<bool> hasMessage(String messageId) async {
+    final rows = await query(
+      'messages',
+      columns: const ['message_id'],
+      where: 'message_id = ?',
+      whereArgs: [messageId],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
+  Future<void> insertMessage(dynamic message) async {
+    if (message is ChatMessage) {
+      await saveMessage(message);
+    } else if (message is MeshMessage) {
+      await insert(
+        'messages',
+        {
+          'message_id': message.messageId,
+          'conversation_id': message.conversationId,
+          'sender_id': message.senderDeviceId,
+          'sender_name': message.senderName,
+          'content': message.content,
+          'timestamp': message.createdAt,
+          'created_at': message.createdAt,
+          'status': message.status,
+          'hop_count': message.hopCount,
+          'ttl': message.ttl,
+          'message_type': 'TEXT',
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } else if (message is Map<String, dynamic>) {
+      await insert(
+        'messages',
+        message,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+  }
+
+  Future<void> recordRelay({
+    required String messageId,
+    required String fromDeviceId,
+    required String toDeviceId,
+    required int hopNumber,
+    String status = 'FORWARDED',
+  }) async {
+    await insert(
+      'message_relays',
+      {
+        'id': 'relay_${DateTime.now().microsecondsSinceEpoch}_$hopNumber',
+        'message_id': messageId,
+        'from_device_id': fromDeviceId,
+        'to_device_id': toDeviceId,
+        'hop_number': hopNumber,
+        'received_at': DateTime.now().millisecondsSinceEpoch,
+        'forwarded_at': DateTime.now().millisecondsSinceEpoch,
+        'status': status,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getRelays() async {
+    return await query('message_relays', orderBy: 'received_at ASC');
+  }
 }
+

@@ -15,6 +15,7 @@ import '../../providers/theme_provider.dart';
 import '../../services/mesh_engine.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/app_bar_actions.dart';
 
 /// Screen 6: Live Map & Nearby Devices
 /// Features:
@@ -89,53 +90,36 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   List<_MapNode> _computeNodes(
     List<EmergencyReport> emergencyReports,
     TelemetryProvider telemetry,
+    MeshProvider mesh,
   ) {
     final List<_MapNode> result = [];
 
-    // 1. User Node ('You')
+    // 1. User Node ('You') at canvas center
     result.add(
       _MapNode(
         id: 'node-you',
         label: 'You',
         type: _NodeType.you,
         offset: const Offset(450, 450),
-        statusText: 'Mesh relay active • GPS status in header',
+        statusText: telemetry.hasGpsFix
+            ? 'GPS lock active • Mesh node online'
+            : 'Mesh relay active • Searching GPS satellites...',
         distance: '0 m',
         lastSeen: 'Now',
       ),
     );
 
-    final originLatitude = telemetry.latitude;
-    final originLongitude = telemetry.longitude;
-    if (!telemetry.hasGpsFix ||
-        originLatitude == null ||
-        originLongitude == null) {
-      // Bluetooth tells us that peers are nearby, not their bearing. Do not
-      // draw made-up positions when this device has no GPS reference.
-      return result;
-    }
-    final pixelsPerMeter = _pixelsPerMeter(
-      originLatitude,
-      originLongitude,
-      emergencyReports,
-    );
-
-    // Nearby Connections does not reveal a peer's bearing or GPS coordinate.
-    // The legacy visual peer placement below is retained only as disabled
-    // history; no Bluetooth peer is rendered geographically without GPS.
-    /*
-    // Nearby Connections exposes no peer direction or peer GPS coordinate.
-    // Connected peers remain visible in the Network tab instead of being
-    // placed arbitrarily on a geographic map.
-    const peers = <MeshDevice>[];
+    // 2. Proximity Radar for Connected Mesh Peers
+    // Renders connected BLE / Wi-Fi mesh peers in proximity rings around 'You'
+    final peers = mesh.nearbyDevices;
     for (int i = 0; i < peers.length; i++) {
       final dev = peers[i];
       final angle = (dev.deviceId.hashCode.abs() % 360) * math.pi / 180;
       final rssiAbs = dev.signalStrength.abs().clamp(30, 95);
-      final radius = 90.0 + ((rssiAbs - 30) / 65.0) * 160.0;
+      final radius = 70.0 + ((rssiAbs - 30) / 65.0) * 140.0;
       final pos = Offset(
-        400 + math.cos(angle) * radius,
-        480 + math.sin(angle) * radius,
+        450 + math.cos(angle) * radius,
+        450 + math.sin(angle) * radius,
       );
 
       result.add(
@@ -145,17 +129,45 @@ class _LiveMapScreenState extends State<LiveMapScreen>
           type: i % 2 == 0 ? _NodeType.peerTeal : _NodeType.peerYellow,
           offset: pos,
           statusText:
-              'Relay node ${dev.displayName.isNotEmpty ? dev.displayName : dev.deviceId} • Battery ${dev.batteryLevel}% • Hop ${dev.hopCount}',
+              'Mesh peer ${dev.displayName.isNotEmpty ? dev.displayName : dev.deviceId} • Battery ${dev.batteryLevel}% • Hop ${dev.hopCount}',
           distance: dev.proximityBand == ProximityBand.immediate
               ? '~25 m'
               : (dev.proximityBand == ProximityBand.near ? '~120 m' : '~450 m'),
-          lastSeen: 'Just now',
+          lastSeen: 'Connected',
           meshDevice: dev,
         ),
       );
     }
 
-    */
+    // 3. Anchor Coordinates for Geographic Projection
+    double originLatitude = telemetry.latitude ?? 28.6139;
+    double originLongitude = telemetry.longitude ?? 77.2090;
+
+    if (telemetry.latitude == null || telemetry.longitude == null) {
+      // Find first available report or shelter to anchor relative map
+      for (final r in emergencyReports) {
+        if (r.latitude != null && r.longitude != null) {
+          originLatitude = r.latitude!;
+          originLongitude = r.longitude!;
+          break;
+        }
+      }
+      if (originLatitude == 28.6139 && _shelterResources.isNotEmpty) {
+        for (final s in _shelterResources) {
+          if (s.latitude != null && s.longitude != null) {
+            originLatitude = s.latitude!;
+            originLongitude = s.longitude!;
+            break;
+          }
+        }
+      }
+    }
+
+    final pixelsPerMeter = _pixelsPerMeter(
+      originLatitude,
+      originLongitude,
+      emergencyReports,
+    );
     // 2. Real Emergency Reports from SQLite (zero fake fallback nodes)
     if (emergencyReports.isNotEmpty) {
       for (int i = 0; i < emergencyReports.length; i++) {
@@ -465,8 +477,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     final String coords = (lat != null && lng != null)
         ? '${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E'
         : (rep?.location.isNotEmpty == true && rep?.location != 'Unknown'
-            ? rep!.location
-            : 'No shared GPS coordinate');
+              ? rep!.location
+              : 'No shared GPS coordinate');
     final String status = rep?.status ?? 'SAVED';
 
     showModalBottomSheet<void>(
@@ -1158,7 +1170,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       for (final report in _emergencyReports) report.id: report,
     };
     final activeReports = reportsById.values.toList();
-    final nodes = _computeNodes(activeReports, telemetry);
+    final nodes = _computeNodes(activeReports, telemetry, mesh);
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -1347,10 +1359,12 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                     ),
                     // Settings / layers action icon
                     IconButton(
-                      icon: Icon(Icons.settings_outlined, color: theme.text),
+                      icon: Icon(Icons.tune_rounded, color: theme.text),
                       tooltip: 'Map Settings',
                       onPressed: () => _showLayersSheet(theme),
                     ),
+                    const ThemeToggleButton(compact: true),
+                    const ProfileAvatarButton(compact: true),
                   ],
                 ),
               ),

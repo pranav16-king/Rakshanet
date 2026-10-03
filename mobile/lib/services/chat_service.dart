@@ -275,7 +275,7 @@ class ChatService extends ChangeNotifier {
       messageId: resolvedMessageId,
       status: 'QUEUED',
     );
-    _updateLocalMessageStatus(messageId, MessageDeliveryStatus.queued);
+    _updateLocalMessageStatus(resolvedMessageId, MessageDeliveryStatus.queued);
 
     // 5. MeshEngine owns the one physical send path and advances the durable
     // status only after Nearby Connections accepts a peer payload.
@@ -333,6 +333,11 @@ class ChatService extends ChangeNotifier {
       _isSyncing = false;
       notifyListeners();
     }
+  }
+
+  /// Stops background mesh timers (for test harness)
+  void stopTimers() {
+    _meshEngine.stopTimers();
   }
 
   @override

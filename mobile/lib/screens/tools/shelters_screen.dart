@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../database/app_database.dart';
 import '../../models/shelter_resource.dart';
 import '../../providers/theme_provider.dart';
@@ -60,9 +61,15 @@ class _SheltersScreenState extends State<SheltersScreen>
     }
   }
 
-  List<ShelterResource> _getFilteredShelters(bool nearbyOnly) {
+  List<ShelterResource> _getFilteredShelters(
+    bool nearbyOnly,
+    TelemetryProvider telemetry,
+  ) {
     return _shelters.where((s) {
-      if (nearbyOnly && s.distance > 3.0) return false;
+      if (nearbyOnly) {
+        final distanceMeters = _distanceFromCurrentGps(s, telemetry);
+        if (distanceMeters == null || distanceMeters > 3000) return false;
+      }
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchName = s.name.toLowerCase().contains(q);
@@ -74,7 +81,9 @@ class _SheltersScreenState extends State<SheltersScreen>
         final hasSupply = s.supplies.any((sup) {
           final supL = sup.toLowerCase();
           if (filterL == 'power') {
-            return supL.contains('power') || supL.contains('solar') || supL.contains('generator');
+            return supL.contains('power') ||
+                supL.contains('solar') ||
+                supL.contains('generator');
           }
           return supL.contains(filterL);
         });
@@ -87,6 +96,7 @@ class _SheltersScreenState extends State<SheltersScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final telemetry = context.watch<TelemetryProvider>();
     final bg = themeProvider.bg;
     final surface = themeProvider.surface;
     final border = themeProvider.border;
@@ -116,16 +126,19 @@ class _SheltersScreenState extends State<SheltersScreen>
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTokens.signalYellow),
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: AppTokens.signalYellow,
+            ),
             iconSize: 24,
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            tooltip: 'Sync via BLE mesh',
+            tooltip: 'Refresh local shelter records',
             onPressed: () async {
               await _loadSheltersFromDatabase();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Updated shelters from local mesh database'),
+                    content: Text('Updated local shelter records'),
                     duration: Duration(seconds: 2),
                   ),
                 );
@@ -151,7 +164,10 @@ class _SheltersScreenState extends State<SheltersScreen>
               indicatorSize: TabBarIndicatorSize.tab,
               labelColor: AppTokens.nightNavy,
               unselectedLabelColor: textMuted,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
               tabs: const [
                 Tab(text: 'Nearby (< 3 km)'),
                 Tab(text: 'All Relief Camps'),
@@ -169,7 +185,10 @@ class _SheltersScreenState extends State<SheltersScreen>
                 // Cached Age Disclaimer Banner
                 Container(
                   margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: isLowPower
                         ? AppTokens.oledSurface
@@ -203,7 +222,10 @@ class _SheltersScreenState extends State<SheltersScreen>
 
                 // Search Bar
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: TextField(
                     controller: _searchController,
                     onChanged: (val) => setState(() => _searchQuery = val),
@@ -234,7 +256,10 @@ class _SheltersScreenState extends State<SheltersScreen>
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-                        borderSide: const BorderSide(color: AppTokens.signalYellow, width: 2),
+                        borderSide: const BorderSide(
+                          color: AppTokens.signalYellow,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -243,13 +268,17 @@ class _SheltersScreenState extends State<SheltersScreen>
                 // Supplies Quick Filter Pills
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
                       _buildFilterChip(
                         label: 'All Supplies',
                         isSelected: _selectedSupplyFilter == null,
-                        onTap: () => setState(() => _selectedSupplyFilter = null),
+                        onTap: () =>
+                            setState(() => _selectedSupplyFilter = null),
                       ),
                       const SizedBox(width: 8),
                       _buildFilterChip(
@@ -281,7 +310,9 @@ class _SheltersScreenState extends State<SheltersScreen>
                         isSelected: _selectedSupplyFilter == 'Medical',
                         onTap: () => setState(() {
                           _selectedSupplyFilter =
-                              _selectedSupplyFilter == 'Medical' ? null : 'Medical';
+                              _selectedSupplyFilter == 'Medical'
+                              ? null
+                              : 'Medical';
                         }),
                       ),
                       const SizedBox(width: 8),
@@ -304,8 +335,16 @@ class _SheltersScreenState extends State<SheltersScreen>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildShelterList(_getFilteredShelters(true), themeProvider),
-                      _buildShelterList(_getFilteredShelters(false), themeProvider),
+                      _buildShelterList(
+                        _getFilteredShelters(true, telemetry),
+                        themeProvider,
+                        telemetry,
+                      ),
+                      _buildShelterList(
+                        _getFilteredShelters(false, telemetry),
+                        themeProvider,
+                        telemetry,
+                      ),
                     ],
                   ),
                 ),
@@ -342,7 +381,9 @@ class _SheltersScreenState extends State<SheltersScreen>
               Icon(
                 icon,
                 size: 16,
-                color: isSelected ? AppTokens.nightNavy : (iconColor ?? theme.text),
+                color: isSelected
+                    ? AppTokens.nightNavy
+                    : (iconColor ?? theme.text),
               ),
               const SizedBox(width: 6),
             ],
@@ -360,7 +401,11 @@ class _SheltersScreenState extends State<SheltersScreen>
     );
   }
 
-  Widget _buildShelterList(List<ShelterResource> shelters, ThemeProvider theme) {
+  Widget _buildShelterList(
+    List<ShelterResource> shelters,
+    ThemeProvider theme,
+    TelemetryProvider telemetry,
+  ) {
     if (shelters.isEmpty) {
       return Center(
         child: Padding(
@@ -378,7 +423,11 @@ class _SheltersScreenState extends State<SheltersScreen>
                   shape: BoxShape.circle,
                   border: Border.all(color: theme.border),
                 ),
-                child: Icon(Icons.night_shelter_outlined, size: 36, color: theme.textMuted),
+                child: Icon(
+                  Icons.night_shelter_outlined,
+                  size: 36,
+                  color: theme.textMuted,
+                ),
               ),
               const SizedBox(height: 18),
               Text(
@@ -392,9 +441,13 @@ class _SheltersScreenState extends State<SheltersScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Relief shelter coordinates will automatically appear as nearby mesh peers broadcast verified shelter packets.',
+                'Verified shelter records saved on this phone will appear here. The app does not invent shelter locations or capacities.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: theme.textMuted, fontSize: 14, height: 1.4),
+                style: TextStyle(
+                  color: theme.textMuted,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -402,7 +455,10 @@ class _SheltersScreenState extends State<SheltersScreen>
                 child: OutlinedButton.icon(
                   onPressed: _loadSheltersFromDatabase,
                   icon: const Icon(Icons.refresh_rounded, size: 20),
-                  label: const Text('Scan Local Mesh Cache', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Scan Local Mesh Cache',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: theme.text,
                     side: BorderSide(color: theme.border),
@@ -426,13 +482,17 @@ class _SheltersScreenState extends State<SheltersScreen>
         itemCount: shelters.length,
         itemBuilder: (context, index) {
           final shelter = shelters[index];
-          return _buildShelterCard(shelter, theme);
+          return _buildShelterCard(shelter, theme, telemetry);
         },
       ),
     );
   }
 
-  Widget _buildShelterCard(ShelterResource shelter, ThemeProvider theme) {
+  Widget _buildShelterCard(
+    ShelterResource shelter,
+    ThemeProvider theme,
+    TelemetryProvider telemetry,
+  ) {
     final maxCap = shelter.maxCapacity > 0 ? shelter.maxCapacity : 100;
     final occupancyRatio = (shelter.capacity / maxCap).clamp(0.0, 1.0);
     final isCritical = occupancyRatio >= 0.90 || shelter.isFull;
@@ -479,7 +539,8 @@ class _SheltersScreenState extends State<SheltersScreen>
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (shelter.address != null && shelter.address!.isNotEmpty) ...[
+                      if (shelter.address != null &&
+                          shelter.address!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           shelter.address!,
@@ -494,7 +555,10 @@ class _SheltersScreenState extends State<SheltersScreen>
                 ),
                 const SizedBox(width: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTokens.signalYellow.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(AppTokens.radiusPill),
@@ -512,7 +576,7 @@ class _SheltersScreenState extends State<SheltersScreen>
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${shelter.distance.toStringAsFixed(1)} km',
+                        _shelterDistanceLabel(shelter, telemetry),
                         style: const TextStyle(
                           color: AppTokens.signalYellow,
                           fontSize: 13,
@@ -617,7 +681,9 @@ class _SheltersScreenState extends State<SheltersScreen>
                         foregroundColor: theme.text,
                         side: BorderSide(color: theme.border),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusSm,
+                          ),
                         ),
                       ),
                     ),
@@ -642,7 +708,9 @@ class _SheltersScreenState extends State<SheltersScreen>
                         foregroundColor: AppTokens.nightNavy,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusSm,
+                          ),
                         ),
                       ),
                     ),
@@ -670,7 +738,9 @@ class _SheltersScreenState extends State<SheltersScreen>
     } else if (lower.contains('med') || lower.contains('first aid')) {
       icon = Icons.medical_services_rounded;
       color = AppTokens.sosRed;
-    } else if (lower.contains('solar') || lower.contains('power') || lower.contains('generator')) {
+    } else if (lower.contains('solar') ||
+        lower.contains('power') ||
+        lower.contains('generator')) {
       icon = Icons.solar_power_rounded;
       color = AppTokens.signalYellow;
     } else {
@@ -703,10 +773,38 @@ class _SheltersScreenState extends State<SheltersScreen>
     );
   }
 
+  double? _distanceFromCurrentGps(
+    ShelterResource shelter,
+    TelemetryProvider telemetry,
+  ) {
+    if (!telemetry.hasGpsFix ||
+        telemetry.latitude == null ||
+        telemetry.longitude == null ||
+        shelter.latitude == null ||
+        shelter.longitude == null) {
+      return null;
+    }
+    return _distanceMeters(
+      telemetry.latitude!,
+      telemetry.longitude!,
+      shelter.latitude!,
+      shelter.longitude!,
+    );
+  }
+
+  String _shelterDistanceLabel(
+    ShelterResource shelter,
+    TelemetryProvider telemetry,
+  ) {
+    final meters = _distanceFromCurrentGps(shelter, telemetry);
+    return meters == null ? 'GPS needed' : _formatDistance(meters);
+  }
+
   void _showDirectionsModal(ShelterResource shelter) {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
     final telemetry = Provider.of<TelemetryProvider>(context, listen: false);
-    final hasCoordinates = telemetry.hasGpsFix &&
+    final hasCoordinates =
+        telemetry.hasGpsFix &&
         telemetry.latitude != null &&
         telemetry.longitude != null &&
         shelter.latitude != null &&
@@ -731,7 +829,9 @@ class _SheltersScreenState extends State<SheltersScreen>
       context: context,
       backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTokens.radiusLg),
+        ),
       ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24),
@@ -766,11 +866,17 @@ class _SheltersScreenState extends State<SheltersScreen>
                     ? AppTokens.oledSurface
                     : AppTokens.beaconTeal.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-                border: Border.all(color: AppTokens.beaconTeal.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppTokens.beaconTeal.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.explore_rounded, size: 36, color: AppTokens.beaconTeal),
+                  const Icon(
+                    Icons.explore_rounded,
+                    size: 36,
+                    color: AppTokens.beaconTeal,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -791,9 +897,13 @@ class _SheltersScreenState extends State<SheltersScreen>
                           hasCoordinates
                               ? 'Heading: ${bearing!.round()}° (${_bearingLabel(bearing)})'
                               : 'Turn on Location and obtain current GPS before using direction guidance.',
-                          style: TextStyle(color: theme.textMuted, fontSize: 13),
+                          style: TextStyle(
+                            color: theme.textMuted,
+                            fontSize: 13,
+                          ),
                         ),
-                        if (shelter.latitude != null && shelter.longitude != null) ...[
+                        if (shelter.latitude != null &&
+                            shelter.longitude != null) ...[
                           const SizedBox(height: 2),
                           Text(
                             'GPS: ${shelter.latitude!.toStringAsFixed(4)}° N, ${shelter.longitude!.toStringAsFixed(4)}° E',
@@ -824,7 +934,11 @@ class _SheltersScreenState extends State<SheltersScreen>
               hasCoordinates
                   ? 'This is a direct GPS bearing, not turn-by-turn road routing. Follow official evacuation signage and avoid hazards; conditions can change after the local shelter data was saved.\n\nDestination: ${shelter.address ?? shelter.name}.'
                   : 'This phone has no usable origin coordinate or this shelter has no stored coordinate. The app will not invent a route. Check the shelter address and local evacuation signage instead.',
-              style: TextStyle(color: theme.textMuted, fontSize: 13, height: 1.4),
+              style: TextStyle(
+                color: theme.textMuted,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -860,7 +974,8 @@ class _SheltersScreenState extends State<SheltersScreen>
     const earthRadius = 6371000.0;
     final latDelta = (latitudeB - latitudeA) * math.pi / 180;
     final lonDelta = (longitudeB - longitudeA) * math.pi / 180;
-    final a = math.sin(latDelta / 2) * math.sin(latDelta / 2) +
+    final a =
+        math.sin(latDelta / 2) * math.sin(latDelta / 2) +
         math.cos(latitudeA * math.pi / 180) *
             math.cos(latitudeB * math.pi / 180) *
             math.sin(lonDelta / 2) *
@@ -878,7 +993,8 @@ class _SheltersScreenState extends State<SheltersScreen>
     final toLat = latitudeB * math.pi / 180;
     final lonDelta = (longitudeB - longitudeA) * math.pi / 180;
     final y = math.sin(lonDelta) * math.cos(toLat);
-    final x = math.cos(fromLat) * math.sin(toLat) -
+    final x =
+        math.cos(fromLat) * math.sin(toLat) -
         math.sin(fromLat) * math.cos(toLat) * math.cos(lonDelta);
     return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
@@ -895,7 +1011,8 @@ class _SheltersScreenState extends State<SheltersScreen>
   void _showContactModal(ShelterResource shelter) {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
     final textController = TextEditingController(
-      text: 'Requesting check-in assistance for people arriving at ${shelter.name}.',
+      text:
+          'Requesting check-in assistance for people arriving at ${shelter.name}.',
     );
 
     showModalBottomSheet<void>(
@@ -903,7 +1020,9 @@ class _SheltersScreenState extends State<SheltersScreen>
       isScrollControlled: true,
       backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTokens.radiusLg),
+        ),
       ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
@@ -945,9 +1064,7 @@ class _SheltersScreenState extends State<SheltersScreen>
               style: TextStyle(color: theme.text, fontSize: 14),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: theme.isLowPower
-                    ? AppTokens.oledSurface
-                    : theme.bg,
+                fillColor: theme.isLowPower ? AppTokens.oledSurface : theme.bg,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppTokens.radiusMd),
                   borderSide: BorderSide(color: theme.border),
@@ -971,7 +1088,10 @@ class _SheltersScreenState extends State<SheltersScreen>
                       backgroundColor: Color(0xFF162036),
                       content: Row(
                         children: [
-                          Icon(Icons.check_circle_rounded, color: Color(0xFF4CD08A)),
+                          Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFF4CD08A),
+                          ),
                           SizedBox(width: 10),
                           Text('Message queued for multi-hop mesh delivery'),
                         ],

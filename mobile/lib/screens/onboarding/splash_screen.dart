@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../services/user_auth_service.dart';
 import '../../theme/app_tokens.dart';
 import '../profile/profile_setup_screen.dart';
 import '../shell/main_shell.dart';
@@ -62,11 +63,35 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  void _checkRegistrationAndNavigate() {
+  /// Checks offline login availability and routes accordingly:
+  /// 1. If offline login is available AND a local profile exists → go to /main
+  ///    and trigger a background cloud sync.
+  /// 2. If offline login is available but no profile in SQLite → go to /profile-setup
+  /// 3. If not registered at all → go to /profile-setup
+  Future<void> _checkRegistrationAndNavigate() async {
     if (!mounted) return;
+
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
 
-    if (profileProvider.isRegistered) {
+    // Check offline login availability first via UserAuthService
+    final offlineLoginAvailable =
+        await UserAuthService.instance.checkOfflineLoginAvailable();
+
+    if (!mounted) return;
+
+    if (offlineLoginAvailable && profileProvider.isRegistered) {
+      // Offline login: profile found in SQLite → go to main shell
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, _, _) => const MainShell(),
+          transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
+          transitionDuration: const Duration(milliseconds: 400),
+        ),
+      );
+      // Trigger background cloud sync without blocking navigation
+      UserAuthService.instance.syncNow();
+    } else if (profileProvider.isRegistered) {
+      // Legacy path: registered via SharedPreferences only → go to main
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (_, _, _) => const MainShell(),
@@ -75,6 +100,7 @@ class _SplashScreenState extends State<SplashScreen>
         ),
       );
     } else {
+      // No profile → go to profile setup
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (_, _, _) => const ProfileSetupScreen(),

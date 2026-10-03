@@ -33,7 +33,12 @@ class MediaStorageService {
   }
 
   Future<String> createDestination(String requestedName) async {
-    final root = await getApplicationDocumentsDirectory();
+    Directory root;
+    try {
+      root = await getApplicationDocumentsDirectory();
+    } catch (_) {
+      root = Directory.systemTemp;
+    }
     final mediaDirectory = Directory(path.join(root.path, 'mesh-media'));
     if (!await mediaDirectory.exists()) {
       await mediaDirectory.create(recursive: true);

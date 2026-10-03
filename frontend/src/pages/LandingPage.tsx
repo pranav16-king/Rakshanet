@@ -22,7 +22,7 @@ import {
   Globe2,
 } from 'lucide-react';
 import { SignalRescueLogo } from '../components/common/SignalRescueLogo';
-import { GenerativeArtScene } from '../components/ui/anomalous-matter-hero';
+import GatewayFlow from '@/components/ui/gateway-flow';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -211,9 +211,9 @@ export const LandingPage: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-[#0B1220]/95 via-[#0B1220]/75 to-[#0B1220]/30" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0B1220] via-transparent to-[#0B1220]/40" />
 
-          {/* Interactive 3D WebGL Mesh Resonance Scene */}
-          <div className="absolute inset-0 z-0 opacity-60 pointer-events-none">
-            <GenerativeArtScene colorHex="#3CC6D0" />
+          {/* Full-bleed Disaster Mesh Gateway Particle Telemetry Stream */}
+          <div className="absolute inset-0 z-0 opacity-75">
+            <GatewayFlow transparent density={1.25} speed={1.1} strokeWidth={1.3} mode="dark" className="w-full h-full" />
           </div>
 
           {/* SVG Animated Mesh Topology Overlays */}
@@ -331,29 +331,46 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Column: Hero Visual Floating Badge (Exact Match Screen 1) */}
-            <div className="lg:col-span-5 xl:col-span-4 flex justify-center lg:justify-end">
-              {/* Floating Badge from Screen 1 */}
-              <div className="relative group">
-                {/* Outer Glow Halo */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-amber-500 rounded-2xl blur-md opacity-30 group-hover:opacity-60 transition duration-500"></div>
-
-                <div className="relative bg-white/95 backdrop-blur-md rounded-2xl px-6 py-4 shadow-2xl border border-white/60 flex items-center gap-4 transition-transform hover:-translate-y-1">
-                  {/* Signal Icon in Teal/Cyan Circle */}
-                  <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-md shadow-teal-500/30 shrink-0">
-                    <Radio size={24} className="stroke-[2.2] animate-pulse" />
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 border-2 border-white rounded-full"></span>
-                  </div>
-
-                  {/* Two-Line Badge Text */}
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      No Internet
-                    </span>
-                    <span className="text-lg font-black text-slate-900 tracking-tight leading-tight">
-                      Still Connected
+            {/* Right Column: Interactive Live Mesh Gateway Flow Showcase */}
+            <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
+              <div className="relative group rounded-2xl overflow-hidden border border-slate-700/80 shadow-2xl bg-[#0B1220]/95 backdrop-blur-xl transition-all duration-300 hover:border-amber-400/50">
+                {/* Header status bar */}
+                <div className="px-4 py-2.5 bg-[#0E1627] border-b border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#FFD21F] animate-pulse"></span>
+                    <span className="text-xs font-mono text-slate-200 font-bold uppercase tracking-wider">
+                      Live Gateway Ingestion
                     </span>
                   </div>
+                  <span className="text-[10px] font-mono font-semibold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+                    CLICK TO BROADCAST
+                  </span>
+                </div>
+
+                {/* Gateway Flow Interactive Canvas Simulation */}
+                <div className="relative h-64 sm:h-72 w-full overflow-hidden bg-black">
+                  <GatewayFlow density={1.3} speed={1.1} strokeWidth={1.4} mode="dark" />
+                </div>
+
+                {/* Bottom floating badge matching Screen 1 */}
+                <div className="p-3.5 bg-[#0E1627] border-t border-slate-800/80 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-md shadow-teal-500/30 shrink-0">
+                      <Radio size={20} className="stroke-[2.2] animate-pulse" />
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 border border-white rounded-full"></span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        No Internet
+                      </span>
+                      <span className="text-sm font-black text-white tracking-tight leading-tight">
+                        Still Connected • 18 Peers Active
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-amber-400 px-2 py-1 rounded bg-amber-400/10 border border-amber-400/20 font-bold">
+                    DTN v2.1
+                  </span>
                 </div>
               </div>
             </div>

@@ -7,6 +7,7 @@ import 'live_map_screen.dart';
 import 'shelters_screen.dart';
 import 'missing_person_screen.dart';
 import 'ai_assistant_screen.dart';
+import '../../widgets/app_bar_actions.dart';
 
 /// Screen 11: Safety Tools (2x3 Survival Grid)
 /// Features:
@@ -48,6 +49,11 @@ class SafetyToolsScreen extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: const [
+          ThemeToggleButton(compact: true),
+          ProfileAvatarButton(compact: true),
+          SizedBox(width: 8),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

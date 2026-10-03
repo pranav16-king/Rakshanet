@@ -5,8 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/chat_message.dart';
+import '../../providers/telemetry_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
+import '../../services/group_service.dart';
 import '../../theme/app_tokens.dart';
 import 'my_messages_screen.dart';
 
@@ -79,6 +81,49 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _shareCurrentLocation() async {
+    final telemetry = context.read<TelemetryProvider>();
+    final lat = telemetry.latitude;
+    final lng = telemetry.longitude;
+
+    if (lat == null || lng == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Acquiring GPS fix... Please ensure location permissions are granted.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    final accuracyText = telemetry.hasGpsFix ? 'GPS Fix (±10m)' : 'Mesh Estimated (±35m)';
+    final locationTitle = '${lat.toStringAsFixed(4)}°, ${lng.toStringAsFixed(4)}°';
+    final locationPreview = LocationPreview(
+      title: locationTitle,
+      distance: accuracyText,
+      latitude: lat,
+      longitude: lng,
+    );
+
+    try {
+      final chatService = context.read<ChatService>();
+      await chatService.sendMessage(
+        content: '📍 Shared emergency location ($accuracyText)',
+        messageType: 'LOCATION',
+        location: locationPreview,
+      );
+      _scrollToBottom();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to share location: $error')),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _textController.dispose();
@@ -128,6 +173,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
             // Filter Tabs: "Nearby", "Group", "Rescue", "Saved"
             _buildFilterTabs(theme, chatService),
+
+            // Group Management & Invite Actions Bar (shown when Group tab is active)
+            if (chatService.activeFilter == 'Group')
+              _buildGroupHeader(theme),
 
             const SizedBox(height: 8),
 
@@ -212,7 +261,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  /// Screen 5 Header: "Community Chat", subtitle "Nearby devices • 24 online", search icon
+  /// Screen 5 Header: real nearby-device count, search icon, and mesh status.
   Widget _buildHeader(
     BuildContext context,
     ThemeProvider theme,
@@ -394,6 +443,142 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  /// Group Management Header: "+ Create Group", "Invites", and joined groups
+  Widget _buildGroupHeader(ThemeProvider theme) {
+    final groupService = context.watch<GroupService>();
+    final pendingCount = groupService.pendingInviteCount;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        children: [
+          // Pending Invites Notification Banner
+          if (pendingCount > 0)
+            InkWell(
+              onTap: () => Navigator.pushNamed(context, '/pending-invites'),
+              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: AppTokens.beaconTeal.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                  border: Border.all(color: AppTokens.beaconTeal),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.mail_outline_rounded, color: AppTokens.beaconTeal, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'You have $pendingCount group invitation(s)!',
+                        style: TextStyle(
+                          color: theme.text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'Review',
+                      style: TextStyle(
+                        color: AppTokens.beaconTeal,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, color: AppTokens.beaconTeal, size: 18),
+                  ],
+                ),
+              ),
+            ),
+
+          // Group Actions Row: "+ Create Group" & "Invites"
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 38,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTokens.signalYellow,
+                      foregroundColor: AppTokens.lightOnPrimary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text(
+                      'Create Group',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    onPressed: () => Navigator.pushNamed(context, '/create-group'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 38,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.text,
+                    side: BorderSide(color: theme.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                  ),
+                  icon: Icon(
+                    Icons.mail_outline_rounded,
+                    size: 18,
+                    color: pendingCount > 0 ? AppTokens.beaconTeal : theme.textMuted,
+                  ),
+                  label: Text(
+                    pendingCount > 0 ? 'Invites ($pendingCount)' : 'Invites',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: pendingCount > 0 ? AppTokens.beaconTeal : theme.text,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pushNamed(context, '/pending-invites'),
+                ),
+              ),
+            ],
+          ),
+
+          // Active Groups List
+          if (groupService.groups.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 32,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: groupService.groups.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemBuilder: (context, idx) {
+                  final grp = groupService.groups[idx];
+                  return Chip(
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: theme.surface,
+                    side: BorderSide(color: theme.border),
+                    avatar: const Icon(Icons.group, size: 14, color: AppTokens.beaconTeal),
+                    label: Text(
+                      '${grp.name} (${grp.memberCount})',
+                      style: TextStyle(fontSize: 12, color: theme.text),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   /// Message row (mine vs theirs)
   Widget _buildMessageRow(ThemeProvider theme, ChatMessage msg) {
     if (msg.isMine) {
@@ -498,7 +683,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       _buildStatusTickWidget(theme, msg.status),
                       const SizedBox(width: 4),
                       Text(
-                        msg.status.label,
+                        _formatStatusLabel(msg),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -523,7 +708,26 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  /// Status ticks: 1 grey tick (saved locally), 2 teal ticks (sent to mesh), 2 green ticks (delivered to rescue team/cloud)
+  String _formatStatusLabel(ChatMessage msg) {
+    switch (msg.status) {
+      case MessageDeliveryStatus.relayed:
+        final count = msg.hopCount > 0 ? msg.hopCount : 1;
+        return '↗ Relayed by $count devices';
+      case MessageDeliveryStatus.delivered:
+        return '✓ Reached recipient';
+      case MessageDeliveryStatus.saved:
+        return '✓ Saved on this phone';
+      case MessageDeliveryStatus.queued:
+      case MessageDeliveryStatus.sending:
+        return 'Queued in outbox';
+      case MessageDeliveryStatus.sentNearby:
+        return 'Sent to nearby';
+      case MessageDeliveryStatus.failed:
+        return 'Failed';
+    }
+  }
+
+  /// Status ticks: 1 grey tick (saved locally), clock icon (queued), 2 teal arrows/ticks (relayed), 2 green ticks (delivered)
   Widget _buildStatusTickWidget(
     ThemeProvider theme,
     MessageDeliveryStatus status,
@@ -538,17 +742,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
     switch (status) {
       case MessageDeliveryStatus.saved:
-      case MessageDeliveryStatus.queued:
-      case MessageDeliveryStatus.sending:
         // 1 grey tick (saved locally)
         return const Icon(Icons.check, size: 14, color: Color(0xFF9E9E9E));
+      case MessageDeliveryStatus.queued:
+      case MessageDeliveryStatus.sending:
+        return const Icon(Icons.access_time_rounded, size: 13, color: Color(0xFFFFC400));
       case MessageDeliveryStatus.sentNearby:
       case MessageDeliveryStatus.relayed:
-        // 2 teal ticks (sent to mesh)
-        return Icon(Icons.done_all, size: 14, color: infoColor);
+        // 2 teal ticks / arrows (sent to mesh)
+        return Icon(Icons.compare_arrows_rounded, size: 14, color: infoColor);
       case MessageDeliveryStatus.delivered:
-        // 2 green ticks (delivered to rescue team/cloud)
-        return Icon(Icons.done_all, size: 14, color: successColor);
+        // 2 green ticks (delivered to recipient)
+        return Icon(Icons.done_all_rounded, size: 14, color: successColor);
       case MessageDeliveryStatus.failed:
         return Icon(Icons.error_outline, size: 14, color: sosColor);
     }
@@ -824,11 +1029,26 @@ class _ChatScreenState extends State<ChatScreen> {
                       size: 22,
                     ),
                     constraints: const BoxConstraints(
-                      minWidth: 40,
+                      minWidth: 36,
                       minHeight: 40,
                     ),
                     tooltip: 'Send image offline',
                     onPressed: _pickAndSendImage,
+                  ),
+
+                  // Location sharing; sends E2EE location with accuracy radius
+                  IconButton(
+                    icon: Icon(
+                      Icons.my_location_outlined,
+                      color: theme.textMuted,
+                      size: 20,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 40,
+                    ),
+                    tooltip: 'Share emergency location',
+                    onPressed: _shareCurrentLocation,
                   ),
 
                   // Text input

@@ -22,6 +22,11 @@ import 'screens/tools/live_map_screen.dart';
 import 'screens/tools/ai_assistant_screen.dart';
 import 'screens/settings/settings_screen.dart';
 
+import 'services/group_service.dart';
+import 'services/user_auth_service.dart';
+import 'screens/chat/create_group_screen.dart';
+import 'screens/chat/pending_invites_screen.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DeviceIdentityService.instance.initialize();
@@ -33,6 +38,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => MeshProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider(create: (_) => ChatService()),
+        ChangeNotifierProvider(create: (_) => GroupService()),
+        ChangeNotifierProvider(create: (_) => UserAuthService.instance),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         ChangeNotifierProvider(create: (_) => DeviceStatusProvider()),
         ChangeNotifierProvider(create: (_) => EmergencyReportProvider()),
@@ -66,6 +73,8 @@ class RakshaNetApp extends StatelessWidget {
         '/live-map': (_) => const LiveMapScreen(),
         '/ai-assistant': (_) => const AiAssistantScreen(),
         '/settings': (_) => const SettingsScreen(),
+        '/create-group': (_) => const CreateGroupScreen(),
+        '/pending-invites': (_) => const PendingInvitesScreen(),
       },
     );
   }

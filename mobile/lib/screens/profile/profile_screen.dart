@@ -7,7 +7,9 @@ import '../../models/user_profile.dart';
 import '../../providers/mesh_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/user_auth_service.dart';
 import '../../theme/app_tokens.dart';
+import '../../widgets/app_bar_actions.dart';
 
 /// Screen 13: Profile & Volunteer (aligned with Screen 13 in mockup)
 ///
@@ -186,6 +188,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             },
           ),
+          const ThemeToggleButton(compact: true),
+          const SizedBox(width: 4),
         ],
       ),
       body: ListView(
@@ -313,6 +317,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           letterSpacing: 0.5,
                         ),
                       ),
+                      if (profile.email.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.email_outlined,
+                              size: 13,
+                              color: isLight
+                                  ? AppTokens.lightPrimaryInk
+                                  : AppTokens.signalYellow,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                profile.email,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 4),
 
                       // Emergency Phone Number
@@ -585,7 +616,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
-                // Action 5: Sign Out / Reset Anonymous Profile
+                // Action 5: Cloud Database Sync
+                _buildActionTile(
+                  icon: Icons.cloud_sync_outlined,
+                  iconColor: AppTokens.beaconTeal,
+                  title: 'Cloud Database Sync',
+                  subtitle: 'Fetch records from server & push local telemetry',
+                  textColor: textColor,
+                  textMutedColor: textMutedColor,
+                  borderColor: borderColor,
+                  showDivider: true,
+                  onTap: () async {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Connecting to cloud server and syncing data...'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                    await UserAuthService.instance.syncNow();
+                    await _loadDatabaseStats();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          backgroundColor: AppTokens.beaconTeal,
+                          content: Text('Local SQLite database synced with cloud!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                ),
+
+                // Action 6: Sign Out / Reset Anonymous Profile
                 _buildActionTile(
                   icon: Icons.restart_alt_rounded,
                   iconColor: AppTokens.sosRed,

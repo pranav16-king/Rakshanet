@@ -8,6 +8,8 @@ class MeshPacket {
   final int ttl;
   final int hops;
   final String payload;
+  final String? recipientUserId;
+  final String? recipientDeviceId;
 
   const MeshPacket({
     this.ver = 1,
@@ -19,6 +21,8 @@ class MeshPacket {
     required this.ttl,
     required this.hops,
     required this.payload,
+    this.recipientUserId,
+    this.recipientDeviceId,
   });
 
   MeshPacket copyWith({
@@ -31,6 +35,8 @@ class MeshPacket {
     int? ttl,
     int? hops,
     String? payload,
+    String? recipientUserId,
+    String? recipientDeviceId,
   }) {
     return MeshPacket(
       ver: ver ?? this.ver,
@@ -42,6 +48,8 @@ class MeshPacket {
       ttl: ttl ?? this.ttl,
       hops: hops ?? this.hops,
       payload: payload ?? this.payload,
+      recipientUserId: recipientUserId ?? this.recipientUserId,
+      recipientDeviceId: recipientDeviceId ?? this.recipientDeviceId,
     );
   }
 
@@ -56,6 +64,8 @@ class MeshPacket {
       'ttl': ttl,
       'hops': hops,
       'payload': payload,
+      if (recipientUserId != null) 'recipient_user_id': recipientUserId,
+      if (recipientDeviceId != null) 'recipient_device_id': recipientDeviceId,
     };
   }
 
@@ -70,6 +80,10 @@ class MeshPacket {
       ttl: (map['ttl'] as num?)?.toInt() ?? 5,
       hops: (map['hops'] as num?)?.toInt() ?? 0,
       payload: (map['payload'] ?? map['content']) as String? ?? '',
+      recipientUserId:
+          (map['recipient_user_id'] ?? map['recipientUserId']) as String?,
+      recipientDeviceId:
+          (map['recipient_device_id'] ?? map['recipientDeviceId']) as String?,
     );
   }
 }
