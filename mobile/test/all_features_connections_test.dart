@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:rakshanet_mobile/models/user_profile.dart';
 import 'package:rakshanet_mobile/models/chat_message.dart';
 import 'package:rakshanet_mobile/models/message_envelope.dart';
 import 'package:rakshanet_mobile/models/emergency_report.dart';

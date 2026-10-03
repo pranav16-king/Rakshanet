@@ -8,6 +8,7 @@ import 'providers/user_profile_provider.dart';
 import 'providers/device_status_provider.dart';
 import 'providers/emergency_report_provider.dart';
 import 'providers/telemetry_provider.dart';
+import 'services/chat_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/profile/profile_setup_screen.dart';
 import 'screens/shell/main_shell.dart';
@@ -28,6 +29,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => MeshProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => ChatService()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         ChangeNotifierProvider(create: (_) => DeviceStatusProvider()),
         ChangeNotifierProvider(create: (_) => EmergencyReportProvider()),

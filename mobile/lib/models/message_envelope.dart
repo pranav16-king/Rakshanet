@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 /// RakshaNet Delay-Tolerant Message Envelope
 ///
@@ -129,6 +130,19 @@ class MessageEnvelope {
 
   static MessageEnvelope decode(String jsonStr) =>
       MessageEnvelope.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+
+  Uint8List toBytes() => Uint8List.fromList(utf8.encode(encode()));
+
+  static MessageEnvelope fromBytes(Uint8List bytes) =>
+      MessageEnvelope.decode(utf8.decode(bytes));
+
+  static MessageEnvelope? tryFromBytes(Uint8List bytes) {
+    try {
+      return MessageEnvelope.fromBytes(bytes);
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   String toString() =>

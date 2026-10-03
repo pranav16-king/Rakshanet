@@ -415,23 +415,28 @@ class SafetyToolsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.medical_services_rounded, color: AppTokens.sosRed, size: 24),
-                    SizedBox(width: 10),
+                  children: [
+                    const Icon(Icons.medical_services_rounded, color: AppTokens.sosRed, size: 24),
+                    const SizedBox(width: 10),
                     Text(
                       'Offline First Aid Manual',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.text,
+                      ),
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: Icon(Icons.close_rounded, color: theme.text),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             _buildFirstAidItem(
+              theme: theme,
               title: '1. Severe Bleeding Control',
               steps: [
                 'Apply direct, firm pressure on the wound using clean cloth or gauze.',
@@ -441,6 +446,7 @@ class SafetyToolsScreen extends StatelessWidget {
               color: AppTokens.sosRed,
             ),
             _buildFirstAidItem(
+              theme: theme,
               title: '2. CPR (Adult)',
               steps: [
                 'Ensure the scene is safe and check for responsiveness.',
@@ -450,6 +456,7 @@ class SafetyToolsScreen extends StatelessWidget {
               color: AppTokens.signalYellow,
             ),
             _buildFirstAidItem(
+              theme: theme,
               title: '3. Fractures & Splinting',
               steps: [
                 'Do not attempt to push protruding bones back in.',
@@ -459,6 +466,7 @@ class SafetyToolsScreen extends StatelessWidget {
               color: AppTokens.beaconTeal,
             ),
             _buildFirstAidItem(
+              theme: theme,
               title: '4. Burns & Scalds',
               steps: [
                 'Cool burn under clean, cool running water for at least 10 minutes.',
@@ -468,6 +476,7 @@ class SafetyToolsScreen extends StatelessWidget {
               color: AppTokens.darkWarning,
             ),
             _buildFirstAidItem(
+              theme: theme,
               title: '5. Choking (Heimlich Maneuver)',
               steps: [
                 'Stand behind person, lean them slightly forward.',
@@ -483,6 +492,7 @@ class SafetyToolsScreen extends StatelessWidget {
   }
 
   Widget _buildFirstAidItem({
+    required ThemeProvider theme,
     required String title,
     required List<String> steps,
     required Color color,
@@ -517,7 +527,11 @@ class SafetyToolsScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       s,
-                      style: const TextStyle(fontSize: 13, height: 1.35),
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        color: theme.text,
+                      ),
                     ),
                   ),
                 ],
@@ -552,23 +566,28 @@ class SafetyToolsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.lightbulb_rounded, color: AppTokens.signalYellow, size: 24),
-                    SizedBox(width: 10),
+                  children: [
+                    const Icon(Icons.lightbulb_rounded, color: AppTokens.signalYellow, size: 24),
+                    const SizedBox(width: 10),
                     Text(
                       'Disaster Survival Checklists',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.text,
+                      ),
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: Icon(Icons.close_rounded, color: theme.text),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             _buildSurvivalTip(
+              theme: theme,
               hazard: 'Flash Floods & Rising Water',
               icon: Icons.waves_rounded,
               color: AppTokens.beaconTeal,
@@ -579,6 +598,7 @@ class SafetyToolsScreen extends StatelessWidget {
               ],
             ),
             _buildSurvivalTip(
+              theme: theme,
               hazard: 'Earthquake Shaking',
               icon: Icons.terrain_rounded,
               color: AppTokens.darkWarning,
@@ -589,6 +609,7 @@ class SafetyToolsScreen extends StatelessWidget {
               ],
             ),
             _buildSurvivalTip(
+              theme: theme,
               hazard: 'Building Fire & Smoke Inhalation',
               icon: Icons.local_fire_department_rounded,
               color: AppTokens.sosRed,
@@ -599,6 +620,7 @@ class SafetyToolsScreen extends StatelessWidget {
               ],
             ),
             _buildSurvivalTip(
+              theme: theme,
               hazard: 'Severe Cyclone / Storm Surge',
               icon: Icons.air_rounded,
               color: const Color(0xFF3B82F6),
@@ -615,6 +637,7 @@ class SafetyToolsScreen extends StatelessWidget {
   }
 
   Widget _buildSurvivalTip({
+    required ThemeProvider theme,
     required String hazard,
     required IconData icon,
     required Color color,
@@ -649,7 +672,16 @@ class SafetyToolsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('• ', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-                  Expanded(child: Text(t, style: const TextStyle(fontSize: 13, height: 1.35))),
+                  Expanded(
+                    child: Text(
+                      t,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        color: theme.text,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -671,19 +703,22 @@ class SafetyToolsScreen extends StatelessWidget {
           side: BorderSide(color: theme.border),
         ),
         title: Row(
-          children: const [
-            Icon(Icons.verified_user_rounded, color: Color(0xFF4CD08A), size: 26),
-            SizedBox(width: 10),
-            Text('Quick Safety Check-in', style: TextStyle(fontWeight: FontWeight.bold)),
+          children: [
+            const Icon(Icons.verified_user_rounded, color: Color(0xFF4CD08A), size: 26),
+            const SizedBox(width: 10),
+            Text(
+              'Quick Safety Check-in',
+              style: TextStyle(fontWeight: FontWeight.bold, color: theme.text),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Broadcast an autonomous "I Am Safe" packet across all nearby BLE and Wi-Fi Direct devices.',
-              style: TextStyle(fontSize: 14, height: 1.4),
+              style: TextStyle(fontSize: 14, height: 1.4, color: theme.text),
             ),
             const SizedBox(height: 14),
             Container(
@@ -695,12 +730,28 @@ class SafetyToolsScreen extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('Payload Summary:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  SizedBox(height: 4),
-                  Text('• Status: ALL SAFE / NO ASSISTANCE NEEDED', style: TextStyle(fontSize: 12)),
-                  Text('• Timestamp: Just Now', style: TextStyle(fontSize: 12)),
-                  Text('• GPS: Last Known Location Included', style: TextStyle(fontSize: 12)),
+                children: [
+                  Text(
+                    'Payload Summary:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: theme.text,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '• Status: ALL SAFE / NO ASSISTANCE NEEDED',
+                    style: TextStyle(fontSize: 12, color: theme.text),
+                  ),
+                  Text(
+                    '• Timestamp: Just Now',
+                    style: TextStyle(fontSize: 12, color: theme.textMuted),
+                  ),
+                  Text(
+                    '• GPS: Last Known Location Included',
+                    style: TextStyle(fontSize: 12, color: theme.textMuted),
+                  ),
                 ],
               ),
             ),
@@ -720,13 +771,13 @@ class SafetyToolsScreen extends StatelessWidget {
             onPressed: () {
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: Color(0xFF162036),
-                  content: Row(
+                SnackBar(
+                  backgroundColor: theme.isLightMode ? AppTokens.nightNavy : AppTokens.darkSurface,
+                  content: const Row(
                     children: [
                       Icon(Icons.check_circle_rounded, color: Color(0xFF4CD08A)),
                       SizedBox(width: 10),
-                      Text('"I Am Safe" status broadcasted to 6 nearby mesh peers'),
+                      Text('"I Am Safe" status broadcasted to nearby mesh peers'),
                     ],
                   ),
                 ),
@@ -773,25 +824,29 @@ class SafetyToolsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.phone_in_talk_rounded, color: Color(0xFF3B82F6), size: 24),
-                    SizedBox(width: 10),
+                  children: [
+                    const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF3B82F6), size: 24),
+                    const SizedBox(width: 10),
                     Text(
                       'Verified Emergency Numbers',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.text,
+                      ),
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: Icon(Icons.close_rounded, color: theme.text),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Tapping a number copies it to your clipboard. Standard telecom dials operate during cellular coverage; otherwise numbers are queued for uplink nodes.',
-              style: TextStyle(fontSize: 12.5, color: Colors.grey),
+              style: TextStyle(fontSize: 12.5, color: theme.textMuted),
             ),
             const SizedBox(height: 14),
             ...numbers.map((item) {
@@ -834,6 +889,7 @@ class SafetyToolsScreen extends StatelessWidget {
                     Clipboard.setData(ClipboardData(text: item['num']!));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
+                        backgroundColor: theme.isLightMode ? AppTokens.nightNavy : AppTokens.darkSurface,
                         content: Text('Copied ${item['num']} to clipboard'),
                         duration: const Duration(seconds: 2),
                       ),
@@ -895,17 +951,21 @@ class SafetyToolsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.notifications_active_rounded, color: AppTokens.darkWarning, size: 24),
-                    SizedBox(width: 10),
+                  children: [
+                    const Icon(Icons.notifications_active_rounded, color: AppTokens.darkWarning, size: 24),
+                    const SizedBox(width: 10),
                     Text(
                       'Broadcast Warning Bulletins',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.text,
+                      ),
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: Icon(Icons.close_rounded, color: theme.text),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
               ],

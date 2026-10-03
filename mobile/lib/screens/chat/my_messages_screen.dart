@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/chat_message.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
 import '../../theme/app_tokens.dart';
 
@@ -19,25 +20,26 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final chatService = Provider.of<ChatService>(context);
+    final theme = context.watch<ThemeProvider>();
+    final chatService = context.watch<ChatService>();
     final pendingMessages = chatService.pendingMessages;
     final sentMessages = chatService.sentMessages;
     final receivedMessages = chatService.receivedMessages;
 
     return Scaffold(
-      backgroundColor: AppTokens.darkBg,
+      backgroundColor: theme.bg,
       appBar: AppBar(
-        backgroundColor: AppTokens.darkBg,
+        backgroundColor: theme.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTokens.darkText),
+          icon: Icon(Icons.arrow_back, color: theme.text),
           onPressed: () => Navigator.pop(context),
           tooltip: 'Back',
         ),
-        title: const Text(
+        title: Text(
           'My Messages',
           style: TextStyle(
-            color: AppTokens.darkText,
+            color: theme.text,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -45,7 +47,7 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
-            color: AppTokens.darkBorder,
+            color: theme.border,
             height: 1,
           ),
         ),
@@ -56,13 +58,14 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
             const SizedBox(height: 12),
 
             // Segmented Filter Tabs: Pending / Sent / Received
-            _buildSegmentedTabs(),
+            _buildSegmentedTabs(theme),
 
             const SizedBox(height: 12),
 
             // Content Area based on Tab
             Expanded(
               child: _buildTabContent(
+                theme: theme,
                 pendingMessages: pendingMessages,
                 sentMessages: sentMessages,
                 receivedMessages: receivedMessages,
@@ -73,6 +76,7 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
             // Bottom Sync Status Card (matching Screen 10 mockup)
             _buildSyncStatusCard(
               context: context,
+              theme: theme,
               pendingCount: pendingMessages.length,
               isSyncing: chatService.isSyncing,
               onSyncTap: () => chatService.syncAllPendingNow(),
@@ -84,16 +88,16 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
   }
 
   /// Segmented tabs bar
-  Widget _buildSegmentedTabs() {
-    final tabs = ['Pending', 'Sent', 'Received'];
+  Widget _buildSegmentedTabs(ThemeProvider theme) {
+    const tabs = ['Pending', 'Sent', 'Received'];
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppTokens.darkSurfaceSunken,
+        color: theme.surfaceSunken,
         borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-        border: Border.all(color: AppTokens.darkBorder),
+        border: Border.all(color: theme.border),
       ),
       child: Row(
         children: List.generate(tabs.length, (index) {
@@ -119,7 +123,7 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
                   style: TextStyle(
                     color: isSelected
                         ? AppTokens.nightNavy
-                        : AppTokens.darkTextMuted,
+                        : theme.textMuted,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -133,6 +137,7 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
   }
 
   Widget _buildTabContent({
+    required ThemeProvider theme,
     required List<ChatMessage> pendingMessages,
     required List<ChatMessage> sentMessages,
     required List<ChatMessage> receivedMessages,
@@ -142,6 +147,7 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
       // Pending Tab
       if (pendingMessages.isEmpty) {
         return _buildEmptyState(
+          theme: theme,
           icon: Icons.check_circle_outline,
           title: 'All messages sent!',
           subtitle: 'No pending items waiting for network sync.',
@@ -154,13 +160,14 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final item = pendingMessages[index];
-          return _buildPendingMessageCard(item);
+          return _buildPendingMessageCard(theme, item);
         },
       );
     } else if (_selectedTabIndex == 1) {
       // Sent Tab
       if (sentMessages.isEmpty) {
         return _buildEmptyState(
+          theme: theme,
           icon: Icons.outbox,
           title: 'No sent messages yet',
           subtitle: 'Messages relayed through the mesh network will show here.',
@@ -173,13 +180,14 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final item = sentMessages[index];
-          return _buildSentMessageCard(item);
+          return _buildSentMessageCard(theme, item);
         },
       );
     } else {
       // Received Tab
       if (receivedMessages.isEmpty) {
         return _buildEmptyState(
+          theme: theme,
           icon: Icons.inbox,
           title: 'No received broadcasts',
           subtitle: 'Broadcasts from nearby peer devices will appear here.',
@@ -192,7 +200,7 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final item = receivedMessages[index];
-          return _buildReceivedMessageCard(item);
+          return _buildReceivedMessageCard(theme, item);
         },
       );
     }
@@ -202,7 +210,10 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
   /// SOS - Trapped ("To: Nearby devices", "Waiting for network...")
   /// Location Update ("To: Rescue Team", "Waiting for network...")
   /// Missing Person Report ("To: Government", "Waiting for network...")
-  Widget _buildPendingMessageCard(ChatMessage item) {
+  Widget _buildPendingMessageCard(ThemeProvider theme, ChatMessage item) {
+    final isLight = theme.isLightMode;
+    final sosColor = isLight ? AppTokens.lightSos : AppTokens.darkSos;
+
     IconData iconData = Icons.warning_amber_rounded;
     Color iconBgColor = AppTokens.sosRed;
     String title = item.category ?? 'Emergency Alert';
@@ -229,9 +240,9 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTokens.darkSurface,
+        color: theme.surface,
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        border: Border.all(color: AppTokens.darkBorder),
+        border: Border.all(color: theme.border),
       ),
       child: ListTile(
         contentPadding:
@@ -251,8 +262,8 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            color: AppTokens.darkText,
+          style: TextStyle(
+            color: theme.text,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -263,8 +274,8 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
             const SizedBox(height: 4),
             Text(
               toTarget,
-              style: const TextStyle(
-                color: AppTokens.darkTextMuted,
+              style: TextStyle(
+                color: theme.textMuted,
                 fontSize: 13,
               ),
             ),
@@ -274,16 +285,16 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
                 Container(
                   width: 6,
                   height: 6,
-                  decoration: const BoxDecoration(
-                    color: AppTokens.darkSos,
+                  decoration: BoxDecoration(
+                    color: sosColor,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Text(
+                Text(
                   'Waiting for network...',
                   style: TextStyle(
-                    color: AppTokens.darkSos,
+                    color: sosColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -298,30 +309,34 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
           children: [
             Text(
               item.formattedTime,
-              style: const TextStyle(
-                color: AppTokens.darkTextMuted,
+              style: TextStyle(
+                color: theme.textMuted,
                 fontSize: 12,
               ),
             ),
             const SizedBox(height: 6),
-            const Icon(
+            Icon(
               Icons.chevron_right,
-              color: AppTokens.darkTextMuted,
+              color: theme.textMuted,
               size: 20,
             ),
           ],
         ),
-        onTap: () => _showItemDetailDialog(item, title, toTarget),
+        onTap: () => _showItemDetailDialog(theme, item, title, toTarget),
       ),
     );
   }
 
-  Widget _buildSentMessageCard(ChatMessage item) {
+  Widget _buildSentMessageCard(ThemeProvider theme, ChatMessage item) {
+    final isLight = theme.isLightMode;
+    final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
+    final successColor = isLight ? AppTokens.lightSuccess : AppTokens.darkSuccess;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppTokens.darkSurface,
+        color: theme.surface,
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        border: Border.all(color: AppTokens.darkBorder),
+        border: Border.all(color: theme.border),
       ),
       child: ListTile(
         contentPadding:
@@ -330,19 +345,19 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: AppTokens.darkInfo.withValues(alpha: 0.15),
+            color: infoColor.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
+          child: Icon(
             Icons.done_all,
-            color: AppTokens.darkInfo,
+            color: infoColor,
             size: 22,
           ),
         ),
         title: Text(
           item.category ?? (item.recipientTarget ?? 'Broadcast'),
-          style: const TextStyle(
-            color: AppTokens.darkText,
+          style: TextStyle(
+            color: theme.text,
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
@@ -355,16 +370,16 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
               item.content,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppTokens.darkTextMuted,
+              style: TextStyle(
+                color: theme.textMuted,
                 fontSize: 13,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               'Status: ${item.status.label} (${item.hopCount} hops)',
-              style: const TextStyle(
-                color: AppTokens.darkSuccess,
+              style: TextStyle(
+                color: successColor,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -373,8 +388,8 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
         ),
         trailing: Text(
           item.formattedTime,
-          style: const TextStyle(
-            color: AppTokens.darkTextMuted,
+          style: TextStyle(
+            color: theme.textMuted,
             fontSize: 12,
           ),
         ),
@@ -382,31 +397,34 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
     );
   }
 
-  Widget _buildReceivedMessageCard(ChatMessage item) {
+  Widget _buildReceivedMessageCard(ThemeProvider theme, ChatMessage item) {
+    final isLight = theme.isLightMode;
+    final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppTokens.darkSurface,
+        color: theme.surface,
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        border: Border.all(color: AppTokens.darkBorder),
+        border: Border.all(color: theme.border),
       ),
       child: ListTile(
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: AppTokens.darkSurfaceSunken,
+          backgroundColor: theme.surfaceSunken,
           radius: 22,
           child: Text(
             item.senderName.isNotEmpty ? item.senderName[0] : '?',
-            style: const TextStyle(
-              color: AppTokens.darkInfo,
+            style: TextStyle(
+              color: infoColor,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
         title: Text(
           item.senderName,
-          style: const TextStyle(
-            color: AppTokens.darkText,
+          style: TextStyle(
+            color: theme.text,
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
@@ -415,15 +433,15 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
           item.content,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: AppTokens.darkTextMuted,
+          style: TextStyle(
+            color: theme.textMuted,
             fontSize: 13,
           ),
         ),
         trailing: Text(
           item.formattedTime,
-          style: const TextStyle(
-            color: AppTokens.darkTextMuted,
+          style: TextStyle(
+            color: theme.textMuted,
             fontSize: 12,
           ),
         ),
@@ -435,18 +453,27 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
   /// "● Network available! 3 messages will be sent automatically to government and rescue agencies."
   Widget _buildSyncStatusCard({
     required BuildContext context,
+    required ThemeProvider theme,
     required int pendingCount,
     required bool isSyncing,
     required VoidCallback onSyncTap,
   }) {
+    final isLight = theme.isLightMode;
+    final isLowPower = theme.isLowPower;
+    final successColor = isLight ? AppTokens.lightSuccess : AppTokens.darkSuccess;
+
+    final cardBg = isLight
+        ? AppTokens.lightSuccess.withValues(alpha: 0.12)
+        : (isLowPower ? const Color(0xFF071B12) : const Color(0xFF0F2B20));
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F2B20), // Subtle emergency green tint
+        color: cardBg,
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
         border: Border.all(
-          color: AppTokens.darkSuccess.withValues(alpha: 0.5),
+          color: successColor.withValues(alpha: 0.5),
           width: 1.5,
         ),
       ),
@@ -459,20 +486,20 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
             height: 36,
             margin: const EdgeInsets.only(top: 2),
             decoration: BoxDecoration(
-              color: AppTokens.darkSuccess.withValues(alpha: 0.2),
+              color: successColor.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: isSyncing
-                ? const Padding(
-                    padding: EdgeInsets.all(8.0),
+                ? Padding(
+                    padding: const EdgeInsets.all(8.0),
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppTokens.darkSuccess,
+                      color: successColor,
                     ),
                   )
-                : const Icon(
+                : Icon(
                     Icons.sync_alt,
-                    color: AppTokens.darkSuccess,
+                    color: successColor,
                     size: 20,
                   ),
           ),
@@ -489,16 +516,16 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppTokens.darkSuccess,
+                      decoration: BoxDecoration(
+                        color: successColor,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const Text(
+                    Text(
                       'Network available!',
                       style: TextStyle(
-                        color: AppTokens.darkText,
+                        color: theme.text,
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -510,8 +537,8 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
                   pendingCount > 0
                       ? '$pendingCount messages will be sent automatically to government and rescue agencies.'
                       : 'All messages synchronized with government and rescue coordination.',
-                  style: const TextStyle(
-                    color: AppTokens.darkTextMuted,
+                  style: TextStyle(
+                    color: theme.textMuted,
                     fontSize: 13,
                     height: 1.3,
                   ),
@@ -525,13 +552,13 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppTokens.darkSuccess,
+                        color: successColor,
                         borderRadius: BorderRadius.circular(AppTokens.radiusSm),
                       ),
                       child: Text(
                         isSyncing ? 'Syncing now...' : 'Sync Now',
-                        style: const TextStyle(
-                          color: AppTokens.nightNavy,
+                        style: TextStyle(
+                          color: isLight ? Colors.white : AppTokens.nightNavy,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
@@ -548,6 +575,7 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
   }
 
   Widget _buildEmptyState({
+    required ThemeProvider theme,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -558,12 +586,12 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 56, color: AppTokens.darkTextMuted),
+            Icon(icon, size: 56, color: theme.textMuted),
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
-                color: AppTokens.darkText,
+              style: TextStyle(
+                color: theme.text,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -572,8 +600,8 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppTokens.darkTextMuted,
+              style: TextStyle(
+                color: theme.textMuted,
                 fontSize: 14,
               ),
             ),
@@ -583,10 +611,18 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
     );
   }
 
-  void _showItemDetailDialog(ChatMessage item, String title, String toTarget) {
+  void _showItemDetailDialog(
+    ThemeProvider theme,
+    ChatMessage item,
+    String title,
+    String toTarget,
+  ) {
+    final isLight = theme.isLightMode;
+    final targetColor = isLight ? AppTokens.lightPrimaryInk : AppTokens.signalYellow;
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTokens.darkSurface,
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -602,7 +638,7 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppTokens.darkBorderStrong,
+                    color: theme.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -610,8 +646,8 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
               const SizedBox(height: 16),
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppTokens.darkText,
+                style: TextStyle(
+                  color: theme.text,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -619,17 +655,17 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
               const SizedBox(height: 8),
               Text(
                 toTarget,
-                style: const TextStyle(
-                  color: AppTokens.signalYellow,
+                style: TextStyle(
+                  color: targetColor,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Divider(color: AppTokens.darkBorder, height: 24),
+              Divider(color: theme.border, height: 24),
               Text(
                 item.content,
-                style: const TextStyle(
-                  color: AppTokens.darkText,
+                style: TextStyle(
+                  color: theme.text,
                   fontSize: 15,
                   height: 1.4,
                 ),
@@ -637,13 +673,12 @@ class _MyMessagesScreenState extends State<MyMessagesScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Icon(Icons.lock_clock,
-                      size: 16, color: AppTokens.darkTextMuted),
+                  Icon(Icons.lock_clock, size: 16, color: theme.textMuted),
                   const SizedBox(width: 6),
                   Text(
                     'Created: ${item.formattedTime}  •  TTL: ${item.ttl}  •  Status: ${item.status.label}',
-                    style: const TextStyle(
-                      color: AppTokens.darkTextMuted,
+                    style: TextStyle(
+                      color: theme.textMuted,
                       fontSize: 12,
                     ),
                   ),

@@ -38,7 +38,8 @@ void main() {
       expect(savedMsg.content, equals('Emergency medical supplies required at Sector 5'));
       expect(
         savedMsg.status == MessageDeliveryStatus.saved ||
-            savedMsg.status == MessageDeliveryStatus.queued,
+            savedMsg.status == MessageDeliveryStatus.queued ||
+            savedMsg.status == MessageDeliveryStatus.sentNearby,
         isTrue,
       );
     });

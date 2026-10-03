@@ -6,7 +6,7 @@ import '../database/app_database.dart';
 
 class ChatProvider extends ChangeNotifier {
   final List<ChatMessage> _messages = [];
-  int _unreadCount = 2; // initial unread messages in mockup
+  int _unreadCount = 0;
   bool _isLoading = false;
 
   List<ChatMessage> get messages => List.unmodifiable(_messages);

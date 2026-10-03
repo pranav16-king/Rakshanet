@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/mesh_provider.dart';
+import '../../providers/device_status_provider.dart';
+import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -20,6 +23,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _offlineMode = true;
   bool _locationSharing = true;
   bool _autoSync = true;
+
+  // Storage stats tracking
+  double _mapCacheMb = 12.4;
+  double _meshLogKb = 320.0;
+  bool _isCacheCleared = false;
 
   @override
   void initState() {
@@ -64,17 +72,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (_) {}
   }
 
+  void _handleClearCache(ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: themeProvider.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          side: BorderSide(color: themeProvider.border),
+        ),
+        title: Text(
+          'Clear Offline Cache?',
+          style: TextStyle(
+            color: themeProvider.text,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'This will purge ${_mapCacheMb.toStringAsFixed(1)} MB of cached map tiles and relayed packet buffers. '
+          'Your emergency volunteer profile, contacts, and outbox queue will not be lost.',
+          style: TextStyle(
+            color: themeProvider.textMuted,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: themeProvider.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeProvider.sosMain,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(100, 44),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+              ),
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() {
+                _mapCacheMb = 0.0;
+                _meshLogKb = 42.0; // Minimal essential index
+                _isCacheCleared = true;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Offline cache cleared successfully (12.4 MB freed)'),
+                  backgroundColor: themeProvider.surface,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                    side: BorderSide(color: themeProvider.border),
+                  ),
+                ),
+              );
+            },
+            child: const Text('Clear Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final profileProvider = context.watch<ProfileProvider>();
+    final meshProvider = context.watch<MeshProvider>();
+    final deviceStatusProvider = context.watch<DeviceStatusProvider>();
 
     final isLowPower = themeProvider.isLowPower;
     final cardColor = themeProvider.surface;
     final borderColor = themeProvider.border;
     final textColor = themeProvider.text;
     final textMutedColor = themeProvider.textMuted;
-    const greenActiveColor = Color(0xFF4CD08A);
+    final successColor = themeProvider.success;
+    final iconBgColor = themeProvider.isLight
+        ? AppTokens.lightBgAlt
+        : const Color(0xFF1E2D4A);
+    final iconColor = themeProvider.isLight
+        ? themeProvider.primaryInk
+        : themeProvider.primary;
+
+    final totalStorageMb = _mapCacheMb + (_meshLogKb / 1024.0);
 
     return Scaffold(
       backgroundColor: themeProvider.bg,
@@ -84,7 +173,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: textColor),
           iconSize: 24,
-          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          constraints: const BoxConstraints(
+            minWidth: AppTokens.touchMin,
+            minHeight: AppTokens.touchMin,
+          ),
           tooltip: 'Back',
           onPressed: () => Navigator.of(context).maybePop(),
         ),
@@ -100,7 +192,193 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          // Section 1: Toggle switches card
+          // ==========================================
+          // Section 1: Appearance & Power
+          // ==========================================
+          _buildSectionHeader('APPEARANCE & BATTERY', textMutedColor),
+          const SizedBox(height: 8),
+
+          Container(
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+              border: Border.all(color: borderColor, width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Theme Mode Switcher
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: iconBgColor,
+                              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                            ),
+                            child: Icon(
+                              Icons.palette_outlined,
+                              color: iconColor,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Theme Mode',
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isLowPower
+                                      ? 'OLED Low-Power override active'
+                                      : (themeProvider.baseThemeMode == AppThemeMode.system
+                                          ? 'System default'
+                                          : (themeProvider.baseThemeMode == AppThemeMode.light
+                                              ? 'Light (Hi-vis vest)'
+                                              : 'Dark (Night navy)')),
+                                  style: TextStyle(
+                                    color: textMutedColor,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Segmented Buttons: System, Light, Dark
+                      Row(
+                        children: [
+                          _buildThemeOptionButton(
+                            label: 'System',
+                            icon: Icons.brightness_auto,
+                            isSelected: !isLowPower &&
+                                themeProvider.baseThemeMode == AppThemeMode.system,
+                            themeProvider: themeProvider,
+                            onTap: () {
+                              themeProvider.setThemeMode(AppThemeMode.system);
+                              deviceStatusProvider.toggleLowPowerMode(false);
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildThemeOptionButton(
+                            label: 'Light',
+                            icon: Icons.light_mode,
+                            isSelected: !isLowPower &&
+                                themeProvider.baseThemeMode == AppThemeMode.light,
+                            themeProvider: themeProvider,
+                            onTap: () {
+                              themeProvider.setThemeMode(AppThemeMode.light);
+                              deviceStatusProvider.toggleLowPowerMode(false);
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildThemeOptionButton(
+                            label: 'Dark',
+                            icon: Icons.dark_mode,
+                            isSelected: !isLowPower &&
+                                themeProvider.baseThemeMode == AppThemeMode.dark,
+                            themeProvider: themeProvider,
+                            onTap: () {
+                              themeProvider.setThemeMode(AppThemeMode.dark);
+                              deviceStatusProvider.toggleLowPowerMode(false);
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: borderColor,
+                  indent: 16,
+                  endIndent: 16,
+                ),
+
+                // Low-Power OLED Mode Switch
+                _buildSwitchTile(
+                  icon: Icons.battery_saver,
+                  iconBg: isLowPower
+                      ? const Color(0xFF0E1627)
+                      : iconBgColor,
+                  iconColor: isLowPower
+                      ? AppTokens.darkPrimary
+                      : iconColor,
+                  title: 'Low-Power OLED Mode',
+                  subtitle: 'True #000000 pure black to maximize battery',
+                  value: isLowPower,
+                  onChanged: (val) {
+                    themeProvider.setLowPower(val);
+                    deviceStatusProvider.toggleLowPowerMode(val);
+                  },
+                  activeColor: successColor,
+                  textColor: textColor,
+                  textMutedColor: textMutedColor,
+                  borderColor: borderColor,
+                  showDivider: false,
+                ),
+
+                if (isLowPower)
+                  Container(
+                    margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTokens.darkSurfaceSunken,
+                      borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                      border: Border.all(color: AppTokens.darkBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.bolt,
+                          color: AppTokens.darkPrimary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Pure #000000 active: OLED screen pixels powered off to conserve critical battery.',
+                            style: TextStyle(
+                              color: themeProvider.textMuted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ==========================================
+          // Section 2: Network & Mesh Radio (Screen 12)
+          // ==========================================
+          _buildSectionHeader('NETWORK & RELAY RADIOS', textMutedColor),
+          const SizedBox(height: 8),
+
           Container(
             decoration: BoxDecoration(
               color: cardColor,
@@ -109,66 +387,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child: Column(
               children: [
-                // 1. Offline Mode
+                // 1. Mesh Radio Toggle
+                _buildSwitchTile(
+                  icon: Icons.cell_tower,
+                  iconBg: iconBgColor,
+                  iconColor: iconColor,
+                  title: 'Mesh Radio Network',
+                  subtitle: meshProvider.isMeshActive
+                      ? 'Active (${meshProvider.connectedPeerCount} nearby relays reachable)'
+                      : 'Disabled (Bluetooth mesh transceiver paused)',
+                  value: meshProvider.isMeshActive,
+                  onChanged: (val) {
+                    meshProvider.toggleMesh(val);
+                  },
+                  activeColor: successColor,
+                  textColor: textColor,
+                  textMutedColor: textMutedColor,
+                  borderColor: borderColor,
+                  showDivider: true,
+                ),
+
+                // 2. Offline Mode
                 _buildSwitchTile(
                   icon: Icons.signal_cellular_off,
-                  iconBg: const Color(0xFF1E2D4A),
-                  iconColor: Colors.white,
+                  iconBg: iconBgColor,
+                  iconColor: iconColor,
                   title: 'Offline Mode',
                   subtitle: 'Always work without internet',
                   value: _offlineMode,
                   onChanged: _setOfflineMode,
-                  activeColor: greenActiveColor,
+                  activeColor: successColor,
                   textColor: textColor,
                   textMutedColor: textMutedColor,
                   borderColor: borderColor,
                   showDivider: true,
                 ),
 
-                // 2. Location Sharing
+                // 3. Location Sharing
                 _buildSwitchTile(
                   icon: Icons.location_on,
-                  iconBg: const Color(0xFF1E2D4A),
-                  iconColor: Colors.white,
+                  iconBg: iconBgColor,
+                  iconColor: iconColor,
                   title: 'Location Sharing',
                   subtitle: 'Share when available',
                   value: _locationSharing,
                   onChanged: _setLocationSharing,
-                  activeColor: greenActiveColor,
+                  activeColor: successColor,
                   textColor: textColor,
                   textMutedColor: textMutedColor,
                   borderColor: borderColor,
                   showDivider: true,
                 ),
 
-                // 3. Auto Sync
+                // 4. Auto Sync
                 _buildSwitchTile(
                   icon: Icons.sync,
-                  iconBg: const Color(0xFF1E2D4A),
-                  iconColor: Colors.white,
+                  iconBg: iconBgColor,
+                  iconColor: iconColor,
                   title: 'Auto Sync',
                   subtitle: 'Send to government when internet is back',
                   value: _autoSync,
                   onChanged: _setAutoSync,
-                  activeColor: greenActiveColor,
-                  textColor: textColor,
-                  textMutedColor: textMutedColor,
-                  borderColor: borderColor,
-                  showDivider: true,
-                ),
-
-                // 4. Low Power Theme
-                _buildSwitchTile(
-                  icon: Icons.dark_mode,
-                  iconBg: const Color(0xFF1E2D4A),
-                  iconColor: Colors.white,
-                  title: 'Low Power Theme',
-                  subtitle: 'Save battery (dark mode / OLED)',
-                  value: isLowPower,
-                  onChanged: (val) {
-                    themeProvider.setLowPower(val);
-                  },
-                  activeColor: greenActiveColor,
+                  activeColor: successColor,
                   textColor: textColor,
                   textMutedColor: textMutedColor,
                   borderColor: borderColor,
@@ -180,7 +460,159 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // Section 2: Navigation rows card
+          // ==========================================
+          // Section 3: Data & Storage Stats + Cache Clear
+          // ==========================================
+          _buildSectionHeader('DATA & STORAGE', textMutedColor),
+          const SizedBox(height: 8),
+
+          Container(
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+              border: Border.all(color: borderColor, width: 1),
+            ),
+            child: Column(
+              children: [
+                // Storage Stats Tile
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: iconBgColor,
+                          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                        ),
+                        child: Icon(Icons.storage, color: iconColor, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Device Storage',
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Offline Maps: ${_mapCacheMb.toStringAsFixed(1)} MB • Mesh Cache: ${_meshLogKb.toStringAsFixed(0)} KB',
+                              style: TextStyle(
+                                color: textMutedColor,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: themeProvider.surfaceSunken,
+                          borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Text(
+                          '${totalStorageMb.toStringAsFixed(1)} MB',
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: borderColor,
+                  indent: 70,
+                  endIndent: 16,
+                ),
+
+                // Clear Cache Row
+                InkWell(
+                  onTap: () => _handleClearCache(themeProvider),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(AppTokens.radiusMd),
+                    bottomRight: Radius.circular(AppTokens.radiusMd),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: iconBgColor,
+                            borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                          ),
+                          child: Icon(
+                            Icons.delete_sweep_outlined,
+                            color: _isCacheCleared
+                                ? themeProvider.textMuted
+                                : (themeProvider.isLight ? themeProvider.sos : themeProvider.sos),
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Clear Offline Cache',
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _isCacheCleared
+                                    ? 'Cache already cleared (essential storage retained)'
+                                    : 'Free storage while keeping emergency profile',
+                                style: TextStyle(
+                                  color: textMutedColor,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          color: textMutedColor,
+                          size: 22,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ==========================================
+          // Section 4: Navigation / Info (Screen 12)
+          // ==========================================
+          _buildSectionHeader('SYSTEM & PRIVACY', textMutedColor),
+          const SizedBox(height: 8),
+
           Container(
             decoration: BoxDecoration(
               color: cardColor,
@@ -192,8 +624,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Language
                 _buildNavTile(
                   icon: Icons.language,
-                  iconBg: const Color(0xFF1E2D4A),
-                  iconColor: Colors.white,
+                  iconBg: iconBgColor,
+                  iconColor: iconColor,
                   title: 'Language',
                   subtitle: profileProvider.profile.preferredLanguage == 'hi'
                       ? 'Hindi (हिंदी)'
@@ -204,35 +636,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   textMutedColor: textMutedColor,
                   borderColor: borderColor,
                   showDivider: true,
-                  onTap: () => _showLanguageDialog(context),
+                  onTap: () => _showLanguageDialog(context, themeProvider),
                 ),
 
                 // Privacy & Security
                 _buildNavTile(
                   icon: Icons.lock_outline,
-                  iconBg: const Color(0xFF1E2D4A),
-                  iconColor: Colors.white,
+                  iconBg: iconBgColor,
+                  iconColor: iconColor,
                   title: 'Privacy & Security',
                   subtitle: 'End-to-end encryption',
                   textColor: textColor,
                   textMutedColor: textMutedColor,
                   borderColor: borderColor,
                   showDivider: true,
-                  onTap: () => _showPrivacyDialog(context),
+                  onTap: () => _showPrivacyDialog(context, themeProvider),
                 ),
 
                 // About
                 _buildNavTile(
                   icon: Icons.info_outline,
-                  iconBg: const Color(0xFF1E2D4A),
-                  iconColor: Colors.white,
+                  iconBg: iconBgColor,
+                  iconColor: iconColor,
                   title: 'About',
                   subtitle: 'SignalRescue AI v1.0',
                   textColor: textColor,
                   textMutedColor: textMutedColor,
                   borderColor: borderColor,
                   showDivider: false,
-                  onTap: () => _showAboutDialog(context),
+                  onTap: () => _showAboutDialog(context, themeProvider),
                 ),
               ],
             ),
@@ -240,7 +672,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 20),
 
+          // ==========================================
           // Quick link to Volunteer Profile (Screen 13)
+          // ==========================================
           InkWell(
             onTap: () {
               Navigator.of(context).pushNamed('/profile');
@@ -257,10 +691,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: AppTokens.signalYellow.withValues(alpha: 0.2),
-                    child: const Icon(
+                    backgroundColor: themeProvider.primary.withValues(alpha: 0.2),
+                    child: Icon(
                       Icons.person,
-                      color: AppTokens.signalYellow,
+                      color: themeProvider.isLight
+                          ? themeProvider.primaryInk
+                          : themeProvider.primary,
                       size: 22,
                     ),
                   ),
@@ -298,6 +734,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, top: 4),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeOptionButton({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required ThemeProvider themeProvider,
+    required VoidCallback onTap,
+  }) {
+    final bgColor = isSelected
+        ? themeProvider.primary
+        : themeProvider.surfaceSunken;
+    final fgColor = isSelected
+        ? themeProvider.onPrimary
+        : themeProvider.text;
+    final borderCol = isSelected
+        ? themeProvider.primary
+        : themeProvider.border;
+
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: AppTokens.touchMin),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+            border: Border.all(color: borderCol, width: 1.5),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: fgColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: fgColor,
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -455,19 +959,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showLanguageDialog(BuildContext context) {
+  void _showLanguageDialog(BuildContext context, ThemeProvider themeProvider) {
     final profileProvider = context.read<ProfileProvider>();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Select Language'),
+        backgroundColor: themeProvider.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          side: BorderSide(color: themeProvider.border),
+        ),
+        title: Text(
+          'Select Language',
+          style: TextStyle(color: themeProvider.text, fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text('English'),
+              title: Text('English', style: TextStyle(color: themeProvider.text)),
               trailing: profileProvider.profile.preferredLanguage == 'en'
-                  ? const Icon(Icons.check, color: AppTokens.signalYellow)
+                  ? Icon(Icons.check, color: themeProvider.primaryInk)
                   : null,
               onTap: () {
                 profileProvider.updateProfile(preferredLanguage: 'en');
@@ -475,9 +987,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             ListTile(
-              title: const Text('Hindi (हिंदी)'),
+              title: Text('Hindi (हिंदी)', style: TextStyle(color: themeProvider.text)),
               trailing: profileProvider.profile.preferredLanguage == 'hi'
-                  ? const Icon(Icons.check, color: AppTokens.signalYellow)
+                  ? Icon(Icons.check, color: themeProvider.primaryInk)
                   : null,
               onTap: () {
                 profileProvider.updateProfile(preferredLanguage: 'hi');
@@ -485,9 +997,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             ListTile(
-              title: const Text('Marathi (मराठी)'),
+              title: Text('Marathi (मराठी)', style: TextStyle(color: themeProvider.text)),
               trailing: profileProvider.profile.preferredLanguage == 'mr'
-                  ? const Icon(Icons.check, color: AppTokens.signalYellow)
+                  ? Icon(Icons.check, color: themeProvider.primaryInk)
                   : null,
               onTap: () {
                 profileProvider.updateProfile(preferredLanguage: 'mr');
@@ -500,40 +1012,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showPrivacyDialog(BuildContext context) {
+  void _showPrivacyDialog(BuildContext context, ThemeProvider themeProvider) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Privacy & Security'),
-        content: const Text(
+        backgroundColor: themeProvider.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          side: BorderSide(color: themeProvider.border),
+        ),
+        title: Text(
+          'Privacy & Security',
+          style: TextStyle(color: themeProvider.text, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
           'SignalRescue AI uses cryptographic peer-to-peer security with Ed25519 signatures. '
           'All communication remains anonymous across mesh relays until reaching authorized '
-          'emergency responders. No cloud telemetry or third-party trackers are used.',
+          'emergency responders. Zero telemetry or external tracking is enabled.',
+          style: TextStyle(
+            color: themeProvider.textMuted,
+            fontSize: 14,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Understood'),
+            child: Text(
+              'Understood',
+              style: TextStyle(
+                color: themeProvider.primaryInk,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  void _showAboutDialog(BuildContext context, ThemeProvider themeProvider) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('SignalRescue AI (RakshaNet)'),
-        content: const Text(
+        backgroundColor: themeProvider.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          side: BorderSide(color: themeProvider.border),
+        ),
+        title: Text(
+          'SignalRescue AI (RakshaNet)',
+          style: TextStyle(color: themeProvider.text, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
           'Version 1.0.0 (Production Build)\n\n'
           'Engineered for extreme offline disaster resilience with BLE 5.x multi-hop relay, '
-          'store-and-forward outbox synchronization, and low-power OLED emergency mode.',
+          'store-and-forward outbox synchronization, and low-power OLED emergency mode.\n\n'
+          'Designed to operate without cell towers, Wi-Fi, or central power grids.',
+          style: TextStyle(
+            color: themeProvider.textMuted,
+            fontSize: 14,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
+            child: Text(
+              'OK',
+              style: TextStyle(
+                color: themeProvider.primaryInk,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),

@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'app_tokens.dart';
 
 enum AppThemeMode {
-  dark,
+  system,
   light,
+  dark,
   lowPower,
 }
 
 /// RakshaNet Hi-vis beacon design system theme definitions.
-/// Strict adherence to:
-/// - Dark theme (Night Navy #0B1220)
-/// - Light theme (Hi-vis vest #FFFCEB / #FFC400)
-/// - Low-power OLED theme (True #000000 Black)
+/// Strict adherence to `p:\RakshaNet\design.md`:
+/// - Light theme: Background #FFFCEB, Surface #FFFFFF, Text #16202D, Text Muted #566070, PrimaryInk #8A5A00 (4.5:1 contrast)
+/// - Dark theme: Night Navy #0B1220, Surface #162036, Text #EEF2F8, Text Muted #9FADC2, Primary #FFD21F, SOS #FF5A4E (Main #D92D20)
+/// - Low-power OLED theme: True #000000 Black, Surface #0E1627, Border #26344F, OLED pure black saving battery
 /// - Touch targets >= 48dp, primary buttons 56dp
 class AppTheme {
   static ThemeData getDarkTheme() {
@@ -97,7 +98,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppTokens.darkSurface,
+        fillColor: AppTokens.darkSurfaceSunken,
         constraints: const BoxConstraints(minHeight: AppTokens.inputHeight),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -232,7 +233,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           minimumSize: const Size(AppTokens.touchMin, AppTokens.touchMin), // >= 48dp
-          foregroundColor: AppTokens.lightPrimaryInk,
+          foregroundColor: AppTokens.lightPrimaryInk, // passes 4.5:1 contrast on light backgrounds
           textStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -241,7 +242,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppTokens.lightSurface,
+        fillColor: AppTokens.lightSurfaceSunken,
         constraints: const BoxConstraints(minHeight: AppTokens.inputHeight),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -254,7 +255,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-          borderSide: const BorderSide(color: AppTokens.lightPrimary, width: 2),
+          borderSide: const BorderSide(color: AppTokens.lightPrimaryInk, width: 2),
         ),
       ),
       switchTheme: SwitchThemeData(
@@ -308,17 +309,17 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppTokens.oledBg, // True OLED #000000 Black
       colorScheme: const ColorScheme.dark(
-        primary: AppTokens.darkPrimary,
-        onPrimary: AppTokens.darkOnPrimary,
+        primary: AppTokens.oledPrimary,
+        onPrimary: AppTokens.oledOnPrimary,
         surface: AppTokens.oledSurface,
-        onSurface: Colors.white,
-        error: AppTokens.darkSos,
+        onSurface: AppTokens.oledText,
+        error: AppTokens.oledSos,
         onError: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppTokens.oledBg,
         elevation: 0,
-        foregroundColor: Colors.white,
+        foregroundColor: AppTokens.oledText,
         centerTitle: false,
       ),
       cardTheme: const CardThemeData(
@@ -332,8 +333,8 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
-          backgroundColor: AppTokens.darkPrimary,
-          foregroundColor: AppTokens.darkOnPrimary,
+          backgroundColor: AppTokens.oledPrimary,
+          foregroundColor: AppTokens.oledOnPrimary,
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
@@ -348,8 +349,8 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
-          backgroundColor: AppTokens.darkPrimary,
-          foregroundColor: AppTokens.darkOnPrimary,
+          backgroundColor: AppTokens.oledPrimary,
+          foregroundColor: AppTokens.oledOnPrimary,
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
@@ -362,7 +363,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
-          foregroundColor: Colors.white,
+          foregroundColor: AppTokens.oledText,
           side: const BorderSide(color: AppTokens.oledBorder, width: 1.5),
           textStyle: const TextStyle(
             fontSize: 16,
@@ -376,7 +377,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           minimumSize: const Size(AppTokens.touchMin, AppTokens.touchMin), // >= 48dp
-          foregroundColor: AppTokens.darkPrimary,
+          foregroundColor: AppTokens.oledPrimary,
           textStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -385,7 +386,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppTokens.oledSurface,
+        fillColor: AppTokens.oledSurfaceSunken,
         constraints: const BoxConstraints(minHeight: AppTokens.inputHeight),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -398,7 +399,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-          borderSide: const BorderSide(color: AppTokens.darkPrimary, width: 2),
+          borderSide: const BorderSide(color: AppTokens.oledPrimary, width: 2),
         ),
       ),
       switchTheme: SwitchThemeData(
@@ -407,7 +408,7 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith<Color>((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppTokens.darkSuccess;
+            return AppTokens.oledSuccess;
           }
           return AppTokens.oledBorder;
         }),
@@ -417,30 +418,30 @@ class AppTheme {
         headlineLarge: TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: AppTokens.oledText,
         ),
         headlineMedium: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: AppTokens.oledText,
         ),
         titleLarge: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: AppTokens.oledText,
         ),
         bodyLarge: TextStyle(
           fontSize: 16,
-          color: Colors.white,
+          color: AppTokens.oledText,
         ),
         bodyMedium: TextStyle(
           fontSize: 14,
-          color: Color(0xFF999999),
+          color: AppTokens.oledTextMuted,
         ),
         labelSmall: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF888888),
+          color: AppTokens.oledTextMuted,
         ),
       ),
     );

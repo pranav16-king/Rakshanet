@@ -45,10 +45,10 @@ class TelemetryModel {
   final RadioScanProfile radioScanProfile;
 
   TelemetryModel({
-    this.meshCount = 12,
-    this.batteryLevel = 85,
+    this.meshCount = 0,
+    this.batteryLevel = 0,
     this.isOnline = false,
-    this.hasGpsFix = true,
+    this.hasGpsFix = false,
     RadioScanProfile? radioScanProfile,
   }) : radioScanProfile = radioScanProfile ?? RadioScanProfile.fromBattery(batteryLevel);
 

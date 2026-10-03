@@ -136,7 +136,45 @@ class NearbyTab extends StatelessWidget {
             ),
           ),
 
-        ...mesh.nearbyDevices.map((device) => _buildDeviceCard(device, theme)),
+        if (mesh.nearbyDevices.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+            decoration: BoxDecoration(
+              color: theme.surface,
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+              border: Border.all(color: theme.border),
+            ),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.radar_rounded,
+                  size: 48,
+                  color: AppTokens.beaconTeal,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Scanning for Nearby Mesh Nodes...',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'No peer devices detected in radio range yet. RakshaNet will automatically connect via BLE & Wi-Fi Direct when survivors or responders are nearby.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor.withValues(alpha: 0.7),
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...mesh.nearbyDevices.map((device) => _buildDeviceCard(device, theme)),
         const SizedBox(height: 24),
       ],
     );

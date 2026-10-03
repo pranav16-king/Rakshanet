@@ -39,6 +39,7 @@ class BluetoothRadioService extends ChangeNotifier {
 
   // Connected physical peers: Map<endpointId, MeshDevice>
   final Map<String, MeshDevice> _connectedPeers = <String, MeshDevice>{};
+  final Map<String, String> _discoveredEndpointNames = <String, String>{};
   Map<String, MeshDevice> get connectedPeers => Map.unmodifiable(_connectedPeers);
   List<MeshDevice> get peerList => _connectedPeers.values.toList();
   int get connectedCount => _connectedPeers.length;
@@ -47,6 +48,7 @@ class BluetoothRadioService extends ChangeNotifier {
   final StreamController<Uint8List> _payloadController =
       StreamController<Uint8List>.broadcast();
   Stream<Uint8List> get incomingPayloadStream => _payloadController.stream;
+  Stream<Uint8List> get peerPayloadStream => _payloadController.stream;
 
   final StreamController<List<MeshDevice>> _peerUpdateController =
       StreamController<List<MeshDevice>>.broadcast();
@@ -174,6 +176,7 @@ class BluetoothRadioService extends ChangeNotifier {
     String localEndpointName,
   ) async {
     _logStatus('Endpoint discovered: $endpointId ($endpointName). Initiating auto-handshake...');
+    _discoveredEndpointNames[endpointId] = endpointName;
 
     try {
       await _nearby.requestConnection(
@@ -191,6 +194,9 @@ class BluetoothRadioService extends ChangeNotifier {
   /// Auto-accept incoming connection handshake without manual user intervention
   void _handleConnectionInitiated(String endpointId, ConnectionInfo connectionInfo) {
     _logStatus('Incoming connection from $endpointId (${connectionInfo.endpointName}). Auto-accepting...');
+    if (connectionInfo.endpointName.isNotEmpty) {
+      _discoveredEndpointNames[endpointId] = connectionInfo.endpointName;
+    }
 
     try {
       _nearby.acceptConnection(
@@ -217,11 +223,25 @@ class BluetoothRadioService extends ChangeNotifier {
     if (status == Status.CONNECTED) {
       _logStatus('Peer handshake completed! Connected to endpoint: $endpointId');
 
+      String peerDeviceId = 'SR-${endpointId.toUpperCase().padRight(4, '0').substring(0, 4)}';
+      String peerDisplayName = 'Peer $endpointId';
+
+      final rawName = _discoveredEndpointNames[endpointId];
+      if (rawName != null && rawName.contains('|')) {
+        final parts = rawName.split('|');
+        if (parts.isNotEmpty && parts[0].trim().isNotEmpty) {
+          peerDeviceId = parts[0].trim();
+        }
+        if (parts.length > 1 && parts[1].trim().isNotEmpty) {
+          peerDisplayName = parts[1].trim();
+        }
+      }
+
       // Create peer model with estimated signal strength
       final peer = MeshDevice(
         id: endpointId,
-        deviceId: 'SR-${endpointId.toUpperCase().padRight(4, '0').substring(0, 4)}',
-        displayName: 'Peer $endpointId',
+        deviceId: peerDeviceId,
+        displayName: peerDisplayName,
         connectionType: ConnectionType.ble,
         signalStrength: -65,
         proximityBand: ProximityBand.near,
@@ -237,6 +257,7 @@ class BluetoothRadioService extends ChangeNotifier {
     } else {
       _logStatus('Connection rejected or failed with $endpointId (status: $status)');
       _connectedPeers.remove(endpointId);
+      _discoveredEndpointNames.remove(endpointId);
       _peerUpdateController.add(peerList);
       notifyListeners();
     }
@@ -246,6 +267,7 @@ class BluetoothRadioService extends ChangeNotifier {
   void _handleDisconnected(String endpointId) {
     _logStatus('Peer disconnected: $endpointId');
     _connectedPeers.remove(endpointId);
+    _discoveredEndpointNames.remove(endpointId);
     _peerUpdateController.add(peerList);
     notifyListeners();
   }
@@ -297,6 +319,12 @@ class BluetoothRadioService extends ChangeNotifier {
 
     return successCount;
   }
+
+  /// Alias for broadcastPayload
+  Future<int> broadcastBytes(Uint8List bytes) => broadcastPayload(bytes);
+
+  /// Alias for broadcastPayload (send to all connected radio peers)
+  Future<int> sendToPeers(Uint8List bytes) => broadcastPayload(bytes);
 
   /// Broadcast a JSON-encoded string over the physical radio
   Future<int> broadcastJson(Map<String, dynamic> jsonMap) async {

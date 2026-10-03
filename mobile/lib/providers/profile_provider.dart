@@ -1,13 +1,15 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../models/user_profile.dart';
 import '../database/app_database.dart';
+import '../database/repositories/profile_repository.dart';
 
 class ProfileProvider extends ChangeNotifier {
   static const String _prefRegisteredKey = 'rakshanet_user_registered';
   static const String _prefUserIdKey = 'rakshanet_user_id';
 
+  final ProfileRepository _profileRepo = ProfileRepository();
   UserProfile _profile = UserProfile.unregistered();
   bool _isLoading = true;
   bool _isRegistered = false;
@@ -15,6 +17,7 @@ class ProfileProvider extends ChangeNotifier {
   UserProfile get profile => _profile;
   bool get isLoading => _isLoading;
   bool get isRegistered => _isRegistered;
+  ProfileRepository get repository => _profileRepo;
 
   ProfileProvider() {
     loadProfile();
@@ -28,8 +31,8 @@ class ProfileProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final hasRegisteredFlag = prefs.getBool(_prefRegisteredKey);
 
-      // Check SQLite durable source of truth first
-      final dbProfile = await AppDatabase.instance.getUserProfile();
+      // Check SQLite durable source of truth first via ProfileRepository
+      final dbProfile = await _profileRepo.getProfile() ?? await AppDatabase.instance.getUserProfile();
 
       if (dbProfile != null && dbProfile.isRegistered) {
         _profile = dbProfile;
@@ -66,8 +69,9 @@ class ProfileProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final randomId = 100000 + Random().nextInt(900000);
-    final meshId = 'SR-$randomId';
+    // Generate canonical anonymous ID format: SR-XXXX-XXXX
+    final fullUuid = const Uuid().v4().toUpperCase().replaceAll('-', '');
+    final meshId = 'SR-${fullUuid.substring(0, 4)}-${fullUuid.substring(4, 8)}';
     final now = DateTime.now().millisecondsSinceEpoch;
 
     final newProfile = UserProfile(
@@ -91,8 +95,9 @@ class ProfileProvider extends ChangeNotifier {
     _profile = newProfile;
     _isRegistered = true;
 
-    // Save-Before-Send: Persist to SQLite & SharedPreferences
+    // Save-Before-Send: Persist to SQLite via ProfileRepository & AppDatabase
     try {
+      await _profileRepo.saveProfile(newProfile);
       await AppDatabase.instance.saveUserProfile(newProfile);
     } catch (e) {
       debugPrint('[ProfileProvider] Error saving user profile to SQLite: $e');
@@ -131,14 +136,24 @@ class ProfileProvider extends ChangeNotifier {
     _profile = updated;
     notifyListeners();
 
-    await AppDatabase.instance.saveUserProfile(updated);
+    try {
+      await _profileRepo.updateProfile(updated);
+      await AppDatabase.instance.saveUserProfile(updated);
+    } catch (e) {
+      debugPrint('[ProfileProvider] Error updating profile in SQLite: $e');
+    }
   }
 
   Future<void> signOut() async {
     _isLoading = true;
     notifyListeners();
 
-    await AppDatabase.instance.clearUserProfile();
+    try {
+      await _profileRepo.clearProfile();
+      await AppDatabase.instance.clearUserProfile();
+    } catch (e) {
+      debugPrint('[ProfileProvider] Error clearing profile in SQLite: $e');
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefRegisteredKey, false);
 

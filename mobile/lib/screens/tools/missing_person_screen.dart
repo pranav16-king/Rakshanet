@@ -23,16 +23,11 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
   final MissingPersonRepository _repository = MissingPersonRepository();
   late final TabController _tabController;
 
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Rohan Kumar');
-  final TextEditingController _ageController =
-      TextEditingController(text: '12 years');
-  final TextEditingController _descriptionController =
-      TextEditingController(text: 'Blue jacket, black bag');
-  final TextEditingController _locationController =
-      TextEditingController(text: 'Near River Bridge');
-  final TextEditingController _timeController =
-      TextEditingController(text: 'Today, 10:30 AM');
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _timeController = TextEditingController();
 
   final List<_PhotoThumb> _photos = [
     _PhotoThumb(id: '1', title: 'Portrait', color: const Color(0xFF3A506B), icon: Icons.face_rounded),
@@ -80,18 +75,13 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
   }
 
   void _pickTime() async {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 10, minute: 30),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppTokens.signalYellow,
-              onPrimary: AppTokens.lightOnPrimary,
-              surface: Colors.white,
-            ),
-          ),
+          data: theme.themeData,
           child: child!,
         );
       },
@@ -265,10 +255,12 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
     if (!mounted) return;
     setState(() => _isSubmitting = false);
 
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
       ),
@@ -280,8 +272,8 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
             Container(
               width: 60,
               height: 60,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE8F8F0),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4CD08A).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -290,22 +282,22 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Missing Person Report Saved to SQLite',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 19,
                 fontWeight: FontWeight.bold,
-                color: AppTokens.lightText,
+                color: theme.text,
               ),
             ),
             const SizedBox(height: 10),
             Text(
               'Report for "${newReport.name}" committed to offline database.\nBroadcasting to nearby peer devices over BLE mesh.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: AppTokens.lightTextMuted,
+                color: theme.textMuted,
                 height: 1.45,
               ),
             ),
@@ -313,19 +305,19 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF6F8FA),
+                color: theme.surfaceSunken,
                 borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-                border: Border.all(color: const Color(0xFFE1E4E8)),
+                border: Border.all(color: theme.border),
               ),
               child: Column(
                 children: [
-                  _buildSummaryRow('Report ID', reportId),
+                  _buildSummaryRow('Report ID', reportId, theme),
                   const SizedBox(height: 6),
-                  _buildSummaryRow('Search Status', 'SEARCHING'),
+                  _buildSummaryRow('Search Status', 'SEARCHING', theme),
                   const SizedBox(height: 6),
-                  _buildSummaryRow('Database State', 'Committed to SQLite (Save-Before-Send)'),
+                  _buildSummaryRow('Database State', 'Committed to SQLite (Save-Before-Send)', theme),
                   const SizedBox(height: 6),
-                  _buildSummaryRow('Attached Photos', '${_photos.length} thumbnails'),
+                  _buildSummaryRow('Attached Photos', '${_photos.length} thumbnail(s)', theme),
                 ],
               ),
             ),
@@ -336,7 +328,7 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTokens.signalYellow,
-                  foregroundColor: AppTokens.lightOnPrimary,
+                  foregroundColor: AppTokens.nightNavy,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppTokens.radiusMd),
@@ -358,17 +350,25 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
+  Widget _buildSummaryRow(String label, String value, ThemeProvider theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(color: AppTokens.lightTextMuted, fontSize: 13)),
-        Text(value,
-            style: const TextStyle(
-                color: AppTokens.lightText,
-                fontWeight: FontWeight.bold,
-                fontSize: 13)),
+            style: TextStyle(color: theme.textMuted, fontSize: 13)),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              color: theme.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -775,6 +775,8 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
             ),
             decoration: InputDecoration(
               isDense: true,
+              hintText: 'e.g. Near River Bridge, Station Road...',
+              hintStyle: TextStyle(color: theme.textMuted, fontSize: 14),
               contentPadding: const EdgeInsets.symmetric(vertical: 8),
               prefixIcon: const Icon(Icons.location_on,
                   color: AppTokens.signalYellow, size: 20),
@@ -823,11 +825,15 @@ class _MissingPersonScreenState extends State<MissingPersonScreen>
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _timeController.text,
+                    _timeController.text.isEmpty
+                        ? 'Select time (tap to set)'
+                        : _timeController.text,
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: theme.text,
+                      color: _timeController.text.isEmpty
+                          ? theme.textMuted
+                          : theme.text,
                     ),
                   ),
                 ),

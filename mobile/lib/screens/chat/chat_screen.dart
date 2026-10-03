@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/chat_message.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
 import '../../theme/app_tokens.dart';
 import 'my_messages_screen.dart';
@@ -62,19 +63,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final chatService = Provider.of<ChatService>(context);
+    final theme = context.watch<ThemeProvider>();
+    final chatService = context.watch<ChatService>();
     final messages = chatService.communityMessages;
 
     return Scaffold(
-      backgroundColor: AppTokens.darkBg,
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: Column(
           children: [
             // Top App Bar
-            _buildHeader(context, chatService),
+            _buildHeader(context, theme, chatService),
 
             // Filter Tabs: "Nearby", "Group", "Rescue", "Saved"
-            _buildFilterTabs(chatService),
+            _buildFilterTabs(theme, chatService),
 
             const SizedBox(height: 8),
 
@@ -87,7 +89,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     )
                   : messages.isEmpty
-                      ? _buildEmptyState()
+                      ? _buildEmptyState(theme)
                       : ListView.builder(
                           controller: _scrollController,
                           padding: const EdgeInsets.symmetric(
@@ -95,16 +97,16 @@ class _ChatScreenState extends State<ChatScreen> {
                           itemCount: messages.length,
                           itemBuilder: (context, index) {
                             final msg = messages[index];
-                            return _buildMessageRow(msg);
+                            return _buildMessageRow(theme, msg);
                           },
                         ),
             ),
 
             // Emergency Shortcuts Bar
-            _buildEmergencyShortcutsBar(),
+            _buildEmergencyShortcutsBar(theme),
 
             // Bottom Input Bar
-            _buildInputBar(),
+            _buildInputBar(theme),
           ],
         ),
       ),
@@ -112,7 +114,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Authentic empty state when SQLite messages table is empty
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeProvider theme) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -122,31 +124,31 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               width: 64,
               height: 64,
-              decoration: const BoxDecoration(
-                color: AppTokens.darkSurfaceSunken,
+              decoration: BoxDecoration(
+                color: theme.surfaceSunken,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 32,
-                color: AppTokens.darkTextMuted,
+                color: theme.textMuted,
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'No messages yet',
               style: TextStyle(
-                color: AppTokens.darkText,
+                color: theme.text,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Stay connected, nearby peer messages will appear here.',
+            Text(
+              'Broadcasts from nearby devices will appear here',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppTokens.darkTextMuted,
+                color: theme.textMuted,
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -158,14 +160,21 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Screen 5 Header: "Community Chat", subtitle "Nearby devices • 24 online", search icon
-  Widget _buildHeader(BuildContext context, ChatService chatService) {
+  Widget _buildHeader(
+    BuildContext context,
+    ThemeProvider theme,
+    ChatService chatService,
+  ) {
+    final successColor =
+        theme.isLightMode ? AppTokens.lightSuccess : AppTokens.darkSuccess;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        color: AppTokens.darkBg,
+      decoration: BoxDecoration(
+        color: theme.bg,
         border: Border(
           bottom: BorderSide(
-            color: AppTokens.darkBorder,
+            color: theme.border,
             width: 1,
           ),
         ),
@@ -194,12 +203,12 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'Community Chat',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppTokens.darkText,
+                    color: theme.text,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -209,17 +218,17 @@ class _ChatScreenState extends State<ChatScreen> {
                     Container(
                       width: 7,
                       height: 7,
-                      decoration: const BoxDecoration(
-                        color: AppTokens.darkSuccess,
+                      decoration: BoxDecoration(
+                        color: successColor,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'Nearby devices • ${chatService.onlineDevices} online',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppTokens.darkTextMuted,
+                        color: theme.textMuted,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -231,7 +240,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
           // Search Icon Button (min touch target 48dp)
           IconButton(
-            icon: const Icon(Icons.search, color: AppTokens.darkText, size: 24),
+            icon: Icon(Icons.search, color: theme.text, size: 24),
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             tooltip: 'Search messages',
             onPressed: () {
@@ -249,8 +258,11 @@ class _ChatScreenState extends State<ChatScreen> {
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(Icons.outbox_rounded,
-                    color: AppTokens.signalYellow, size: 24),
+                const Icon(
+                  Icons.outbox_rounded,
+                  color: AppTokens.signalYellow,
+                  size: 24,
+                ),
                 if (chatService.pendingMessages.isNotEmpty)
                   Positioned(
                     top: -4,
@@ -288,8 +300,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Filter tabs: "Nearby", "Group", "Rescue", "Saved"
-  Widget _buildFilterTabs(ChatService chatService) {
-    final tabs = ['Nearby', 'Group', 'Rescue', 'Saved'];
+  Widget _buildFilterTabs(ThemeProvider theme, ChatService chatService) {
+    const tabs = ['Nearby', 'Group', 'Rescue', 'Saved'];
 
     return Container(
       height: 48,
@@ -312,12 +324,12 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppTokens.signalYellow
-                    : AppTokens.darkSurface,
+                    : theme.surface,
                 borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                 border: Border.all(
                   color: isSelected
                       ? AppTokens.signalYellow
-                      : AppTokens.darkBorder,
+                      : theme.border,
                   width: 1,
                 ),
               ),
@@ -325,7 +337,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Text(
                 tab,
                 style: TextStyle(
-                  color: isSelected ? AppTokens.nightNavy : AppTokens.darkText,
+                  color: isSelected ? AppTokens.nightNavy : theme.text,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   fontSize: 14,
                 ),
@@ -338,16 +350,34 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Message row (mine vs theirs)
-  Widget _buildMessageRow(ChatMessage msg) {
+  Widget _buildMessageRow(ThemeProvider theme, ChatMessage msg) {
     if (msg.isMine) {
-      return _buildMyMessageBubble(msg);
+      return _buildMyMessageBubble(theme, msg);
     } else {
-      return _buildTheirMessageBubble(msg);
+      return _buildTheirMessageBubble(theme, msg);
     }
   }
 
   /// Outgoing message bubble (mine)
-  Widget _buildMyMessageBubble(ChatMessage msg) {
+  Widget _buildMyMessageBubble(ThemeProvider theme, ChatMessage msg) {
+    final isLight = theme.isLightMode;
+    final isLowPower = theme.isLowPower;
+
+    // Background and border colors matching design.md
+    final bubbleColor = isLight
+        ? AppTokens.lightPrimarySoft
+        : (isLowPower ? const Color(0xFF222005) : const Color(0xFF2E2712));
+
+    final borderColor = isLight
+        ? AppTokens.lightBorderStrong
+        : (isLowPower
+            ? AppTokens.oledBorderStrong
+            : AppTokens.darkPrimary.withValues(alpha: 0.4));
+
+    final senderColor = isLight ? AppTokens.lightPrimaryInk : AppTokens.signalYellow;
+    final successColor = isLight ? AppTokens.lightSuccess : AppTokens.darkSuccess;
+    final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -359,7 +389,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFF2E2712), // Warm yellow-navy contrast tint
+                color: bubbleColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -367,7 +397,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   bottomRight: Radius.circular(4),
                 ),
                 border: Border.all(
-                  color: AppTokens.darkPrimary.withValues(alpha: 0.4),
+                  color: borderColor,
                   width: 1,
                 ),
               ),
@@ -375,10 +405,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Sender Tag "You"
-                  const Text(
+                  Text(
                     'You',
                     style: TextStyle(
-                      color: AppTokens.signalYellow,
+                      color: senderColor,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -388,8 +418,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   // Message Text
                   Text(
                     msg.content,
-                    style: const TextStyle(
-                      color: AppTokens.darkText,
+                    style: TextStyle(
+                      color: theme.text,
                       fontSize: 15,
                       height: 1.35,
                     ),
@@ -398,36 +428,38 @@ class _ChatScreenState extends State<ChatScreen> {
                   // Optional Location Preview
                   if (msg.location != null) ...[
                     const SizedBox(height: 8),
-                    _buildLocationPreviewCard(msg.location!),
+                    _buildLocationPreviewCard(theme, msg.location!),
                   ],
 
                   const SizedBox(height: 6),
 
-                  // Bottom row: Timestamp + Delivery Status Tick
+                  // Bottom row: Timestamp + Delivery Status Ticks
+                  // Status ticks: 1 grey tick (saved locally), 2 teal ticks (sent to mesh), 2 green ticks (delivered to rescue team/cloud)
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Text(
                         msg.formattedTime,
-                        style: const TextStyle(
-                          color: AppTokens.darkTextMuted,
+                        style: TextStyle(
+                          color: theme.textMuted,
                           fontSize: 11,
                         ),
                       ),
                       const SizedBox(width: 6),
-                      msg.buildStatusWidget(),
+                      _buildStatusTickWidget(theme, msg.status),
                       const SizedBox(width: 4),
                       Text(
                         msg.status.label,
                         style: TextStyle(
                           fontSize: 10,
+                          fontWeight: FontWeight.w500,
                           color: msg.status == MessageDeliveryStatus.delivered
-                              ? AppTokens.darkSuccess
+                              ? successColor
                               : (msg.status == MessageDeliveryStatus.sentNearby ||
                                       msg.status == MessageDeliveryStatus.relayed
-                                  ? AppTokens.darkInfo
-                                  : AppTokens.darkTextMuted),
+                                  ? infoColor
+                                  : theme.textMuted),
                         ),
                       ),
                     ],
@@ -441,10 +473,41 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  /// Status ticks: 1 grey tick (saved locally), 2 teal ticks (sent to mesh), 2 green ticks (delivered to rescue team/cloud)
+  Widget _buildStatusTickWidget(ThemeProvider theme, MessageDeliveryStatus status) {
+    final infoColor = theme.isLightMode ? AppTokens.lightInfo : AppTokens.darkInfo;
+    final successColor = theme.isLightMode ? AppTokens.lightSuccess : AppTokens.darkSuccess;
+    final sosColor = theme.isLightMode ? AppTokens.lightSos : AppTokens.darkSos;
+
+    switch (status) {
+      case MessageDeliveryStatus.saved:
+      case MessageDeliveryStatus.queued:
+      case MessageDeliveryStatus.sending:
+        // 1 grey tick (saved locally)
+        return const Icon(Icons.check, size: 14, color: Color(0xFF9E9E9E));
+      case MessageDeliveryStatus.sentNearby:
+      case MessageDeliveryStatus.relayed:
+        // 2 teal ticks (sent to mesh)
+        return Icon(Icons.done_all, size: 14, color: infoColor);
+      case MessageDeliveryStatus.delivered:
+        // 2 green ticks (delivered to rescue team/cloud)
+        return Icon(Icons.done_all, size: 14, color: successColor);
+      case MessageDeliveryStatus.failed:
+        return Icon(Icons.error_outline, size: 14, color: sosColor);
+    }
+  }
+
   /// Incoming message bubble (theirs)
-  Widget _buildTheirMessageBubble(ChatMessage msg) {
+  Widget _buildTheirMessageBubble(ThemeProvider theme, ChatMessage msg) {
+    final isLight = theme.isLightMode;
     final initial =
         msg.senderName.isNotEmpty ? msg.senderName[0].toUpperCase() : '?';
+
+    final bubbleBg = isLight
+        ? theme.surfaceSunken
+        : theme.surface;
+
+    final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -454,11 +517,11 @@ class _ChatScreenState extends State<ChatScreen> {
           // Sender Avatar
           CircleAvatar(
             radius: 18,
-            backgroundColor: AppTokens.darkSurfaceSunken,
+            backgroundColor: theme.surfaceSunken,
             child: Text(
               initial,
-              style: const TextStyle(
-                color: AppTokens.darkInfo,
+              style: TextStyle(
+                color: infoColor,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
@@ -470,7 +533,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppTokens.darkSurface,
+                color: bubbleBg,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
                   topRight: Radius.circular(16),
@@ -478,7 +541,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   bottomRight: Radius.circular(16),
                 ),
                 border: Border.all(
-                  color: AppTokens.darkBorder,
+                  color: theme.border,
                   width: 1,
                 ),
               ),
@@ -488,8 +551,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   // Sender Name
                   Text(
                     msg.senderName,
-                    style: const TextStyle(
-                      color: AppTokens.darkText,
+                    style: TextStyle(
+                      color: theme.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -499,8 +562,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   // Message Content
                   Text(
                     msg.content,
-                    style: const TextStyle(
-                      color: AppTokens.darkText,
+                    style: TextStyle(
+                      color: theme.text,
                       fontSize: 15,
                       height: 1.35,
                     ),
@@ -509,7 +572,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   // Shared Location Preview Card
                   if (msg.location != null) ...[
                     const SizedBox(height: 8),
-                    _buildLocationPreviewCard(msg.location!),
+                    _buildLocationPreviewCard(theme, msg.location!),
                   ],
 
                   const SizedBox(height: 6),
@@ -517,8 +580,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   // Timestamp
                   Text(
                     msg.formattedTime,
-                    style: const TextStyle(
-                      color: AppTokens.darkTextMuted,
+                    style: TextStyle(
+                      color: theme.textMuted,
                       fontSize: 11,
                     ),
                   ),
@@ -533,15 +596,23 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Shared Location Preview Card matching Screen 5 mockup
-  /// ("Shared location: Near Village School ~1.2 km from you")
-  Widget _buildLocationPreviewCard(LocationPreview location) {
+  Widget _buildLocationPreviewCard(ThemeProvider theme, LocationPreview location) {
+    final isLight = theme.isLightMode;
+    final isLowPower = theme.isLowPower;
+
+    final cardBg = isLight
+        ? AppTokens.lightInfo.withValues(alpha: 0.1)
+        : (isLowPower ? const Color(0xFF07141A) : const Color(0xFF0F2633));
+
+    final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F2633), // Beacon teal soft container
+        color: cardBg,
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
         border: Border.all(
-          color: AppTokens.darkInfo.withValues(alpha: 0.4),
+          color: infoColor.withValues(alpha: 0.4),
           width: 1,
         ),
       ),
@@ -551,12 +622,12 @@ class _ChatScreenState extends State<ChatScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppTokens.darkInfo.withValues(alpha: 0.2),
+              color: infoColor.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.location_on,
-              color: AppTokens.darkInfo,
+              color: infoColor,
               size: 20,
             ),
           ),
@@ -565,26 +636,26 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Shared location',
                   style: TextStyle(
-                    color: AppTokens.darkInfo,
+                    color: infoColor,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   location.title,
-                  style: const TextStyle(
-                    color: AppTokens.darkText,
+                  style: TextStyle(
+                    color: theme.text,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   location.distance,
-                  style: const TextStyle(
-                    color: AppTokens.darkTextMuted,
+                  style: TextStyle(
+                    color: theme.textMuted,
                     fontSize: 12,
                   ),
                 ),
@@ -597,7 +668,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Emergency Shortcuts Bar ("Need medical help", "We are safe here", "Road blocked", etc.)
-  Widget _buildEmergencyShortcutsBar() {
+  Widget _buildEmergencyShortcutsBar(ThemeProvider theme) {
+    final sosColor = theme.isLightMode ? AppTokens.lightSos : AppTokens.darkSos;
+
     return Container(
       height: 42,
       margin: const EdgeInsets.only(top: 4, bottom: 6),
@@ -610,17 +683,17 @@ class _ChatScreenState extends State<ChatScreen> {
           final shortcut = _emergencyShortcuts[index];
           return ActionChip(
             elevation: 0,
-            backgroundColor: AppTokens.darkSurfaceSunken,
-            side: const BorderSide(color: AppTokens.darkBorderStrong),
-            avatar: const Icon(
+            backgroundColor: theme.surfaceSunken,
+            side: BorderSide(color: theme.border),
+            avatar: Icon(
               Icons.emergency_outlined,
               size: 14,
-              color: AppTokens.darkSos,
+              color: sosColor,
             ),
             label: Text(
               shortcut,
-              style: const TextStyle(
-                color: AppTokens.darkText,
+              style: TextStyle(
+                color: theme.text,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -633,14 +706,21 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Bottom Input Bar with mic icon, text field, and send arrow button
-  Widget _buildInputBar() {
+  Widget _buildInputBar(ThemeProvider theme) {
+    final isLight = theme.isLightMode;
+    final isLowPower = theme.isLowPower;
+
+    final barBg = isLight
+        ? AppTokens.lightBgAlt
+        : (isLowPower ? AppTokens.oledBgAlt : AppTokens.darkBgAlt);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: const BoxDecoration(
-        color: AppTokens.darkBgAlt,
+      decoration: BoxDecoration(
+        color: barBg,
         border: Border(
           top: BorderSide(
-            color: AppTokens.darkBorder,
+            color: theme.border,
             width: 1,
           ),
         ),
@@ -652,10 +732,10 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Container(
               height: 50,
               decoration: BoxDecoration(
-                color: AppTokens.darkSurface,
+                color: theme.surface,
                 borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                 border: Border.all(
-                  color: AppTokens.darkBorder,
+                  color: theme.border,
                   width: 1,
                 ),
               ),
@@ -664,9 +744,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   // Smile / Attachment icon
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.sentiment_satisfied_alt,
-                      color: AppTokens.darkTextMuted,
+                      color: theme.textMuted,
                       size: 22,
                     ),
                     constraints:
@@ -679,29 +759,29 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: TextField(
                       controller: _textController,
                       focusNode: _focusNode,
-                      style: const TextStyle(
-                        color: AppTokens.darkText,
+                      style: TextStyle(
+                        color: theme.text,
                         fontSize: 15,
                       ),
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _handleSendMessage(),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Type a message...',
                         hintStyle: TextStyle(
-                          color: AppTokens.darkTextMuted,
+                          color: theme.textMuted,
                           fontSize: 14,
                         ),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 4),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                       ),
                     ),
                   ),
 
                   // Microphone Button
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.mic_none,
-                      color: AppTokens.darkTextMuted,
+                      color: theme.textMuted,
                       size: 22,
                     ),
                     constraints:

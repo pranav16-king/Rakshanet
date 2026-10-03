@@ -1,3 +1,5 @@
+import 'nearby_device.dart';
+
 enum ProximityBand {
   immediate,
   near,
@@ -86,24 +88,84 @@ class MeshDevice {
     };
   }
 
-  factory MeshDevice.fromMap(Map<String, dynamic> map) {
+  NearbyDevice toNearbyDevice() {
+    return NearbyDevice(
+      deviceId: deviceId,
+      displayName: displayName,
+      connectionType: connectionType == ConnectionType.wifiDirect ? 'WIFI_DIRECT' : 'BLE',
+      rssi: signalStrength,
+      proximityBand: proximityBand.name.toUpperCase(),
+      lastSeen: lastSeen,
+      isConnected: isConnected,
+      hopCount: hopCount,
+      batteryLevel: batteryLevel,
+    );
+  }
+
+  factory MeshDevice.fromNearbyDevice(NearbyDevice nd) {
+    ProximityBand band = ProximityBand.near;
+    final pb = nd.proximityBand.toUpperCase();
+    if (pb == 'IMMEDIATE') {
+      band = ProximityBand.immediate;
+    } else if (pb == 'FAR') {
+      band = ProximityBand.far;
+    }
+
     return MeshDevice(
-      id: map['id'] as String,
-      deviceId: map['device_id'] as String,
-      displayName: map['display_name'] as String,
-      connectionType: ConnectionType.values.firstWhere(
-        (c) => c.name == (map['connection_type'] as String? ?? 'ble'),
-        orElse: () => ConnectionType.ble,
-      ),
-      signalStrength: map['signal_strength'] as int? ?? -65,
-      proximityBand: ProximityBand.values.firstWhere(
-        (p) => p.name == (map['proximity_band'] as String? ?? 'near'),
-        orElse: () => ProximityBand.near,
-      ),
-      hopCount: map['hop_count'] as int? ?? 1,
-      batteryLevel: map['battery_level'] as int? ?? 80,
-      lastSeen: DateTime.fromMillisecondsSinceEpoch(map['last_seen'] as int),
-      isConnected: (map['is_connected'] as int? ?? 1) == 1,
+      id: nd.deviceId,
+      deviceId: nd.deviceId,
+      displayName: nd.displayName,
+      connectionType: nd.connectionType.toUpperCase().contains('WIFI')
+          ? ConnectionType.wifiDirect
+          : ConnectionType.ble,
+      signalStrength: nd.rssi,
+      proximityBand: band,
+      hopCount: nd.hopCount,
+      batteryLevel: nd.batteryLevel ?? 80,
+      lastSeen: nd.lastSeen,
+      isConnected: nd.isConnected,
+    );
+  }
+
+  factory MeshDevice.fromMap(Map<String, dynamic> map) {
+    final devId = (map['device_id'] ?? map['deviceId'] ?? map['id'] ?? '').toString();
+    final dispName = (map['display_name'] ?? map['displayName'] ?? 'Peer').toString();
+    final connTypeStr = (map['connection_type'] ?? map['connectionType'] ?? 'ble').toString().toLowerCase();
+    final connType = connTypeStr.contains('wifi') ? ConnectionType.wifiDirect : ConnectionType.ble;
+    final rssi = map['signal_strength'] is int
+        ? map['signal_strength'] as int
+        : (map['rssi'] is int
+            ? map['rssi'] as int
+            : int.tryParse(map['rssi']?.toString() ?? '-65') ?? -65);
+    final proxStr = (map['proximity_band'] ?? map['proximityBand'] ?? 'near').toString().toLowerCase();
+    final prox = proxStr.contains('immediate')
+        ? ProximityBand.immediate
+        : (proxStr.contains('far') ? ProximityBand.far : ProximityBand.near);
+    final hops = map['hop_count'] is int
+        ? map['hop_count'] as int
+        : (int.tryParse(map['hopCount']?.toString() ?? '1') ?? 1);
+    final bat = map['battery_level'] is int
+        ? map['battery_level'] as int
+        : (int.tryParse(map['batteryLevel']?.toString() ?? '80') ?? 80);
+    DateTime seen = DateTime.now();
+    if (map['last_seen'] is int) {
+      seen = DateTime.fromMillisecondsSinceEpoch(map['last_seen'] as int);
+    } else if (map['last_seen'] != null) {
+      seen = DateTime.tryParse(map['last_seen'].toString()) ?? DateTime.now();
+    }
+    final conn = map['is_connected'] == 1 || map['is_connected'] == true;
+
+    return MeshDevice(
+      id: (map['id'] ?? devId).toString(),
+      deviceId: devId,
+      displayName: dispName,
+      connectionType: connType,
+      signalStrength: rssi,
+      proximityBand: prox,
+      hopCount: hops,
+      batteryLevel: bat,
+      lastSeen: seen,
+      isConnected: conn,
     );
   }
 }

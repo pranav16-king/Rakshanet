@@ -703,6 +703,9 @@ class AppDatabase {
     if (map.containsKey('signal_strength') && !map.containsKey('rssi')) {
       map['rssi'] = map['signal_strength'];
     }
+    // Remove extra non-table columns from MeshDevice.toMap()
+    map.remove('id');
+    map.remove('signal_strength');
     await insert(
       'nearby_devices',
       map,

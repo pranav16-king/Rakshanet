@@ -7,6 +7,7 @@ import '../../models/emergency_report.dart';
 import '../../models/message_envelope.dart';
 import '../../providers/emergency_report_provider.dart';
 import '../../providers/mesh_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../services/mesh_engine.dart';
 import '../../theme/app_tokens.dart';
@@ -141,12 +142,14 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
       _isSending = false;
     });
 
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     // Show Confirmation Bottom Sheet
     showModalBottomSheet(
       context: context,
       isDismissible: false,
       enableDrag: false,
-      backgroundColor: AppTokens.darkBg,
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
       ),
@@ -166,10 +169,10 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                 child: const Icon(Icons.cell_tower_rounded, color: Colors.white, size: 36),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'SOS Broadcast Live!',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: theme.text,
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
                 ),
@@ -180,8 +183,8 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                     ? 'Saved to SQLite (ID: ${realReport.id.substring(0, 8)}). Broadcasting $_selectedCategory emergency to $peerCount nearby mesh devices.'
                     : 'Saved to SQLite (ID: ${realReport.id.substring(0, 8)}). Broadcasting $_selectedCategory emergency beacon. Will relay once peers connect.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppTokens.darkTextMuted,
+                style: TextStyle(
+                  color: theme.textMuted,
                   fontSize: 14,
                   height: 1.4,
                 ),
@@ -190,19 +193,19 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppTokens.darkSurface,
+                  color: theme.surfaceSunken,
                   borderRadius: BorderRadius.circular(AppTokens.radiusSm),
                   border: Border.all(color: AppTokens.beaconTeal),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check_circle_rounded, color: AppTokens.darkInfo, size: 16),
-                    SizedBox(width: 8),
+                    const Icon(Icons.check_circle_rounded, color: AppTokens.beaconTeal, size: 16),
+                    const SizedBox(width: 8),
                     Text(
                       'Save-Before-Send: Persisted via ReportRepository',
                       style: TextStyle(
-                        color: AppTokens.darkInfo,
+                        color: theme.isLightMode ? AppTokens.beaconTeal : AppTokens.darkInfo,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -238,19 +241,22 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+
     return Scaffold(
-      backgroundColor: AppTokens.nightNavy,
+      backgroundColor: theme.bg,
       appBar: AppBar(
-        backgroundColor: AppTokens.nightNavy,
+        backgroundColor: AppTokens.signalYellow,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppTokens.nightNavy),
+          tooltip: 'Back',
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
           'Emergency Report',
           style: TextStyle(
-            color: Colors.white,
+            color: AppTokens.nightNavy,
             fontSize: 20,
             fontWeight: FontWeight.w800,
           ),
@@ -258,7 +264,8 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white),
+            icon: const Icon(Icons.close_rounded, color: AppTokens.nightNavy),
+            tooltip: 'Cancel',
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -269,24 +276,24 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Subtitle matching Screen 4 mockup
-                    const Text(
+                    Text(
                       'What type of help do you need?',
                       style: TextStyle(
-                        color: AppTokens.darkText,
+                        color: theme.text,
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Select the emergency category to notify rescuers.',
                       style: TextStyle(
-                        color: AppTokens.darkTextMuted,
+                        color: theme.textMuted,
                         fontSize: 13,
                       ),
                     ),
@@ -302,6 +309,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                         final type = _emergencyTypes[index];
                         final isSelected = _selectedCategory == type['title'];
                         return _buildSelectionTile(
+                          theme: theme,
                           title: type['title'] as String,
                           subtitle: type['subtitle'] as String,
                           icon: type['icon'] as IconData,
@@ -323,29 +331,29 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppTokens.darkSurface,
+                        color: theme.surface,
                         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-                        border: Border.all(color: AppTokens.darkBorder),
+                        border: Border.all(color: theme.border),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Column(
+                          Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'People Needing Help',
                                 style: TextStyle(
-                                  color: AppTokens.darkText,
+                                  color: theme.text,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
                                 'Number of individuals affected',
                                 style: TextStyle(
-                                  color: AppTokens.darkTextMuted,
+                                  color: theme.textMuted,
                                   fontSize: 12,
                                 ),
                               ),
@@ -354,24 +362,29 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                           Row(
                             children: [
                               IconButton(
+                                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                                 onPressed: _peopleCount > 1
                                     ? () => setState(() => _peopleCount--)
                                     : null,
                                 icon: const Icon(Icons.remove_circle_outline_rounded),
-                                color: AppTokens.signalYellow,
+                                color: theme.isLightMode ? AppTokens.lightPrimaryInk : AppTokens.signalYellow,
                               ),
-                              Text(
-                                '$_peopleCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: Text(
+                                  '$_peopleCount',
+                                  style: TextStyle(
+                                    color: theme.text,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
                               ),
                               IconButton(
+                                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                                 onPressed: () => setState(() => _peopleCount++),
                                 icon: const Icon(Icons.add_circle_outline_rounded),
-                                color: AppTokens.signalYellow,
+                                color: theme.isLightMode ? AppTokens.lightPrimaryInk : AppTokens.signalYellow,
                               ),
                             ],
                           ),
@@ -381,18 +394,36 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Additional Description
+                    // Additional Description / Medical Notes
+                    Text(
+                      'Medical Notes & Situation Details',
+                      style: TextStyle(
+                        color: theme.text,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     TextField(
                       controller: _notesController,
                       maxLines: 2,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      style: TextStyle(color: theme.text, fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: 'Additional details (e.g. 2nd floor, water rising)...',
+                        hintText: 'Additional details (e.g. severe leg wound, 2nd floor, elderly)...',
+                        hintStyle: TextStyle(color: theme.textMuted, fontSize: 13),
                         filled: true,
-                        fillColor: AppTokens.darkSurfaceSunken,
+                        fillColor: theme.surfaceSunken,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                          borderSide: const BorderSide(color: AppTokens.darkBorder),
+                          borderSide: BorderSide(color: theme.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                          borderSide: BorderSide(color: theme.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                          borderSide: const BorderSide(color: AppTokens.signalYellow, width: 2),
                         ),
                       ),
                     ),
@@ -407,8 +438,8 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                color: AppTokens.nightNavy,
-                border: Border(top: BorderSide(color: AppTokens.darkBorder.withValues(alpha: 0.5))),
+                color: theme.surface,
+                border: Border(top: BorderSide(color: theme.border)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -425,7 +456,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
                         ),
                         elevation: 4,
-                        shadowColor: AppTokens.sosRed.withValues(alpha: 0.6),
+                        shadowColor: AppTokens.sosRed.withValues(alpha: 0.5),
                       ),
                       child: _isSending
                           ? const SizedBox(
@@ -455,11 +486,11 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Will be saved to SQLite and queued in MeshEngine for relay.',
+                  Text(
+                    'Saved to SQLite via ReportRepository • Queued for BLE Mesh relay',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppTokens.darkTextMuted,
+                      color: theme.textMuted,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -474,6 +505,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
   }
 
   Widget _buildSelectionTile({
+    required ThemeProvider theme,
     required String title,
     required String subtitle,
     required IconData icon,
@@ -481,6 +513,16 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    final tileBg = isSelected
+        ? (theme.isLightMode
+            ? AppTokens.lightPrimarySoft
+            : (theme.isLowPower ? const Color(0xFF1E1A04) : AppTokens.darkSurfaceAlt))
+        : theme.surface;
+
+    final tileBorder = isSelected
+        ? (theme.isLightMode ? AppTokens.lightPrimaryInk : AppTokens.signalYellow)
+        : theme.border;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppTokens.radiusMd),
@@ -488,16 +530,16 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? AppTokens.darkSurfaceAlt : AppTokens.darkSurface,
+          color: tileBg,
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           border: Border.all(
-            color: isSelected ? AppTokens.signalYellow : AppTokens.darkBorder,
+            color: tileBorder,
             width: isSelected ? 2.0 : 1.0,
           ),
-          boxShadow: isSelected
+          boxShadow: isSelected && !theme.isLowPower
               ? [
                   BoxShadow(
-                    color: AppTokens.signalYellow.withValues(alpha: 0.2),
+                    color: AppTokens.signalYellow.withValues(alpha: 0.18),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -516,7 +558,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
               ),
               child: Icon(
                 icon,
-                color: badgeColor == const Color(0xFFFFC400) ? AppTokens.nightNavy : Colors.white,
+                color: badgeColor == AppTokens.signalYellow ? AppTokens.nightNavy : Colors.white,
                 size: 24,
               ),
             ),
@@ -529,7 +571,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : AppTokens.darkText,
+                      color: theme.text,
                       fontSize: 15.5,
                       fontWeight: FontWeight.w800,
                     ),
@@ -537,8 +579,8 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: AppTokens.darkTextMuted,
+                    style: TextStyle(
+                      color: theme.textMuted,
                       fontSize: 12.5,
                     ),
                   ),
@@ -547,9 +589,9 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
             ),
             // Selection indicator
             if (isSelected)
-              const Icon(
+              Icon(
                 Icons.check_circle_rounded,
-                color: AppTokens.signalYellow,
+                color: theme.isLightMode ? AppTokens.lightPrimaryInk : AppTokens.signalYellow,
                 size: 24,
               )
             else
@@ -558,7 +600,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                 height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppTokens.darkBorderStrong, width: 1.5),
+                  border: Border.all(color: theme.border, width: 1.5),
                 ),
               ),
           ],

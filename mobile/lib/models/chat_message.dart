@@ -172,16 +172,16 @@ class ChatMessage {
   Widget buildStatusWidget([BuildContext? context]) {
     switch (status) {
       case MessageDeliveryStatus.saved:
-        return const Icon(Icons.check, size: 14, color: Color(0xFF9E9E9E));
       case MessageDeliveryStatus.queued:
-        return const Icon(Icons.access_time, size: 14, color: Color(0xFFFFC400));
       case MessageDeliveryStatus.sending:
-        return const Icon(Icons.sync, size: 14, color: Color(0xFFFFC400));
+        // 1 grey tick (saved locally)
+        return const Icon(Icons.check, size: 14, color: Color(0xFF9E9E9E));
       case MessageDeliveryStatus.sentNearby:
-        return const Icon(Icons.check, size: 14, color: Color(0xFF3CC6D0));
       case MessageDeliveryStatus.relayed:
+        // 2 teal ticks (sent to mesh)
         return const Icon(Icons.done_all, size: 14, color: Color(0xFF3CC6D0));
       case MessageDeliveryStatus.delivered:
+        // 2 green ticks (delivered to rescue team/cloud)
         return const Icon(Icons.done_all, size: 14, color: Color(0xFF4CD08A));
       case MessageDeliveryStatus.failed:
         return const Icon(Icons.error_outline, size: 14, color: Color(0xFFFF5A4E));

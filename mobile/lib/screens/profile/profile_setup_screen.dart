@@ -14,9 +14,9 @@ class ProfileSetupScreen extends StatefulWidget {
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController(text: 'Amit Sharma');
-  final _phoneCtrl = TextEditingController(text: '+91 98765 43210');
-  final _notesCtrl = TextEditingController(text: 'First-aid certified');
+  final _nameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
   String _selectedBloodGroup = 'O+';
   String _selectedLanguage = 'English';
   bool _isSubmitting = false;
@@ -51,8 +51,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     try {
       final profileProvider = context.read<ProfileProvider>();
       await profileProvider.registerUser(
-        name: _nameCtrl.text.trim().isEmpty ? 'Amit Sharma' : _nameCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim().isEmpty ? '+91 98765 43210' : _phoneCtrl.text.trim(),
+        name: _nameCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim(),
         bloodGroup: _selectedBloodGroup,
         medicalNotes: _notesCtrl.text.trim(),
         preferredLanguage: _selectedLanguage,
@@ -80,6 +80,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final textMuted = themeProvider.textMuted;
     final surfaceColor = themeProvider.surface;
     final borderColor = themeProvider.border;
+    final isLowPower = themeProvider.isLowPower;
+    final isLight = themeProvider.isLight;
+    final yellowAccent = isLight ? AppTokens.lightPrimaryInk : AppTokens.signalYellow;
 
     return Scaffold(
       backgroundColor: themeProvider.bg,
@@ -99,18 +102,20 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       height: 96,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTokens.signalYellow.withValues(alpha: 0.35),
-                            blurRadius: 24,
-                            spreadRadius: 4,
-                          ),
-                          BoxShadow(
-                            color: AppTokens.beaconTeal.withValues(alpha: 0.25),
-                            blurRadius: 16,
-                            spreadRadius: 2,
-                          ),
-                        ],
+                        boxShadow: isLowPower
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: AppTokens.signalYellow.withValues(alpha: 0.35),
+                                  blurRadius: 24,
+                                  spreadRadius: 4,
+                                ),
+                                BoxShadow(
+                                  color: AppTokens.beaconTeal.withValues(alpha: 0.25),
+                                  blurRadius: 16,
+                                  spreadRadius: 2,
+                                ),
+                              ],
                       ),
                       child: ClipOval(
                         child: Image.asset(
@@ -118,9 +123,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => Container(
                             color: AppTokens.signalYellow.withValues(alpha: 0.15),
-                            child: const Icon(
+                            child: Icon(
                               Icons.radar_rounded,
-                              color: AppTokens.signalYellow,
+                              color: yellowAccent,
                               size: 48,
                             ),
                           ),
@@ -175,7 +180,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             labelStyle: TextStyle(color: textMuted),
                             hintText: 'e.g. Amit Sharma',
                             hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.6)),
-                            prefixIcon: const Icon(Icons.person_outline, color: AppTokens.signalYellow),
+                            prefixIcon: Icon(Icons.person_outline, color: yellowAccent),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppTokens.radiusSm),
                               borderSide: BorderSide(color: borderColor),
@@ -218,6 +223,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                               borderSide: const BorderSide(color: AppTokens.signalYellow, width: 2),
                             ),
                           ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'Please enter your phone number' : null,
                         ),
                         const SizedBox(height: 16),
 

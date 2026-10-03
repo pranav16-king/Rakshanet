@@ -67,8 +67,14 @@ class _SheltersScreenState extends State<SheltersScreen>
         if (!matchName && !matchAddr) return false;
       }
       if (_selectedSupplyFilter != null) {
-        final hasSupply = s.supplies.any((sup) =>
-            sup.toLowerCase().contains(_selectedSupplyFilter!.toLowerCase()));
+        final filterL = _selectedSupplyFilter!.toLowerCase();
+        final hasSupply = s.supplies.any((sup) {
+          final supL = sup.toLowerCase();
+          if (filterL == 'power') {
+            return supL.contains('power') || supL.contains('solar') || supL.contains('generator');
+          }
+          return supL.contains(filterL);
+        });
         if (!hasSupply) return false;
       }
       return true;
@@ -277,13 +283,13 @@ class _SheltersScreenState extends State<SheltersScreen>
                       ),
                       const SizedBox(width: 8),
                       _buildFilterChip(
-                        label: 'Solar',
-                        icon: Icons.solar_power_rounded,
+                        label: 'Power',
+                        icon: Icons.bolt_rounded,
                         iconColor: AppTokens.signalYellow,
-                        isSelected: _selectedSupplyFilter == 'Solar',
+                        isSelected: _selectedSupplyFilter == 'Power',
                         onTap: () => setState(() {
                           _selectedSupplyFilter =
-                              _selectedSupplyFilter == 'Solar' ? null : 'Solar';
+                              _selectedSupplyFilter == 'Power' ? null : 'Power';
                         }),
                       ),
                     ],
@@ -359,14 +365,25 @@ class _SheltersScreenState extends State<SheltersScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.night_shelter_outlined, size: 56, color: theme.textMuted),
-              const SizedBox(height: 16),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: theme.isLowPower
+                      ? AppTokens.oledSurface
+                      : AppTokens.beaconTeal.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: theme.border),
+                ),
+                child: Icon(Icons.night_shelter_outlined, size: 36, color: theme.textMuted),
+              ),
+              const SizedBox(height: 18),
               Text(
                 'No shelters reported in this area yet.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: theme.text,
-                  fontSize: 17,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -374,7 +391,23 @@ class _SheltersScreenState extends State<SheltersScreen>
               Text(
                 'Relief shelter coordinates will automatically appear as nearby mesh peers broadcast verified shelter packets.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: theme.textMuted, fontSize: 14),
+                style: TextStyle(color: theme.textMuted, fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: _loadSheltersFromDatabase,
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: const Text('Scan Local Mesh Cache', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.text,
+                    side: BorderSide(color: theme.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
