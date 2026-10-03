@@ -77,7 +77,7 @@ class BluetoothRadioService extends ChangeNotifier {
       final btAdvOk = statuses[Permission.bluetoothAdvertise]?.isGranted ?? true;
       final btConnOk = statuses[Permission.bluetoothConnect]?.isGranted ?? true;
 
-      _permissionsGranted = locationOk && (btScanOk || btAdvOk);
+      _permissionsGranted = locationOk && (btScanOk || btAdvOk || btConnOk);
       _logStatus('Permissions check: granted=$_permissionsGranted');
       notifyListeners();
       return _permissionsGranted;
@@ -195,7 +195,7 @@ class BluetoothRadioService extends ChangeNotifier {
     try {
       _nearby.acceptConnection(
         endpointId,
-        onPayLoadRecieve: (receivedEndpointId, payload) {
+        onPayLoadRecieved: (receivedEndpointId, payload) {
           _handlePayloadReceived(receivedEndpointId, payload);
         },
         onPayloadTransferUpdate: (receivedEndpointId, update) {
