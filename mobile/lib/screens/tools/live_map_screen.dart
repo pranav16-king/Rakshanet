@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -11,14 +12,15 @@ import '../../providers/emergency_report_provider.dart';
 import '../../providers/mesh_provider.dart';
 import '../../providers/telemetry_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/mesh_engine.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 
 /// Screen 6: Live Map & Nearby Devices
 /// Features:
 /// - Offline topographical custom vector canvas with contour lines and grid
-/// - Dynamic real nodes: You, BLE Mesh Peers, Emergency SOS Reports, Shelter Hubs
-/// - Dynamic mesh connectivity links between actual active nodes
+/// - GPS-coordinate nodes: You, Emergency SOS Reports, and Shelter Hubs
+/// - Never assigns an invented position to a Bluetooth peer or mesh relay
 /// - Interactive zoom & pan via InteractiveViewer
 /// - Filter chips: "You", "Nearby", "SOS", "Rescue", "Shelter"
 /// - Floating layer toggle and GPS re-center controls
@@ -48,7 +50,6 @@ class _LiveMapScreenState extends State<LiveMapScreen>
 
   // Layer settings
   bool _showContours = true;
-  bool _showMeshLinks = true;
   bool _showGrid = true;
 
   // Selected marker details for inspection
@@ -56,6 +57,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
 
   List<EmergencyReport> _emergencyReports = [];
   List<ShelterResource> _shelterResources = [];
+  StreamSubscription? _meshEventSubscription;
 
   Future<void> _loadSqliteData() async {
     try {
@@ -85,7 +87,6 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   }
 
   List<_MapNode> _computeNodes(
-    MeshProvider mesh,
     List<EmergencyReport> emergencyReports,
     TelemetryProvider telemetry,
   ) {
@@ -119,7 +120,10 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       emergencyReports,
     );
 
-    // 2. Real BLE peers dynamically from MeshProvider
+    // Nearby Connections does not reveal a peer's bearing or GPS coordinate.
+    // The legacy visual peer placement below is retained only as disabled
+    // history; no Bluetooth peer is rendered geographically without GPS.
+    /*
     // Nearby Connections exposes no peer direction or peer GPS coordinate.
     // Connected peers remain visible in the Network tab instead of being
     // placed arbitrarily on a geographic map.
@@ -151,7 +155,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       );
     }
 
-    // 3. Real Emergency Reports from SQLite (zero fake fallback nodes)
+    */
+    // 2. Real Emergency Reports from SQLite (zero fake fallback nodes)
     if (emergencyReports.isNotEmpty) {
       for (int i = 0; i < emergencyReports.length; i++) {
         final rep = emergencyReports[i];
@@ -187,7 +192,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       }
     }
 
-    // 4. Real Shelter Resources from SQLite
+    // 3. Real Shelter Resources from SQLite
     if (_shelterResources.isNotEmpty) {
       for (int i = 0; i < _shelterResources.length; i++) {
         final s = _shelterResources[i];
@@ -301,6 +306,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     )..repeat();
 
     _loadSqliteData();
+    _meshEventSubscription = MeshEngine().incomingEnvelopes.listen((_) {
+      _loadSqliteData();
+    });
 
     // Center view on user node after initial build
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -310,6 +318,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
 
   @override
   void dispose() {
+    _meshEventSubscription?.cancel();
     _pulseController.dispose();
     _transformController.dispose();
     super.dispose();
@@ -393,6 +402,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                   setState(() => _showContours = val);
                 },
               ),
+              /*
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 activeThumbColor: AppTokens.signalYellow,
@@ -410,6 +420,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                   setState(() => _showMeshLinks = val);
                 },
               ),
+              */
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 activeThumbColor: AppTokens.signalYellow,
@@ -632,7 +643,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                       ),
                       icon: const Icon(Icons.navigation_rounded, size: 20),
                       label: const Text(
-                        'Navigate to Location',
+                        'View coordinate guidance',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -644,7 +655,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                           SnackBar(
                             backgroundColor: AppTokens.beaconTeal,
                             content: Text(
-                              'Offline compass navigation engaged for ${node.distance}',
+                              'Shared GPS coordinate: ${node.distance}. This is not turn-by-turn routing.',
                             ),
                           ),
                         );
@@ -827,7 +838,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                       ),
                       icon: const Icon(Icons.navigation_rounded, size: 20),
                       label: const Text(
-                        'Route to Shelter',
+                        'View coordinate guidance',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -839,7 +850,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                           SnackBar(
                             backgroundColor: AppTokens.beaconTeal,
                             content: Text(
-                              'Offline directions engaged for ${s.name} (${node.distance})',
+                              'Use the shelter direction guidance for ${s.name}; no road route is claimed.',
                             ),
                           ),
                         );
@@ -957,10 +968,12 @@ class _LiveMapScreenState extends State<LiveMapScreen>
         id: report.id,
         label: 'SOS',
         type: _NodeType.sos,
-        offset: const Offset(400, 480),
+        // This is used only for the detail card when the report supplied no
+        // coordinate; it is never added to the geographic canvas.
+        offset: Offset.zero,
         statusText:
             '${report.peopleCount} ${report.peopleCount == 1 ? 'person needs' : 'people need'} help • ${report.category}',
-        distance: '~1.3 km',
+        distance: 'No shared GPS coordinate',
         lastSeen: _formatTimeAgo(report.timestamp),
         peopleCount: report.peopleCount,
         emergencyReport: report,
@@ -1140,10 +1153,12 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     final mesh = context.watch<MeshProvider>();
     final telemetry = context.watch<TelemetryProvider>();
     final emergencyProvider = context.watch<EmergencyReportProvider>();
-    final activeReports = emergencyProvider.reports.isNotEmpty
-        ? emergencyProvider.reports
-        : _emergencyReports;
-    final nodes = _computeNodes(mesh, activeReports, telemetry);
+    final reportsById = <String, EmergencyReport>{
+      for (final report in emergencyProvider.reports) report.id: report,
+      for (final report in _emergencyReports) report.id: report,
+    };
+    final activeReports = reportsById.values.toList();
+    final nodes = _computeNodes(activeReports, telemetry);
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -1217,7 +1232,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                           activeFilters: _activeFilters,
                           pulseValue: _pulseController.value,
                           showContours: _showContours,
-                          showMeshLinks: _showMeshLinks,
+                          // A received radio packet establishes no geographic
+                          // path. Do not render assumed relay links on the map.
+                          showMeshLinks: false,
                           showGrid: _showGrid,
                           selectedNode: _selectedNode,
                           themeMode: theme.currentMode,
@@ -1312,7 +1329,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
-                                  mesh.nearbyDevices.isEmpty
+                                  mesh.connectedPeerCount == 0
                                       ? 'Offline • Searching for nearby devices...'
                                       : 'Offline • ${mesh.nearbyDevices.length} ${mesh.nearbyDevices.length == 1 ? 'device' : 'devices'} nearby',
                                   overflow: TextOverflow.ellipsis,

@@ -22,18 +22,27 @@ export const useAuthStore = create<AuthStoreState>((set) => {
   // Listen for 401 unauthorized events dispatched by apiClient
   if (typeof window !== 'undefined') {
     window.addEventListener('auth:unauthorized', () => {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(USER_KEY);
       set({
         user: null,
         token: null,
         isAuthenticated: false,
-        error: 'Session expired. Please sign in again.',
+        isInitializing: false,
+        error: 'Session expired or invalid. Please sign in.',
       });
     });
   }
 
+  const existingToken = typeof window !== 'undefined' 
+    ? (localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY))
+    : null;
+
   return {
     user: null,
-    token: typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null,
+    token: existingToken,
     isAuthenticated: false,
     isInitializing: true,
     isLoading: false,
@@ -42,42 +51,33 @@ export const useAuthStore = create<AuthStoreState>((set) => {
     login: async (email: string, password: string, rememberMe: boolean = true) => {
       set({ isLoading: true, error: null });
       try {
-        let authUser: User;
-        let authToken: string;
+        const response = await apiClient.post<{ 
+          access_token?: string; 
+          token?: string; 
+          token_type?: string; 
+          user: User 
+        }>('/api/v1/auth/login', {
+          email: email.trim(),
+          password,
+        });
 
-        try {
-          const response = await apiClient.post<{ token: string; user: User }>('/api/v1/auth/login', {
-            email,
-            password,
-          });
-          authToken = response.data.token;
-          authUser = response.data.user;
-        } catch (apiErr: unknown) {
-          // If backend auth endpoint is not mounted yet or in offline mode,
-          // provide disaster/emergency fallback verification
-          if (email && password) {
-            authToken = `token_sim_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-            authUser = {
-              id: 'USR-ADMIN-01',
-              email: email.trim(),
-              name: email.split('@')[0].toUpperCase() === 'ADMIN' ? 'Command Director' : email.split('@')[0],
-              role: 'ADMIN',
-              organization: 'National Disaster Response Force (NDRF)',
-              status: 'ONLINE',
-              lastActive: 'Just now',
-              createdAt: new Date().toISOString(),
-            };
-          } else {
-            throw apiErr;
-          }
+        const authToken = response.data.access_token || response.data.token;
+        const authUser = response.data.user;
+
+        if (!authToken) {
+          throw new Error('No access token returned from backend gateway');
         }
 
         if (rememberMe) {
           localStorage.setItem(TOKEN_KEY, authToken);
           localStorage.setItem(USER_KEY, JSON.stringify(authUser));
+          sessionStorage.removeItem(TOKEN_KEY);
+          sessionStorage.removeItem(USER_KEY);
         } else {
           sessionStorage.setItem(TOKEN_KEY, authToken);
           sessionStorage.setItem(USER_KEY, JSON.stringify(authUser));
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
         }
 
         set({
@@ -88,8 +88,13 @@ export const useAuthStore = create<AuthStoreState>((set) => {
           error: null,
         });
         return true;
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Invalid credentials. Please verify your details.';
+      } catch (err: any) {
+        const detail = err?.response?.data?.detail;
+        const message = typeof detail === 'string' 
+          ? detail 
+          : err instanceof Error 
+            ? err.message 
+            : 'Invalid credentials. Please verify your email and password.';
         set({
           error: message,
           isLoading: false,
@@ -108,12 +113,16 @@ export const useAuthStore = create<AuthStoreState>((set) => {
         user: null,
         token: null,
         isAuthenticated: false,
+        isInitializing: false,
         error: null,
       });
     },
 
     checkAuth: async () => {
-      const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+      const token = typeof window !== 'undefined'
+        ? (localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY))
+        : null;
+
       if (!token) {
         set({
           user: null,
@@ -125,34 +134,21 @@ export const useAuthStore = create<AuthStoreState>((set) => {
       }
 
       try {
-        const response = await apiClient.get<User>('/api/v1/auth/me');
+        const response = await apiClient.get<User>('/api/v1/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         set({
           user: response.data,
           token,
           isAuthenticated: true,
           isInitializing: false,
         });
-      } catch {
-        // Fallback to cached user in offline or dev mode
-        const cachedUserStr = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
-        if (cachedUserStr) {
-          try {
-            const cachedUser = JSON.parse(cachedUserStr) as User;
-            set({
-              user: cachedUser,
-              token,
-              isAuthenticated: true,
-              isInitializing: false,
-            });
-            return;
-          } catch {
-            // parsing error
-          }
-        }
-
-        // Invalid or corrupt token
+      } catch (err) {
+        // Token is invalid or expired
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(USER_KEY);
         set({
           user: null,
           token: null,

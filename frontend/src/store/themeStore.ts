@@ -22,8 +22,16 @@ const applyThemeToDOM = (theme: ThemeMode) => {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
   root.classList.remove('light', 'dark', 'oled');
-  root.classList.add(theme);
+  if (theme === 'dark') {
+    root.classList.add('dark');
+  } else if (theme === 'oled') {
+    root.classList.add('dark', 'oled');
+  } else {
+    root.classList.add('light');
+  }
   root.setAttribute('data-theme', theme);
+  document.body.classList.remove('light', 'dark', 'oled');
+  document.body.classList.add(theme);
 };
 
 export const useThemeStore = create<ThemeStoreState>((set, get) => {

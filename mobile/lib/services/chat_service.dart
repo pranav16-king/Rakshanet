@@ -23,7 +23,6 @@ class ChatService extends ChangeNotifier {
   List<ChatMessage> _messages = [];
   bool _isLoading = true;
   String _activeFilter = 'Nearby'; // 'Nearby', 'Group', 'Rescue', 'Saved'
-  final int _onlineDevices = 24;
   bool _isSyncing = false;
 
   // Deduplication structures (Bloom filter + in-memory Set)
@@ -38,9 +37,7 @@ class ChatService extends ChangeNotifier {
   List<ChatMessage> get allMessages => List.unmodifiable(_messages);
   bool get isLoading => _isLoading;
   String get activeFilter => _activeFilter;
-  int get onlineDevices => _radioService.connectedCount > 0
-      ? _radioService.connectedCount
-      : _onlineDevices;
+  int get onlineDevices => _radioService.connectedCount;
   bool get isSyncing => _isSyncing;
 
   ChatService() {

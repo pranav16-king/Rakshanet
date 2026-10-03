@@ -576,9 +576,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/live_map_screen.dart": {
-    "mtime": 1791018958.5866342,
-    "seen": 1791019264.6003032,
-    "ast_hash": "142871f12d926b46cfcd4067f1cfc55c",
+    "mtime": 1791020694.3424587,
+    "seen": 1791020723.809449,
+    "ast_hash": "6aa7704a2e120d5bf4306b22560da9ba",
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/missing_person_screen.dart": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/chat_service.dart": {
-    "mtime": 1791019189.1081378,
-    "seen": 1791019264.6003032,
-    "ast_hash": "0a2704a423bfa5de5ed3b23e1dc73af2",
+    "mtime": 1791020709.2934687,
+    "seen": 1791020723.809449,
+    "ast_hash": "b65c586904fd1d052af75e17578a49aa",
     "semantic_hash": ""
   },
   "mobile/lib/services/database_service.dart": {
@@ -612,9 +612,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/mesh_engine.dart": {
-    "mtime": 1791018628.4915774,
-    "seen": 1791019264.6003032,
-    "ast_hash": "2ac115834131b2485def6e3a896d9fd5",
+    "mtime": 1791020474.6166315,
+    "seen": 1791020723.809449,
+    "ast_hash": "88ef20d9339b1fd633e5490d34c475f9",
     "semantic_hash": ""
   },
   "mobile/lib/services/mesh_router.dart": {
@@ -1062,9 +1062,9 @@
     "semantic_hash": ""
   },
   "backend/gateway/app.py": {
-    "mtime": 1791019155.2761836,
-    "seen": 1791019264.6003032,
-    "ast_hash": "b20f2f6d014bb3d6ec83e1091fa7ed3c",
+    "mtime": 1791020402.6788108,
+    "seen": 1791020723.808908,
+    "ast_hash": "4bcbf52a55201be177721c9bb3fa4ac3",
     "semantic_hash": ""
   },
   "backend/gateway/models.py": {
@@ -1164,9 +1164,9 @@
     "semantic_hash": ""
   },
   "frontend/src/App.tsx": {
-    "mtime": 1791017925.2559457,
-    "seen": 1791018120.5658996,
-    "ast_hash": "3b43d7f840a830ae7455d9f637837f5c",
+    "mtime": 1791020145.3395896,
+    "seen": 1791020723.808908,
+    "ast_hash": "e5be04ee9e220459de47fdd81a238ef7",
     "semantic_hash": ""
   },
   "frontend/src/api/analytics.ts": {
@@ -1182,9 +1182,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/client.ts": {
-    "mtime": 1791017623.2131448,
-    "seen": 1791018120.5658996,
-    "ast_hash": "b23d60657bdd4fcdb122d7e8ec363293",
+    "mtime": 1791020007.370142,
+    "seen": 1791020723.808908,
+    "ast_hash": "1695446b43f642df6dc4c5575dad3271",
     "semantic_hash": ""
   },
   "frontend/src/api/communicationGaps.ts": {
@@ -1290,9 +1290,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/common/Button.tsx": {
-    "mtime": 1791017719.814575,
-    "seen": 1791018120.5658996,
-    "ast_hash": "619df4f0f96a9c2217bd34426f96edfc",
+    "mtime": 1791020254.704817,
+    "seen": 1791020723.808908,
+    "ast_hash": "5328c72a6ad98657db193c1aec049e8b",
     "semantic_hash": ""
   },
   "frontend/src/components/common/Card.tsx": {
@@ -1536,9 +1536,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/layout/Sidebar.tsx": {
-    "mtime": 1791018653.2928383,
-    "seen": 1791019264.6003032,
-    "ast_hash": "732137e81388de8842ca3f8dc059f853",
+    "mtime": 1791020138.0026357,
+    "seen": 1791020723.808908,
+    "ast_hash": "35c73c6a01858e028f37501c2bd03879",
     "semantic_hash": ""
   },
   "frontend/src/components/layout/TopBar.tsx": {
@@ -1734,9 +1734,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/resources/AllocationProgress.tsx": {
-    "mtime": 1791017768.7675653,
-    "seen": 1791018120.5689185,
-    "ast_hash": "a95d9f3695f23f2c6a807f7818b01b97",
+    "mtime": 1791020629.770655,
+    "seen": 1791020723.808908,
+    "ast_hash": "431891aa2c2ba60cc07d02e53e2e22d7",
     "semantic_hash": ""
   },
   "frontend/src/components/resources/ResourceAllocationModal.tsx": {
@@ -1806,9 +1806,9 @@
     "semantic_hash": ""
   },
   "frontend/src/main.tsx": {
-    "mtime": 1791015999.720593,
-    "seen": 1791018120.5689185,
-    "ast_hash": "787e5a07efeb2bf6209d5937195f2f68",
+    "mtime": 1791019850.869566,
+    "seen": 1791020723.809449,
+    "ast_hash": "dc08f97b542b279db1215fac17bd525a",
     "semantic_hash": ""
   },
   "frontend/src/pages/LandingPage.tsx": {
@@ -1824,9 +1824,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/auth/LoginPage.tsx": {
-    "mtime": 1791017893.9939497,
-    "seen": 1791018120.5689185,
-    "ast_hash": "0050c57e782d07740cb60e8cd04727fe",
+    "mtime": 1791020430.8057394,
+    "seen": 1791020723.809449,
+    "ast_hash": "1ba774798149daccf0008df64d26472f",
     "semantic_hash": ""
   },
   "frontend/src/pages/common/PlaceholderPage.tsx": {
@@ -1914,21 +1914,21 @@
     "semantic_hash": ""
   },
   "frontend/src/store/authStore.ts": {
-    "mtime": 1791017643.2602623,
-    "seen": 1791018120.5689185,
-    "ast_hash": "32cc75a100a6c3d5c1c1ccb5c7f379e9",
+    "mtime": 1791019993.88477,
+    "seen": 1791020723.809449,
+    "ast_hash": "660ad79065a944aa36816cf22d2a51a5",
     "semantic_hash": ""
   },
   "frontend/src/store/themeStore.ts": {
-    "mtime": 1791017606.667464,
-    "seen": 1791018120.5689185,
-    "ast_hash": "5e956b4c86ab86aea3859d9262e04ba0",
+    "mtime": 1791020025.8331177,
+    "seen": 1791020723.809449,
+    "ast_hash": "432de0fc787be9d1208096b9260bf04b",
     "semantic_hash": ""
   },
   "frontend/src/theme/ThemeContext.tsx": {
-    "mtime": 1791018029.845049,
-    "seen": 1791018120.5689185,
-    "ast_hash": "1a90a96dd3fe8f251aeaac031f47b969",
+    "mtime": 1791020186.26047,
+    "seen": 1791020723.809449,
+    "ast_hash": "8a4d0c5f6d94b5a31dcd56dc76104a1a",
     "semantic_hash": ""
   },
   "frontend/src/theme/tokens.ts": {
@@ -2118,9 +2118,9 @@
     "semantic_hash": ""
   },
   "frontend/src/assets/helicopter-rescue.jpg": {
-    "mtime": 1791017409.8692048,
-    "seen": 1791018120.5704284,
-    "ast_hash": "dc75058cb4805f438ab5b0bd8f6528d2",
+    "mtime": 1791020373.3451743,
+    "seen": 1791020723.809449,
+    "ast_hash": "71ab64c35004d8ed9f0b705e93677f90",
     "semantic_hash": ""
   },
   "frontend/src/assets/hero-mountain-test.png": {

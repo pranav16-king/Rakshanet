@@ -29,13 +29,13 @@ export const Button: React.FC<ButtonProps> = ({
     primary:
       'bg-[#FFC400] dark:bg-[#FFD21F] text-[#1A1400] font-semibold hover:brightness-105 active:scale-[0.98] shadow-sm',
     secondary:
-      'bg-[#162036] text-[#EEF2F8] border border-[#26344F] hover:bg-[#1E2B48] active:scale-[0.98]',
+      'bg-white dark:bg-[#162036] text-[#16202D] dark:text-[#EEF2F8] border border-[#E6DCA8] dark:border-[#26344F] hover:bg-[#FFF5C2] dark:hover:bg-[#1E2B48] active:scale-[0.98]',
     danger:
       'bg-[#D92D20] dark:bg-[#FF5A4E] text-white font-semibold hover:brightness-110 active:scale-[0.98] shadow-sm',
     ghost:
       'bg-transparent text-[#566070] dark:text-[#9FADC2] hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.98]',
     outline:
-      'bg-transparent border border-white/30 text-white hover:bg-white/10 active:scale-[0.98]',
+      'bg-transparent border border-[#E6DCA8] dark:border-white/30 text-[#16202D] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 active:scale-[0.98]',
   };
 
   return (

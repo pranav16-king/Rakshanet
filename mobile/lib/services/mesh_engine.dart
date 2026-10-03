@@ -3,8 +3,10 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../database/app_database.dart';
 import '../models/message_envelope.dart';
 import '../models/chat_message.dart';
+import '../models/emergency_report.dart';
 import 'database_service.dart';
 import 'bluetooth_radio_service.dart';
 
@@ -147,7 +149,7 @@ class MeshEngine extends ChangeNotifier {
           type: p.messageType,
           payload: p.content,
           recipientTarget: p.recipientTarget,
-          metadata: p.location?.toJson(),
+          metadata: await _metadataFromMessage(p),
         );
         _outboxQueue.add(
           _OutboxItem(env, attachmentPath: p.attachment?.localPath),
@@ -221,6 +223,9 @@ class MeshEngine extends ChangeNotifier {
     );
 
     await _dbService.insertMessage(chatMessage.toDbMap());
+    if (envelope.type == 'SOS') {
+      await _persistIncomingSos(envelope);
+    }
 
     // 3. Record relay audit
     await _dbService.recordRelayAudit(
@@ -439,6 +444,14 @@ class MeshEngine extends ChangeNotifier {
       _statusUpdateController.add(
         existing.copyWith(status: status, hopCount: acknowledgement.hops),
       );
+      if (existing.messageType == 'SOS') {
+        await AppDatabase.instance.update(
+          'emergency_reports',
+          {'status': status.name.toUpperCase()},
+          where: 'id = ?',
+          whereArgs: [targetId],
+        );
+      }
       notifyListeners();
     }
 
@@ -465,6 +478,64 @@ class MeshEngine extends ChangeNotifier {
       metadata: {'ack_msg_id': received.uuid},
     );
     await _radioService.broadcastBytes(acknowledgement.toBytes());
+  }
+
+  Future<void> _persistIncomingSos(MessageEnvelope envelope) async {
+    final metadata = envelope.metadata ?? const <String, dynamic>{};
+    final latitude = _toDouble(metadata['latitude']);
+    final longitude = _toDouble(metadata['longitude']);
+    final peopleCount = _toInt(metadata['peopleCount']) ?? 1;
+    final report = EmergencyReport.create(
+      id: envelope.uuid,
+      category: metadata['category']?.toString() ?? 'Other',
+      peopleCount: peopleCount,
+      description: envelope.payload,
+      status: 'RECEIVED',
+      timestamp: envelope.timestamp,
+      latitude: latitude,
+      longitude: longitude,
+      location: latitude != null && longitude != null
+          ? 'Shared GPS location'
+          : 'No shared GPS coordinate',
+      severity: 'CRITICAL',
+    );
+    await AppDatabase.instance.saveEmergencyReport(report);
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '');
+  }
+
+  int? _toInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  Future<Map<String, dynamic>?> _metadataFromMessage(
+    ChatMessage message,
+  ) async {
+    final metadata = <String, dynamic>{
+      if (message.location != null) ...message.location!.toJson(),
+      if (message.category != null) 'category': message.category,
+      if (message.attachment != null) ...{
+        'attachment_name': message.attachment!.fileName,
+        'attachment_mime_type': message.attachment!.mimeType,
+        'attachment_bytes': message.attachment!.byteLength,
+      },
+    };
+    if (message.messageType == 'SOS') {
+      final reports = await AppDatabase.instance.query(
+        'emergency_reports',
+        where: 'id = ?',
+        whereArgs: [message.messageId],
+        limit: 1,
+      );
+      metadata['peopleCount'] = reports.isEmpty
+          ? 1
+          : (_toInt(reports.first['people_affected']) ?? 1);
+    }
+    return metadata.isEmpty ? null : metadata;
   }
 
   /// Used by the media receiver after its file is durably stored. The file is
@@ -596,7 +667,7 @@ class MeshEngine extends ChangeNotifier {
         type: p.messageType,
         payload: p.content,
         recipientTarget: p.recipientTarget,
-        metadata: p.location?.toJson(),
+        metadata: await _metadataFromMessage(p),
       );
       queueOutboxMessage(env, attachmentPath: p.attachment?.localPath);
     }

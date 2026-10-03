@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext } from 'react';
 import { light, dark, oled, brand, severity } from './tokens';
+import { useThemeStore } from '../store/themeStore';
+import type { ThemeMode } from '../types';
 
-export type ThemeMode = 'light' | 'dark' | 'oled';
+export type { ThemeMode };
 
 export interface ThemeTokens {
   bg: string;
@@ -31,7 +33,7 @@ export interface ThemeTokens {
   [key: string]: string;
 }
 
-interface ThemeContextType {
+export interface ThemeContextType {
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
   cycleTheme: () => void;
@@ -44,39 +46,12 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('signalrescue_theme') as ThemeMode;
-    if (saved === 'light' || saved === 'dark' || saved === 'oled') {
-      return saved;
-    }
-    // Command centers default to dark per design.md Section 8
-    return 'dark';
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove('light', 'dark', 'oled');
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else if (theme === 'oled') {
-      root.classList.add('dark', 'oled');
-    } else {
-      root.classList.add('light');
-    }
-    root.setAttribute('data-theme', theme);
-    localStorage.setItem('signalrescue_theme', theme);
-  }, [theme]);
-
-  const setTheme = (newTheme: ThemeMode) => {
-    setThemeState(newTheme);
-  };
+  const { theme, setTheme } = useThemeStore();
 
   const cycleTheme = () => {
-    setThemeState((prev) => {
-      if (prev === 'dark') return 'oled';
-      if (prev === 'oled') return 'light';
-      return 'dark';
-    });
+    if (theme === 'dark') setTheme('oled');
+    else if (theme === 'oled') setTheme('light');
+    else setTheme('dark');
   };
 
   const currentTokens = (theme === 'light' ? light : theme === 'oled' ? oled : dark) as unknown as ThemeTokens;
