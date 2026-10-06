@@ -522,9 +522,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/settings/settings_screen.dart": {
-    "mtime": 1791022959.2406778,
-    "seen": 1791023323.5250113,
-    "ast_hash": "6eb52952e367d0a10a83eab030397a8d",
+    "mtime": 1791300274.9000368,
+    "seen": 1791300395.1630156,
+    "ast_hash": "d9ac16cac2d327e33adab7be87f241b0",
     "semantic_hash": ""
   },
   "mobile/lib/screens/shell/main_shell.dart": {
@@ -576,9 +576,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/live_map_screen.dart": {
-    "mtime": 1791027142.7093437,
-    "seen": 1791027340.734735,
-    "ast_hash": "c3d68591a5645a9a45fd054829787ce2",
+    "mtime": 1791297542.2703278,
+    "seen": 1791300395.1630156,
+    "ast_hash": "724e550d3f8cae753dcbf6d23a3c2cc6",
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/missing_person_screen.dart": {
@@ -2487,6 +2487,18 @@
     "mtime": 1791296423.096455,
     "seen": 1791296459.5173836,
     "ast_hash": "e043393a6e7ae9eb33c70b89e18a5386",
+    "semantic_hash": ""
+  },
+  "mobile/lib/services/map/offline_map_service.dart": {
+    "mtime": 1791297353.2881372,
+    "seen": 1791300395.1630156,
+    "ast_hash": "9d15f2ec208b83c3c5a9a233a57d85b3",
+    "semantic_hash": ""
+  },
+  "mobile/test/offline_map_service_test.dart": {
+    "mtime": 1791300334.205179,
+    "seen": 1791300395.1630156,
+    "ast_hash": "db8f776e00ecfd19d1e1cd44e5ab0f52",
     "semantic_hash": ""
   }
 }

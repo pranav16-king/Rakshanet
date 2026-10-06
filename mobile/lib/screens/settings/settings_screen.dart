@@ -8,6 +8,7 @@ import '../../providers/device_status_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/app_bar_actions.dart';
+import '../../services/map/offline_map_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -26,7 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoSync = true;
 
   // Storage stats tracking
-  double _mapCacheMb = 12.4;
+  double _mapCacheMb = 0.0;
   double _meshLogKb = 320.0;
   bool _isCacheCleared = false;
 
@@ -34,6 +35,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadPreferences();
+    _loadCacheStats();
+  }
+
+  Future<void> _loadCacheStats() async {
+    try {
+      final stats = await OfflineMapService.instance.getCacheStats();
+      if (mounted) {
+        setState(() {
+          _mapCacheMb = stats['sizeMb'] as double? ?? 0.0;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadPreferences() async {
@@ -118,24 +131,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(AppTokens.radiusSm),
               ),
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
+              final freedMb = _mapCacheMb;
+              await OfflineMapService.instance.clearCache();
+              await _loadCacheStats();
               setState(() {
-                _mapCacheMb = 0.0;
-                _meshLogKb = 42.0; // Minimal essential index
+                _meshLogKb = 42.0;
                 _isCacheCleared = true;
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Offline cache cleared successfully (12.4 MB freed)'),
-                  backgroundColor: themeProvider.surface,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                    side: BorderSide(color: themeProvider.border),
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Offline cache cleared successfully (${freedMb.toStringAsFixed(1)} MB freed)'),
+                    backgroundColor: themeProvider.surface,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                      side: BorderSide(color: themeProvider.border),
+                    ),
                   ),
-                ),
-              );
+                );
+              }
             },
             child: const Text('Clear Now'),
           ),
