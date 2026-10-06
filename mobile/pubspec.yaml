@@ -48,6 +48,7 @@ dependencies:
   flutter_map_cancellable_tile_provider: ^3.0.1
   cryptography: ^2.9.0
   crypto: ^3.0.7
+  http: ^1.4.0
 
 dev_dependencies:
   flutter_test:

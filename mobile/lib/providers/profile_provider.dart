@@ -10,6 +10,13 @@ import '../services/user_auth_service.dart';
 class ProfileProvider extends ChangeNotifier {
   static const String _prefRegisteredKey = 'rakshanet_user_registered';
   static const String _prefUserIdKey = 'rakshanet_user_id';
+  static const String _prefUniqueImeiKey = 'rakshanet_unique_imei_id';
+  static const String _prefUserNameKey = 'rakshanet_user_name';
+  static const String _prefUserEmailKey = 'rakshanet_user_email';
+  static const String _prefUserPhoneKey = 'rakshanet_user_phone';
+  static const String _prefUserBloodKey = 'rakshanet_user_blood';
+  static const String _prefUserNotesKey = 'rakshanet_user_notes';
+  static const String _prefUserLangKey = 'rakshanet_user_lang';
 
   final ProfileRepository _profileRepo = ProfileRepository();
   UserProfile _profile = UserProfile.unregistered();
@@ -30,28 +37,88 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await DeviceIdentityService.instance.initialize();
       final prefs = await SharedPreferences.getInstance();
-      final hasRegisteredFlag = prefs.getBool(_prefRegisteredKey);
+      final hasRegisteredFlag =
+          (prefs.getBool(_prefRegisteredKey) ?? false) ||
+          (prefs.getBool('is_registered') ?? false);
 
-      // Check SQLite durable source of truth first via ProfileRepository
+      // 1. Check SQLite durable source of truth first
       final dbProfile =
-          await _profileRepo.getProfile() ??
-          await AppDatabase.instance.getUserProfile();
+          await AppDatabase.instance.getUserProfile() ??
+          await _profileRepo.getProfile();
 
-      if (dbProfile != null && dbProfile.isRegistered) {
+      bool isValidImeiSession(String id, String name) =>
+          name.trim().isNotEmpty &&
+          id.trim().isNotEmpty &&
+          id.trim() != 'unregistered';
+
+      if (dbProfile != null &&
+          dbProfile.isRegistered &&
+          isValidImeiSession(dbProfile.id, dbProfile.name)) {
         _profile = dbProfile;
         _isRegistered = true;
-      } else if (hasRegisteredFlag == true) {
-        if (dbProfile != null) _profile = dbProfile;
-        _isRegistered = true;
-      } else if (_isRegistered) {
-        // Keep current registered state
-      } else {
-        _profile = dbProfile ?? UserProfile.unregistered();
+        await _mirrorProfileToPrefs(prefs, dbProfile);
+        await DeviceIdentityService.instance.restoreSessionImeiId(
+          dbProfile.id,
+          name: dbProfile.name,
+        );
+      } else if (hasRegisteredFlag) {
+        // 2. Reconstruct from SharedPreferences session backup if SQLite was reset or in-memory
+        final savedId =
+            prefs.getString(_prefUniqueImeiKey)?.trim() ??
+            prefs.getString(_prefUserIdKey)?.trim() ??
+            prefs.getString('user_id')?.trim() ??
+            '';
+        final savedName =
+            prefs.getString(_prefUserNameKey)?.trim() ??
+            prefs.getString('user_name')?.trim() ??
+            '';
+
+        if (isValidImeiSession(savedId, savedName)) {
+          final now = DateTime.now().millisecondsSinceEpoch;
+          final restored = UserProfile(
+            id: savedId,
+            email: prefs.getString(_prefUserEmailKey) ?? '',
+            name: savedName,
+            deviceId: savedId,
+            language:
+                prefs.getString(_prefUserLangKey) ??
+                prefs.getString('user_language') ??
+                'English',
+            bloodGroup:
+                prefs.getString(_prefUserBloodKey) ??
+                prefs.getString('user_blood_group') ??
+                '',
+            emergencyContact:
+                prefs.getString(_prefUserPhoneKey) ??
+                prefs.getString('user_emergency_contact') ??
+                '',
+            medicalNotes:
+                prefs.getString(_prefUserNotesKey) ??
+                prefs.getString('user_medical_notes') ??
+                '',
+            isRegistered: true,
+            createdAt: now,
+            updatedAt: now,
+          );
+          _profile = restored;
+          _isRegistered = true;
+          await AppDatabase.instance.saveUserProfile(restored);
+          await DeviceIdentityService.instance.restoreSessionImeiId(
+            savedId,
+            name: savedName,
+          );
+        } else {
+          _profile = UserProfile.unregistered();
+          _isRegistered = false;
+        }
+      } else if (!_isRegistered) {
+        _profile = UserProfile.unregistered();
         _isRegistered = false;
       }
     } catch (e) {
-      debugPrint('[ProfileProvider] Error loading profile from SQLite: $e');
+      debugPrint('[ProfileProvider] Error loading profile session: $e');
       if (!_isRegistered) {
         _profile = UserProfile.unregistered();
         _isRegistered = false;
@@ -64,7 +131,8 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<void> registerUser({
     required String name,
-    required String phone,
+    String? uniqueId,
+    String phone = '',
     String? email,
     String? bloodGroup,
     String? medicalNotes,
@@ -75,34 +143,37 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     await DeviceIdentityService.instance.initialize();
-    final meshId = DeviceIdentityService.instance.deviceId;
     final now = DateTime.now().millisecondsSinceEpoch;
     final cleanEmail = email?.trim().toLowerCase() ?? '';
-    final uniqueId = cleanEmail.isNotEmpty ? cleanEmail : 'usr-$now';
+    final resolvedUniqueId =
+        (uniqueId != null && uniqueId.trim().isNotEmpty)
+            ? uniqueId.trim()
+            : (DeviceIdentityService.instance.consentedImeiId ??
+                DeviceIdentityService.instance.deviceId);
 
     final newProfile = UserProfile(
-      id: uniqueId,
+      id: resolvedUniqueId,
       email: cleanEmail,
       name: name.trim(),
-      deviceId: meshId,
-      language: preferredLanguage ?? 'en',
+      deviceId: resolvedUniqueId,
+      language: preferredLanguage ?? 'English',
       age: age,
       bloodGroup: bloodGroup ?? '',
-      emergencyContact: phone,
+      emergencyContact: phone.trim(),
       medicalNotes: medicalNotes ?? '',
       isRegistered: true,
-      peopleHelped: 0,
-      messagesRelayed: 0,
-      sosForwarded: 0,
-      missingFound: 0,
-      createdAt: now,
+      peopleHelped: _profile.peopleHelped,
+      messagesRelayed: _profile.messagesRelayed,
+      sosForwarded: _profile.sosForwarded,
+      missingFound: _profile.missingFound,
+      createdAt: _profile.isRegistered ? _profile.createdAt : now,
       updatedAt: now,
     );
 
     _profile = newProfile;
     _isRegistered = true;
 
-    // Save-Before-Send: Persist to SQLite via ProfileRepository & AppDatabase
+    // 1. Save-Before-Send: Persist to SQLite via ProfileRepository & AppDatabase
     try {
       await _profileRepo.saveProfile(newProfile);
       await AppDatabase.instance.saveUserProfile(newProfile);
@@ -110,17 +181,22 @@ class ProfileProvider extends ChangeNotifier {
       debugPrint('[ProfileProvider] Error saving user profile to SQLite: $e');
     }
 
+    // 2. Mirror full session state to SharedPreferences & UserAuthService
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_prefRegisteredKey, true);
-      await prefs.setString(_prefUserIdKey, newProfile.id);
-      await DeviceIdentityService.instance.updateDisplayName(newProfile.name);
-      // Mark offline login as available for future app launches
-      await UserAuthService.instance.markOfflineLoginAvailable(cleanEmail);
-      // Attempt background cloud sync when online
+      await _mirrorProfileToPrefs(prefs, newProfile);
+      await DeviceIdentityService.instance.restoreSessionImeiId(
+        resolvedUniqueId,
+        name: newProfile.name,
+      );
+      await UserAuthService.instance.markOfflineLoginAvailable(
+        resolvedUniqueId,
+        email: cleanEmail,
+        name: newProfile.name,
+      );
       UserAuthService.instance.syncNow();
     } catch (e) {
-      debugPrint('[ProfileProvider] Error saving to SharedPreferences: $e');
+      debugPrint('[ProfileProvider] Error saving session to SharedPreferences: $e');
     }
 
     _isLoading = false;
@@ -142,18 +218,46 @@ class ProfileProvider extends ChangeNotifier {
       bloodGroup: bloodGroup,
       emergencyContact: emergencyContact,
       medicalNotes: medicalNotes,
+      isRegistered: true,
       updatedAt: DateTime.now().millisecondsSinceEpoch,
     );
 
     _profile = updated;
+    _isRegistered = true;
     notifyListeners();
 
     try {
-      await _profileRepo.updateProfile(updated);
+      await _profileRepo.saveProfile(updated);
       await AppDatabase.instance.saveUserProfile(updated);
+      final prefs = await SharedPreferences.getInstance();
+      await _mirrorProfileToPrefs(prefs, updated);
     } catch (e) {
       debugPrint('[ProfileProvider] Error updating profile in SQLite: $e');
     }
+  }
+
+  Future<void> _mirrorProfileToPrefs(
+    SharedPreferences prefs,
+    UserProfile p,
+  ) async {
+    await prefs.setBool(_prefRegisteredKey, true);
+    await prefs.setBool('is_registered', true);
+    await prefs.setBool('has_seen_onboarding', true);
+    await prefs.setBool('rakshanet_logged_in', true);
+    await prefs.setString(_prefUserIdKey, p.id);
+    await prefs.setString(_prefUniqueImeiKey, p.id);
+    await prefs.setString('user_id', p.id);
+    await prefs.setString(_prefUserNameKey, p.name);
+    await prefs.setString('user_name', p.name);
+    await prefs.setString(_prefUserEmailKey, p.email);
+    await prefs.setString(_prefUserPhoneKey, p.emergencyContact);
+    await prefs.setString('user_emergency_contact', p.emergencyContact);
+    await prefs.setString(_prefUserBloodKey, p.bloodGroup);
+    await prefs.setString('user_blood_group', p.bloodGroup);
+    await prefs.setString(_prefUserNotesKey, p.medicalNotes);
+    await prefs.setString('user_medical_notes', p.medicalNotes);
+    await prefs.setString(_prefUserLangKey, p.language);
+    await prefs.setString('user_language', p.language);
   }
 
   Future<void> signOut() async {
@@ -168,6 +272,12 @@ class ProfileProvider extends ChangeNotifier {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefRegisteredKey, false);
+    await prefs.setBool('is_registered', false);
+    await prefs.setBool('rakshanet_logged_in', false);
+    await prefs.remove(_prefUniqueImeiKey);
+    await prefs.remove(_prefUserIdKey);
+    await prefs.remove(_prefUserNameKey);
+    await UserAuthService.instance.logout();
 
     _profile = UserProfile.unregistered();
     _isRegistered = false;

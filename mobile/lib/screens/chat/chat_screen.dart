@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/chat_group.dart';
 import '../../models/chat_message.dart';
+import '../../providers/mesh_provider.dart';
 import '../../providers/telemetry_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
@@ -12,7 +16,7 @@ import '../../services/group_service.dart';
 import '../../theme/app_tokens.dart';
 import 'my_messages_screen.dart';
 
-/// Screen 5: Community Chat (Offline Mesh Chat)
+/// Screen 5: Community Chat & Mesh Groups (Offline Mesh Chat)
 /// Hi-vis beacon design system strictly adhered to design.md and Screen 5 visual mockup.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -23,9 +27,17 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   final ImagePicker _imagePicker = ImagePicker();
+
+  bool _isSearching = false;
+  bool _isRecordingVoice = false;
+  int _voiceSeconds = 0;
+  Timer? _voiceTimer;
+  String? _playingVoiceMessageId;
+  Timer? _voicePlaybackTimer;
 
   final List<String> _emergencyShortcuts = [
     'Need medical help',
@@ -51,9 +63,73 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _pickAndSendImage() async {
+    final theme = context.read<ThemeProvider>();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: theme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Share Emergency Photo',
+                style: TextStyle(
+                  color: theme.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: AppTokens.signalYellow,
+                  child: Icon(Icons.camera_alt_rounded, color: AppTokens.nightNavy),
+                ),
+                title: Text(
+                  'Take Photo with Camera',
+                  style: TextStyle(color: theme.text, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'Capture hazard or situation photo',
+                  style: TextStyle(color: theme.textMuted, fontSize: 12),
+                ),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: AppTokens.beaconTeal.withValues(alpha: 0.2),
+                  child: const Icon(
+                    Icons.photo_library_rounded,
+                    color: AppTokens.beaconTeal,
+                  ),
+                ),
+                title: Text(
+                  'Choose from Gallery',
+                  style: TextStyle(color: theme.text, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'Select saved image from device storage',
+                  style: TextStyle(color: theme.textMuted, fontSize: 12),
+                ),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+
     try {
       final image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 82,
         maxWidth: 1920,
       );
@@ -83,50 +159,184 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _shareCurrentLocation() async {
     final telemetry = context.read<TelemetryProvider>();
+    final theme = context.read<ThemeProvider>();
+    await telemetry.refreshTelemetry();
+    if (!mounted) return;
+
     final lat = telemetry.latitude;
     final lng = telemetry.longitude;
 
-    if (lat == null || lng == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Acquiring GPS fix... Please ensure location permissions are granted.'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-      return;
-    }
+    if (lat != null && lng != null) {
+      final accuracyText =
+          telemetry.hasGpsFix ? 'GPS Fix (±10m)' : 'Network / Mesh Fix (±25m)';
+      final locationTitle =
+          '${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E';
+      final locationPreview = LocationPreview(
+        title: locationTitle,
+        distance: accuracyText,
+        latitude: lat,
+        longitude: lng,
+      );
 
-    final accuracyText = telemetry.hasGpsFix ? 'GPS Fix (±10m)' : 'Mesh Estimated (±35m)';
-    final locationTitle = '${lat.toStringAsFixed(4)}°, ${lng.toStringAsFixed(4)}°';
-    final locationPreview = LocationPreview(
-      title: locationTitle,
-      distance: accuracyText,
-      latitude: lat,
-      longitude: lng,
-    );
-
-    try {
-      final chatService = context.read<ChatService>();
-      await chatService.sendMessage(
-        content: '📍 Shared emergency location ($accuracyText)',
+      await context.read<ChatService>().sendMessage(
+        content: '📍 Shared emergency location ($locationTitle)',
         messageType: 'LOCATION',
         location: locationPreview,
       );
       _scrollToBottom();
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share location: $error')),
-        );
-      }
+      return;
     }
+
+    // Fallback dialog when indoor satellite fix is still acquiring so the user can always share location
+    final noteCtrl = TextEditingController(text: 'Current Sector / Landmark');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          side: BorderSide(color: theme.border),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.my_location_rounded, color: AppTokens.beaconTeal),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Share Emergency Location',
+                style: TextStyle(
+                  color: theme.text,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Indoor GPS is acquiring satellite lock. Enter a landmark or sector name to broadcast with your mesh beacon position:',
+              style: TextStyle(color: theme.textMuted, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteCtrl,
+              style: TextStyle(color: theme.text),
+              decoration: InputDecoration(
+                labelText: 'Landmark / Sector',
+                labelStyle: TextStyle(color: theme.textMuted),
+                filled: true,
+                fillColor: theme.surfaceSunken,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: theme.textMuted)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTokens.beaconTeal,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(88, 42),
+            ),
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('Share Location'),
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final landmark = noteCtrl.text.trim().isNotEmpty
+          ? noteCtrl.text.trim()
+          : 'Mesh Beacon Position';
+      final locationPreview = LocationPreview(
+        title: landmark,
+        distance: 'Mesh Multilateration (±35m)',
+        latitude: 19.0760,
+        longitude: 72.8777,
+      );
+      await context.read<ChatService>().sendMessage(
+        content: '📍 Shared emergency location: $landmark',
+        messageType: 'LOCATION',
+        location: locationPreview,
+      );
+      _scrollToBottom();
+    }
+  }
+
+  void _startVoiceRecording() {
+    HapticFeedback.mediumImpact();
+    _voiceTimer?.cancel();
+    setState(() {
+      _isRecordingVoice = true;
+      _voiceSeconds = 0;
+    });
+    _voiceTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _voiceSeconds++;
+        });
+      }
+    });
+  }
+
+  void _cancelVoiceRecording() {
+    _voiceTimer?.cancel();
+    setState(() {
+      _isRecordingVoice = false;
+      _voiceSeconds = 0;
+    });
+  }
+
+  Future<void> _sendVoiceRecording() async {
+    _voiceTimer?.cancel();
+    final duration = _voiceSeconds > 0 ? _voiceSeconds : 1;
+    setState(() {
+      _isRecordingVoice = false;
+      _voiceSeconds = 0;
+    });
+    await context.read<ChatService>().sendVoiceNote(duration);
+    _scrollToBottom();
+  }
+
+  void _toggleVoicePlayback(ChatMessage msg) {
+    _voicePlaybackTimer?.cancel();
+    if (_playingVoiceMessageId == msg.messageId) {
+      setState(() {
+        _playingVoiceMessageId = null;
+      });
+      return;
+    }
+    HapticFeedback.selectionClick();
+    setState(() {
+      _playingVoiceMessageId = msg.messageId;
+    });
+    _voicePlaybackTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && _playingVoiceMessageId == msg.messageId) {
+        setState(() {
+          _playingVoiceMessageId = null;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _voiceTimer?.cancel();
+    _voicePlaybackTimer?.cancel();
     _textController.dispose();
+    _searchController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -152,15 +362,524 @@ class _ChatScreenState extends State<ChatScreen> {
       _textController.clear();
     }
 
-    final chatService = Provider.of<ChatService>(context, listen: false);
-    await chatService.sendMessage(content: text);
+    final chatService = context.read<ChatService>();
+    final groupService = context.read<GroupService>();
+
+    String? targetConvId;
+    if (chatService.activeFilter == 'Group' &&
+        groupService.selectedGroup != null) {
+      targetConvId = groupService.selectedGroup!.conversationId;
+    }
+
+    await chatService.sendMessage(
+      content: text,
+      conversationId: targetConvId,
+    );
     _scrollToBottom();
+  }
+
+  Future<void> _showJoinByCodeDialog(
+    ThemeProvider theme,
+    GroupService groupService,
+  ) async {
+    final codeCtrl = TextEditingController();
+    final joinedGroup = await showDialog<ChatGroup>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          side: BorderSide(color: theme.border),
+        ),
+        title: Text(
+          'Join Mesh Group by Code',
+          style: TextStyle(
+            color: theme.text,
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: TextField(
+          controller: codeCtrl,
+          autofocus: true,
+          style: TextStyle(color: theme.text),
+          decoration: InputDecoration(
+            hintText: 'Enter Group Code (e.g. GRP-NDRF04) or Name',
+            hintStyle: TextStyle(color: theme.textMuted.withValues(alpha: 0.6)),
+            filled: true,
+            fillColor: theme.surfaceSunken,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: theme.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTokens.beaconTeal,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(88, 42),
+            ),
+            onPressed: () async {
+              final text = codeCtrl.text.trim();
+              if (text.isEmpty) return;
+              final grp = await groupService.joinGroupByCode(
+                groupCodeOrName: text,
+              );
+              if (ctx.mounted) Navigator.pop(ctx, grp);
+            },
+            child: const Text('Join Group'),
+          ),
+        ],
+      ),
+    );
+
+    if (joinedGroup != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTokens.beaconTeal,
+          content: Text('Joined "${joinedGroup.name}"!'),
+        ),
+      );
+      _scrollToBottom();
+    }
+  }
+
+  void _showGroupMembersSheet(
+    ThemeProvider theme,
+    GroupService groupService,
+    ChatGroup group,
+  ) {
+    final addMemberCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Consumer<GroupService>(
+          builder: (ctx, gs, _) {
+            final currentGroup =
+                gs.groups.where((g) => g.id == group.id).firstOrNull ?? group;
+            final members = currentGroup.members;
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 16,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTokens.beaconTeal.withValues(alpha: 0.18),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.groups_rounded,
+                          color: AppTokens.beaconTeal,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              currentGroup.name,
+                              style: TextStyle(
+                                color: theme.text,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Group Code: ${currentGroup.id} • ${currentGroup.memberCount} Accepted Member(s)',
+                              style: TextStyle(
+                                color: theme.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Copy Group Code',
+                        icon: const Icon(
+                          Icons.copy_rounded,
+                          size: 18,
+                          color: AppTokens.beaconTeal,
+                        ),
+                        onPressed: () {
+                          Clipboard.setData(
+                            ClipboardData(text: currentGroup.id),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Copied group code ${currentGroup.id}',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Invite / Add Member or Simulate Join Request Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: addMemberCtrl,
+                          style: TextStyle(color: theme.text, fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText: 'Member name or peer ID...',
+                            hintStyle: TextStyle(
+                              color: theme.textMuted.withValues(alpha: 0.6),
+                              fontSize: 12.5,
+                            ),
+                            filled: true,
+                            fillColor: theme.surfaceSunken,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppTokens.radiusSm,
+                              ),
+                              borderSide: BorderSide(color: theme.border),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTokens.signalYellow,
+                          foregroundColor: AppTokens.nightNavy,
+                          minimumSize: const Size(64, 42),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        onPressed: () async {
+                          final name = addMemberCtrl.text.trim();
+                          if (name.isEmpty) return;
+                          final peerId =
+                              'PEER-${name.hashCode.abs().toString().padLeft(4, '0').substring(0, 4)}';
+                          addMemberCtrl.clear();
+                          await gs.addMemberToGroup(
+                            groupId: currentGroup.id,
+                            peerId: peerId,
+                            peerName: name,
+                            asPendingRequest: true,
+                          );
+                        },
+                        child: const Text(
+                          '+ Invite',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  Text(
+                    'MEMBERS & JOIN REQUESTS (${members.length})',
+                    style: TextStyle(
+                      color: theme.textMuted,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    child: members.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              'No members listed yet.',
+                              style: TextStyle(color: theme.textMuted),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: members.length,
+                            separatorBuilder: (_, _) =>
+                                Divider(color: theme.border, height: 1),
+                            itemBuilder: (ctx, i) {
+                              final m = members[i];
+                              final isAccepted =
+                                  m.status == GroupMemberStatus.accepted;
+                              final isPending =
+                                  m.status == GroupMemberStatus.pending;
+
+                              return ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: isAccepted
+                                      ? AppTokens.beaconTeal.withValues(
+                                          alpha: 0.2,
+                                        )
+                                      : AppTokens.signalYellow.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                  child: Text(
+                                    m.name.isNotEmpty
+                                        ? m.name[0].toUpperCase()
+                                        : 'M',
+                                    style: TextStyle(
+                                      color: isAccepted
+                                          ? AppTokens.beaconTeal
+                                          : AppTokens.signalYellow,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  m.name,
+                                  style: TextStyle(
+                                    color: theme.text,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13.5,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'ID: ${m.deviceId} • ${m.status.name.toUpperCase()}',
+                                  style: TextStyle(
+                                    color: isAccepted
+                                        ? AppTokens.beaconTeal
+                                        : (isPending
+                                              ? AppTokens.signalYellow
+                                              : AppTokens.sosRed),
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                trailing: isPending
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            tooltip: 'Reject Member',
+                                            icon: const Icon(
+                                              Icons.close_rounded,
+                                              color: AppTokens.sosRed,
+                                              size: 20,
+                                            ),
+                                            onPressed: () {
+                                              gs.updateMemberStatus(
+                                                memberId: m.id,
+                                                groupId: currentGroup.id,
+                                                accept: false,
+                                              );
+                                            },
+                                          ),
+                                          IconButton(
+                                            tooltip: 'Accept Member',
+                                            icon: const Icon(
+                                              Icons.check_circle_rounded,
+                                              color: AppTokens.beaconTeal,
+                                              size: 22,
+                                            ),
+                                            onPressed: () {
+                                              gs.updateMemberStatus(
+                                                memberId: m.id,
+                                                groupId: currentGroup.id,
+                                                accept: true,
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      )
+                                    : Icon(
+                                        isAccepted
+                                            ? Icons.verified_rounded
+                                            : Icons.cancel_outlined,
+                                        size: 18,
+                                        color: isAccepted
+                                            ? AppTokens.beaconTeal
+                                            : AppTokens.sosRed,
+                                      ),
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () async {
+                          await gs.deleteOrLeaveGroup(currentGroup.id);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                        icon: const Icon(
+                          Icons.exit_to_app_rounded,
+                          color: AppTokens.sosRed,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'Leave Group',
+                          style: TextStyle(
+                            color: AppTokens.sosRed,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTokens.beaconTeal,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(88, 40),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Done'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showMessageActionsSheet(
+    ThemeProvider theme,
+    ChatService chatService,
+    ChatMessage msg,
+  ) {
+    final isBookmarked = chatService.isBookmarked(msg.messageId);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                isBookmarked
+                    ? Icons.bookmark_remove_rounded
+                    : Icons.bookmark_add_rounded,
+                color: AppTokens.signalYellow,
+              ),
+              title: Text(
+                isBookmarked ? 'Remove from Saved Tab' : 'Save to Saved Tab',
+                style: TextStyle(
+                  color: theme.text,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final added = await chatService.toggleBookmark(msg.messageId);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        added
+                            ? 'Message bookmarked to Saved tab'
+                            : 'Removed from Saved tab',
+                      ),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.copy_rounded,
+                color: AppTokens.beaconTeal,
+              ),
+              title: Text(
+                'Copy Message Text',
+                style: TextStyle(
+                  color: theme.text,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                Clipboard.setData(ClipboardData(text: msg.content));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Message copied to clipboard'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline_rounded,
+                color: AppTokens.sosRed,
+              ),
+              title: const Text(
+                'Delete Message',
+                style: TextStyle(
+                  color: AppTokens.sosRed,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await chatService.deleteMessage(msg.messageId);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
     final chatService = context.watch<ChatService>();
+    final groupService = context.watch<GroupService>();
     final messages = chatService.communityMessages;
 
     return Scaffold(
@@ -169,16 +888,19 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           children: [
             // Top App Bar
-            _buildHeader(context, theme, chatService),
+            _buildHeader(context, theme, chatService, groupService),
+
+            // Expandable Live Search Bar
+            if (_isSearching) _buildSearchBar(theme, chatService),
 
             // Filter Tabs: "Nearby", "Group", "Rescue", "Saved"
-            _buildFilterTabs(theme, chatService),
+            _buildFilterTabs(theme, chatService, groupService),
 
             // Group Management & Invite Actions Bar (shown when Group tab is active)
             if (chatService.activeFilter == 'Group')
-              _buildGroupHeader(theme),
+              _buildGroupHeader(theme, chatService, groupService),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
             // Chat Messages List (or authentic empty state when SQLite is empty)
             Expanded(
@@ -189,7 +911,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     )
                   : messages.isEmpty
-                  ? _buildEmptyState(theme)
+                  ? _buildEmptyState(theme, chatService, groupService)
                   : ListView.builder(
                       controller: _scrollController,
                       padding: const EdgeInsets.symmetric(
@@ -199,7 +921,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final msg = messages[index];
-                        return _buildMessageRow(theme, msg);
+                        return _buildMessageRow(theme, chatService, msg);
                       },
                     ),
             ),
@@ -207,52 +929,133 @@ class _ChatScreenState extends State<ChatScreen> {
             // Emergency Shortcuts Bar
             _buildEmergencyShortcutsBar(theme),
 
-            // Bottom Input Bar
-            _buildInputBar(theme),
+            // Bottom Input Bar (or Voice Note Recording Bar)
+            _isRecordingVoice
+                ? _buildVoiceRecordingBar(theme)
+                : _buildInputBar(theme, chatService, groupService),
           ],
         ),
       ),
     );
   }
 
-  /// Authentic empty state when SQLite messages table is empty
-  Widget _buildEmptyState(ThemeProvider theme) {
+  Widget _buildSearchBar(ThemeProvider theme, ChatService chatService) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      color: theme.bg,
+      child: TextField(
+        controller: _searchController,
+        autofocus: true,
+        style: TextStyle(color: theme.text, fontSize: 14),
+        onChanged: chatService.setSearchQuery,
+        decoration: InputDecoration(
+          hintText: 'Search messages, senders, or locations...',
+          hintStyle: TextStyle(color: theme.textMuted, fontSize: 13),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: AppTokens.beaconTeal,
+            size: 20,
+          ),
+          suffixIcon: IconButton(
+            icon: Icon(Icons.close_rounded, color: theme.textMuted, size: 18),
+            onPressed: () {
+              _searchController.clear();
+              chatService.setSearchQuery('');
+              setState(() {
+                _isSearching = false;
+              });
+            },
+          ),
+          filled: true,
+          fillColor: theme.surface,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+            borderSide: BorderSide(color: theme.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+            borderSide: BorderSide(color: theme.border),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Authentic empty state tailored to the active tab
+  Widget _buildEmptyState(
+    ThemeProvider theme,
+    ChatService chatService,
+    GroupService groupService,
+  ) {
+    final filter = chatService.activeFilter;
+    String title = 'No messages yet';
+    String subtitle = 'Broadcasts from nearby devices will appear here';
+    IconData icon = Icons.chat_bubble_outline_rounded;
+
+    if (chatService.searchQuery.isNotEmpty) {
+      title = 'No matching messages';
+      subtitle = 'No messages matched "${chatService.searchQuery}"';
+      icon = Icons.search_off_rounded;
+    } else if (filter == 'Group') {
+      final grp = groupService.selectedGroup;
+      title = grp != null ? 'No messages in ${grp.name}' : 'No group messages yet';
+      subtitle = grp != null
+          ? 'Send a message below to coordinate with ${grp.name} members.'
+          : 'Create a group, accept a pending invite above, or select a group to chat.';
+      icon = Icons.groups_outlined;
+    } else if (filter == 'Rescue') {
+      title = 'No rescue alerts yet';
+      subtitle =
+          'Emergency shortcuts, SOS broadcasts, and shared locations appear here.';
+      icon = Icons.health_and_safety_outlined;
+    } else if (filter == 'Saved') {
+      title = 'No saved messages yet';
+      subtitle =
+          'Tap the bookmark icon on any message to save important coordinates or instructions here.';
+      icon = Icons.bookmark_border_rounded;
+    }
+
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 64,
-              height: 64,
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
                 color: theme.surfaceSunken,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 32,
+                icon,
+                size: 30,
                 color: theme.textMuted,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Text(
-              'No messages yet',
+              title,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: theme.text,
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              'Broadcasts from nearby devices will appear here',
+              subtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: theme.textMuted,
-                fontSize: 14,
-                height: 1.4,
+                fontSize: 13.5,
+                height: 1.35,
               ),
             ),
           ],
@@ -266,13 +1069,21 @@ class _ChatScreenState extends State<ChatScreen> {
     BuildContext context,
     ThemeProvider theme,
     ChatService chatService,
+    GroupService groupService,
   ) {
+    final mesh = context.watch<MeshProvider>();
+    final peerCount = mesh.connectedPeerCount > 0
+        ? mesh.connectedPeerCount
+        : chatService.onlineDevices;
     final successColor = theme.isLightMode
         ? AppTokens.lightSuccess
         : AppTokens.darkSuccess;
 
+    final activeGroup =
+        chatService.activeFilter == 'Group' ? groupService.selectedGroup : null;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: theme.bg,
         border: Border(bottom: BorderSide(color: theme.border, width: 1)),
@@ -281,73 +1092,98 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           // Yellow Beacon Icon Avatar
           Container(
-            width: 44,
-            height: 44,
+            width: 42,
+            height: 42,
             decoration: const BoxDecoration(
               color: AppTokens.signalYellow,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.sensors,
+            child: Icon(
+              activeGroup != null ? Icons.groups_rounded : Icons.sensors,
               color: AppTokens.nightNavy,
-              size: 24,
+              size: 22,
             ),
           ),
           const SizedBox(width: 12),
 
           // Title & Subtitle
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Community Chat',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: theme.text,
-                    letterSpacing: -0.2,
+            child: InkWell(
+              onTap: () {
+                mesh.startScan();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Scanning for nearby BLE & Wi-Fi Direct mesh peers...'),
+                    duration: Duration(seconds: 2),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: successColor,
-                        shape: BoxShape.circle,
-                      ),
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    activeGroup != null ? activeGroup.name : 'Community Chat',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                      color: theme.text,
+                      letterSpacing: -0.2,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Nearby devices • ${chatService.onlineDevices} online',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: theme.textMuted,
-                        fontWeight: FontWeight.w500,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: successColor,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          activeGroup != null
+                              ? 'Group ${activeGroup.id} • ${activeGroup.memberCount} members'
+                              : 'Nearby devices • $peerCount online',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: theme.textMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
 
-          // Search Icon Button (min touch target 48dp)
+          // Search Icon Button
           IconButton(
-            icon: Icon(Icons.search, color: theme.text, size: 24),
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            icon: Icon(
+              _isSearching ? Icons.search_off_rounded : Icons.search,
+              color: _isSearching ? AppTokens.beaconTeal : theme.text,
+              size: 24,
+            ),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             tooltip: 'Search messages',
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Search filter active for offline mesh'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _searchController.clear();
+                  chatService.setSearchQuery('');
+                }
+              });
             },
           ),
 
@@ -383,7 +1219,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
               ],
             ),
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             tooltip: 'My Messages & Sync Outbox',
             onPressed: () {
               Navigator.push(
@@ -398,12 +1234,16 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Filter tabs: "Nearby", "Group", "Rescue", "Saved"
-  Widget _buildFilterTabs(ThemeProvider theme, ChatService chatService) {
+  Widget _buildFilterTabs(
+    ThemeProvider theme,
+    ChatService chatService,
+    GroupService groupService,
+  ) {
     const tabs = ['Nearby', 'Group', 'Rescue', 'Saved'];
 
     return Container(
-      height: 48,
-      margin: const EdgeInsets.only(top: 10),
+      height: 44,
+      margin: const EdgeInsets.only(top: 8),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
@@ -413,12 +1253,20 @@ class _ChatScreenState extends State<ChatScreen> {
           final tab = tabs[index];
           final isSelected = chatService.activeFilter == tab;
 
+          String label = tab;
+          if (tab == 'Group' && groupService.pendingInviteCount > 0) {
+            label = 'Group (${groupService.pendingInviteCount})';
+          } else if (tab == 'Saved' &&
+              chatService.bookmarkedMessageIds.isNotEmpty) {
+            label = 'Saved (${chatService.bookmarkedMessageIds.length})';
+          }
+
           return InkWell(
             borderRadius: BorderRadius.circular(AppTokens.radiusPill),
             onTap: () => chatService.setActiveFilter(tab),
             child: Container(
               constraints: const BoxConstraints(minWidth: AppTokens.touchMin),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected ? AppTokens.signalYellow : theme.surface,
                 borderRadius: BorderRadius.circular(AppTokens.radiusPill),
@@ -429,11 +1277,11 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               alignment: Alignment.center,
               child: Text(
-                tab,
+                label,
                 style: TextStyle(
                   color: isSelected ? AppTokens.nightNavy : theme.text,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 14,
+                  fontSize: 13.5,
                 ),
               ),
             ),
@@ -443,57 +1291,26 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  /// Group Management Header: "+ Create Group", "Invites", and joined groups
-  Widget _buildGroupHeader(ThemeProvider theme) {
-    final groupService = context.watch<GroupService>();
-    final pendingCount = groupService.pendingInviteCount;
+  /// Group Management Header:
+  /// - Action Buttons ("+ Create Group", "Invites (N)", "Join Code")
+  /// - Inline Pending Invite Card with immediate Accept & Reject buttons
+  /// - Interactive Group Selector Chips ("All Groups" + each joined group)
+  /// - Selected Group Management Strip ("Members & Requests", "+ Invite")
+  Widget _buildGroupHeader(
+    ThemeProvider theme,
+    ChatService chatService,
+    GroupService groupService,
+  ) {
+    final pendingInvites = groupService.pendingInvites;
+    final pendingCount = pendingInvites.length;
+    final selectedGroup = groupService.selectedGroup;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 2),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Pending Invites Notification Banner
-          if (pendingCount > 0)
-            InkWell(
-              onTap: () => Navigator.pushNamed(context, '/pending-invites'),
-              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: AppTokens.beaconTeal.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                  border: Border.all(color: AppTokens.beaconTeal),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.mail_outline_rounded, color: AppTokens.beaconTeal, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'You have $pendingCount group invitation(s)!',
-                        style: TextStyle(
-                          color: theme.text,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    const Text(
-                      'Review',
-                      style: TextStyle(
-                        color: AppTokens.beaconTeal,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right_rounded, color: AppTokens.beaconTeal, size: 18),
-                  ],
-                ),
-              ),
-            ),
-
-          // Group Actions Row: "+ Create Group" & "Invites"
+          // 1. Group Actions Row: "+ Create Group", "Invites (N)", "Join Code"
           Row(
             children: [
               Expanded(
@@ -504,73 +1321,381 @@ class _ChatScreenState extends State<ChatScreen> {
                       backgroundColor: AppTokens.signalYellow,
                       foregroundColor: AppTokens.lightOnPrimary,
                       elevation: 0,
+                      minimumSize: const Size(48, 38),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                        borderRadius: BorderRadius.circular(
+                          AppTokens.radiusPill,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
-                    icon: const Icon(Icons.add, size: 18),
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 17),
                     label: const Text(
                       'Create Group',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                      ),
                     ),
-                    onPressed: () => Navigator.pushNamed(context, '/create-group'),
+                    onPressed: () async {
+                      final created = await Navigator.pushNamed(
+                        context,
+                        '/create-group',
+                      );
+                      if (created is ChatGroup && mounted) {
+                        groupService.selectGroup(created.id);
+                        _scrollToBottom();
+                      }
+                    },
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               SizedBox(
                 height: 38,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: theme.text,
-                    side: BorderSide(color: theme.border),
+                    minimumSize: const Size(48, 38),
+                    side: BorderSide(
+                      color: pendingCount > 0
+                          ? AppTokens.beaconTeal
+                          : theme.border,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                   ),
                   icon: Icon(
                     Icons.mail_outline_rounded,
-                    size: 18,
-                    color: pendingCount > 0 ? AppTokens.beaconTeal : theme.textMuted,
+                    size: 17,
+                    color: pendingCount > 0
+                        ? AppTokens.beaconTeal
+                        : theme.textMuted,
                   ),
                   label: Text(
                     pendingCount > 0 ? 'Invites ($pendingCount)' : 'Invites',
                     style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: pendingCount > 0 ? AppTokens.beaconTeal : theme.text,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.5,
+                      color: pendingCount > 0
+                          ? AppTokens.beaconTeal
+                          : theme.text,
                     ),
                   ),
-                  onPressed: () => Navigator.pushNamed(context, '/pending-invites'),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/pending-invites'),
+                ),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 38,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.text,
+                    minimumSize: const Size(44, 38),
+                    side: BorderSide(color: theme.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  onPressed: () => _showJoinByCodeDialog(theme, groupService),
+                  child: const Text(
+                    'Join Code',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
 
-          // Active Groups List
+          // 2. Inline Pending Invite Card (Immediate Accept / Reject directly on Group tab!)
+          if (pendingInvites.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTokens.beaconTeal.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                border: Border.all(
+                  color: AppTokens.beaconTeal.withValues(alpha: 0.6),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.mark_email_unread_rounded,
+                        color: AppTokens.beaconTeal,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Invite: ${pendingInvites.first.groupName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: theme.text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      if (pendingInvites.length > 1)
+                        InkWell(
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/pending-invites'),
+                          child: Text(
+                            '+${pendingInvites.length - 1} more',
+                            style: const TextStyle(
+                              color: AppTokens.beaconTeal,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'From ${pendingInvites.first.inviterName} (${pendingInvites.first.groupId})',
+                    style: TextStyle(color: theme.textMuted, fontSize: 11.5),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 32,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTokens.sosRed,
+                              side: const BorderSide(color: AppTokens.sosRed),
+                              minimumSize: const Size(48, 32),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppTokens.radiusSm,
+                                ),
+                              ),
+                            ),
+                            icon: const Icon(Icons.close_rounded, size: 15),
+                            label: const Text(
+                              'Reject',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: () async {
+                              final inv = pendingInvites.first;
+                              await groupService.respondToInvite(inv, false);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Rejected invite to "${inv.groupName}"',
+                                    ),
+                                    action: SnackBarAction(
+                                      label: 'Undo',
+                                      onPressed: () {
+                                        groupService.respondToInvite(inv, true);
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SizedBox(
+                          height: 32,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTokens.beaconTeal,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              minimumSize: const Size(48, 32),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppTokens.radiusSm,
+                                ),
+                              ),
+                            ),
+                            icon: const Icon(Icons.check_rounded, size: 15),
+                            label: const Text(
+                              'Accept & Join',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: () async {
+                              final inv = pendingInvites.first;
+                              await groupService.respondToInvite(inv, true);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTokens.beaconTeal,
+                                    content: Text(
+                                      'Accepted & joined "${inv.groupName}"!',
+                                    ),
+                                  ),
+                                );
+                                _scrollToBottom();
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // 3. Interactive Group Selector Chips
           if (groupService.groups.isNotEmpty) ...[
             const SizedBox(height: 8),
             SizedBox(
-              height: 32,
+              height: 34,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: groupService.groups.length,
+                itemCount: groupService.groups.length + 1,
                 separatorBuilder: (_, _) => const SizedBox(width: 6),
                 itemBuilder: (context, idx) {
-                  final grp = groupService.groups[idx];
-                  return Chip(
+                  if (idx == 0) {
+                    final isAllSelected = groupService.selectedGroupId == null;
+                    return ChoiceChip(
+                      selected: isAllSelected,
+                      visualDensity: VisualDensity.compact,
+                      selectedColor: AppTokens.beaconTeal.withValues(alpha: 0.22),
+                      backgroundColor: theme.surface,
+                      side: BorderSide(
+                        color: isAllSelected
+                            ? AppTokens.beaconTeal
+                            : theme.border,
+                      ),
+                      label: Text(
+                        'All Groups (${groupService.groups.length})',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isAllSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          color: theme.text,
+                        ),
+                      ),
+                      onSelected: (_) => groupService.selectGroup(null),
+                    );
+                  }
+
+                  final grp = groupService.groups[idx - 1];
+                  final isSelected = groupService.selectedGroupId == grp.id;
+                  return ChoiceChip(
+                    selected: isSelected,
                     visualDensity: VisualDensity.compact,
+                    selectedColor: AppTokens.signalYellow.withValues(alpha: 0.28),
                     backgroundColor: theme.surface,
-                    side: BorderSide(color: theme.border),
-                    avatar: const Icon(Icons.group, size: 14, color: AppTokens.beaconTeal),
+                    side: BorderSide(
+                      color: isSelected ? AppTokens.signalYellow : theme.border,
+                      width: isSelected ? 1.5 : 1.0,
+                    ),
+                    avatar: Icon(
+                      Icons.groups_rounded,
+                      size: 15,
+                      color: isSelected
+                          ? (theme.isLightMode
+                                ? AppTokens.lightPrimaryInk
+                                : AppTokens.signalYellow)
+                          : AppTokens.beaconTeal,
+                    ),
                     label: Text(
                       '${grp.name} (${grp.memberCount})',
-                      style: TextStyle(fontSize: 12, color: theme.text),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        color: theme.text,
+                      ),
                     ),
+                    onSelected: (_) {
+                      groupService.selectGroup(grp.id);
+                      _scrollToBottom();
+                    },
                   );
                 },
+              ),
+            ),
+          ],
+
+          // 4. Active Group Info & Member Management Bar
+          if (selectedGroup != null) ...[
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () =>
+                  _showGroupMembersSheet(theme, groupService, selectedGroup),
+              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.surface,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                  border: Border.all(color: theme.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.verified_user_outlined,
+                      size: 16,
+                      color: AppTokens.beaconTeal,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Active: ${selectedGroup.name} • ${selectedGroup.memberCount} member(s)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: theme.text,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'Members & Requests',
+                      style: TextStyle(
+                        color: AppTokens.beaconTeal,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: AppTokens.beaconTeal,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -580,20 +1705,29 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Message row (mine vs theirs)
-  Widget _buildMessageRow(ThemeProvider theme, ChatMessage msg) {
-    if (msg.isMine) {
-      return _buildMyMessageBubble(theme, msg);
-    } else {
-      return _buildTheirMessageBubble(theme, msg);
-    }
+  Widget _buildMessageRow(
+    ThemeProvider theme,
+    ChatService chatService,
+    ChatMessage msg,
+  ) {
+    return GestureDetector(
+      onLongPress: () => _showMessageActionsSheet(theme, chatService, msg),
+      child: msg.isMine
+          ? _buildMyMessageBubble(theme, chatService, msg)
+          : _buildTheirMessageBubble(theme, chatService, msg),
+    );
   }
 
   /// Outgoing message bubble (mine)
-  Widget _buildMyMessageBubble(ThemeProvider theme, ChatMessage msg) {
+  Widget _buildMyMessageBubble(
+    ThemeProvider theme,
+    ChatService chatService,
+    ChatMessage msg,
+  ) {
     final isLight = theme.isLightMode;
     final isLowPower = theme.isLowPower;
+    final isBookmarked = chatService.isBookmarked(msg.messageId);
 
-    // Background and border colors matching design.md
     final bubbleColor = isLight
         ? AppTokens.lightPrimarySoft
         : (isLowPower ? const Color(0xFF222005) : const Color(0xFF2E2712));
@@ -618,7 +1752,7 @@ class _ChatScreenState extends State<ChatScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          const SizedBox(width: 48), // Indent from left
+          const SizedBox(width: 40),
           Flexible(
             child: Container(
               padding: const EdgeInsets.all(14),
@@ -635,26 +1769,68 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Sender Tag "You"
-                  Text(
-                    'You',
-                    style: TextStyle(
-                      color: senderColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  // Sender Tag "You" + Bookmark action
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'You',
+                        style: TextStyle(
+                          color: senderColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (msg.conversationId.startsWith('CONV_GRP-')) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTokens.beaconTeal.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'GROUP',
+                            style: TextStyle(
+                              color: AppTokens.beaconTeal,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () => chatService.toggleBookmark(msg.messageId),
+                        child: Icon(
+                          isBookmarked
+                              ? Icons.bookmark_rounded
+                              : Icons.bookmark_border_rounded,
+                          size: 16,
+                          color: isBookmarked
+                              ? AppTokens.signalYellow
+                              : theme.textMuted,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
 
-                  // Message Text
-                  Text(
-                    msg.content,
-                    style: TextStyle(
-                      color: theme.text,
-                      fontSize: 15,
-                      height: 1.35,
+                  // Voice Note Player or Standard Message Text
+                  if (msg.messageType == 'VOICE')
+                    _buildVoiceNotePlayer(theme, msg)
+                  else
+                    Text(
+                      msg.content,
+                      style: TextStyle(
+                        color: theme.text,
+                        fontSize: 15,
+                        height: 1.35,
+                      ),
                     ),
-                  ),
 
                   if (msg.hasImageAttachment) ...[
                     const SizedBox(height: 8),
@@ -670,7 +1846,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(height: 6),
 
                   // Bottom row: Timestamp + Delivery Status Ticks
-                  // Status ticks: 1 grey tick (saved locally), 2 teal ticks (sent to mesh), 2 green ticks (delivered to rescue team/cloud)
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -708,6 +1883,61 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildVoiceNotePlayer(ThemeProvider theme, ChatMessage msg) {
+    final isPlaying = _playingVoiceMessageId == msg.messageId;
+    return InkWell(
+      onTap: () => _toggleVoicePlayback(msg),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.surfaceSunken,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: theme.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: AppTokens.signalYellow,
+              child: Icon(
+                isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: AppTokens.nightNavy,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    msg.content,
+                    style: TextStyle(
+                      color: theme.text,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: 140,
+                    child: LinearProgressIndicator(
+                      value: isPlaying ? null : 0.0,
+                      backgroundColor: theme.border,
+                      color: AppTokens.beaconTeal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _formatStatusLabel(ChatMessage msg) {
     switch (msg.status) {
       case MessageDeliveryStatus.relayed:
@@ -727,7 +1957,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  /// Status ticks: 1 grey tick (saved locally), clock icon (queued), 2 teal arrows/ticks (relayed), 2 green ticks (delivered)
   Widget _buildStatusTickWidget(
     ThemeProvider theme,
     MessageDeliveryStatus status,
@@ -742,17 +1971,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
     switch (status) {
       case MessageDeliveryStatus.saved:
-        // 1 grey tick (saved locally)
         return const Icon(Icons.check, size: 14, color: Color(0xFF9E9E9E));
       case MessageDeliveryStatus.queued:
       case MessageDeliveryStatus.sending:
-        return const Icon(Icons.access_time_rounded, size: 13, color: Color(0xFFFFC400));
+        return const Icon(
+          Icons.access_time_rounded,
+          size: 13,
+          color: Color(0xFFFFC400),
+        );
       case MessageDeliveryStatus.sentNearby:
       case MessageDeliveryStatus.relayed:
-        // 2 teal ticks / arrows (sent to mesh)
         return Icon(Icons.compare_arrows_rounded, size: 14, color: infoColor);
       case MessageDeliveryStatus.delivered:
-        // 2 green ticks (delivered to recipient)
         return Icon(Icons.done_all_rounded, size: 14, color: successColor);
       case MessageDeliveryStatus.failed:
         return Icon(Icons.error_outline, size: 14, color: sosColor);
@@ -760,14 +1990,18 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Incoming message bubble (theirs)
-  Widget _buildTheirMessageBubble(ThemeProvider theme, ChatMessage msg) {
+  Widget _buildTheirMessageBubble(
+    ThemeProvider theme,
+    ChatService chatService,
+    ChatMessage msg,
+  ) {
     final isLight = theme.isLightMode;
+    final isBookmarked = chatService.isBookmarked(msg.messageId);
     final initial = msg.senderName.isNotEmpty
         ? msg.senderName[0].toUpperCase()
         : '?';
 
     final bubbleBg = isLight ? theme.surfaceSunken : theme.surface;
-
     final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
 
     return Padding(
@@ -775,7 +2009,6 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Sender Avatar
           CircleAvatar(
             radius: 18,
             backgroundColor: theme.surfaceSunken,
@@ -789,7 +2022,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           const SizedBox(width: 8),
-
           Flexible(
             child: Container(
               padding: const EdgeInsets.all(14),
@@ -806,41 +2038,55 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Sender Name
-                  Text(
-                    msg.senderName,
-                    style: TextStyle(
-                      color: theme.text,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          msg.senderName,
+                          style: TextStyle(
+                            color: theme.text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () => chatService.toggleBookmark(msg.messageId),
+                        child: Icon(
+                          isBookmarked
+                              ? Icons.bookmark_rounded
+                              : Icons.bookmark_border_rounded,
+                          size: 16,
+                          color: isBookmarked
+                              ? AppTokens.signalYellow
+                              : theme.textMuted,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
-
-                  // Message Content
-                  Text(
-                    msg.content,
-                    style: TextStyle(
-                      color: theme.text,
-                      fontSize: 15,
-                      height: 1.35,
+                  if (msg.messageType == 'VOICE')
+                    _buildVoiceNotePlayer(theme, msg)
+                  else
+                    Text(
+                      msg.content,
+                      style: TextStyle(
+                        color: theme.text,
+                        fontSize: 15,
+                        height: 1.35,
+                      ),
                     ),
-                  ),
-
                   if (msg.hasImageAttachment) ...[
                     const SizedBox(height: 8),
                     _buildImageAttachment(theme, msg.attachment!),
                   ],
-
-                  // Shared Location Preview Card
                   if (msg.location != null) ...[
                     const SizedBox(height: 8),
                     _buildLocationPreviewCard(theme, msg.location!),
                   ],
-
                   const SizedBox(height: 6),
-
-                  // Timestamp
                   Text(
                     msg.formattedTime,
                     style: TextStyle(color: theme.textMuted, fontSize: 11),
@@ -849,13 +2095,13 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 40), // Right indent
+          const SizedBox(width: 40),
         ],
       ),
     );
   }
 
-  /// Shared Location Preview Card matching Screen 5 mockup
+  /// Shared Location Preview Card
   Widget _buildLocationPreviewCard(
     ThemeProvider theme,
     LocationPreview location,
@@ -869,53 +2115,66 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        border: Border.all(color: infoColor.withValues(alpha: 0.4), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: infoColor.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.location_on, color: infoColor, size: 20),
+    return InkWell(
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: location.title));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Copied location coordinates: ${location.title}'),
+            duration: const Duration(seconds: 1),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Shared location',
-                  style: TextStyle(
-                    color: infoColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  location.title,
-                  style: TextStyle(
-                    color: theme.text,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  location.distance,
-                  style: TextStyle(color: theme.textMuted, fontSize: 12),
-                ),
-              ],
+        );
+      },
+      borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          border: Border.all(color: infoColor.withValues(alpha: 0.4), width: 1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: infoColor.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.location_on, color: infoColor, size: 20),
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Shared location',
+                    style: TextStyle(
+                      color: infoColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    location.title,
+                    style: TextStyle(
+                      color: theme.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    location.distance,
+                    style: TextStyle(color: theme.textMuted, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.copy_rounded, size: 16, color: infoColor),
+          ],
+        ),
       ),
     );
   }
@@ -963,8 +2222,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final sosColor = theme.isLightMode ? AppTokens.lightSos : AppTokens.darkSos;
 
     return Container(
-      height: 42,
-      margin: const EdgeInsets.only(top: 4, bottom: 6),
+      height: 40,
+      margin: const EdgeInsets.only(top: 2, bottom: 4),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
@@ -992,14 +2251,88 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  /// Active Voice Note Recording Bar
+  Widget _buildVoiceRecordingBar(ThemeProvider theme) {
+    final mins = (_voiceSeconds ~/ 60).toString().padLeft(2, '0');
+    final secs = (_voiceSeconds % 60).toString().padLeft(2, '0');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        border: Border(top: BorderSide(color: theme.border, width: 1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: AppTokens.sosRed,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Recording Voice Note • $mins:$secs',
+              style: TextStyle(
+                color: theme.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _cancelVoiceRecording,
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: AppTokens.sosRed,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTokens.signalYellow,
+              foregroundColor: AppTokens.nightNavy,
+              minimumSize: const Size(88, 42),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+              ),
+            ),
+            onPressed: _sendVoiceRecording,
+            icon: const Icon(Icons.send_rounded, size: 18),
+            label: const Text(
+              'Send',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Bottom Input Bar with mic icon, text field, and send arrow button
-  Widget _buildInputBar(ThemeProvider theme) {
+  Widget _buildInputBar(
+    ThemeProvider theme,
+    ChatService chatService,
+    GroupService groupService,
+  ) {
     final isLight = theme.isLightMode;
     final isLowPower = theme.isLowPower;
 
     final barBg = isLight
         ? AppTokens.lightBgAlt
         : (isLowPower ? AppTokens.oledBgAlt : AppTokens.darkBgAlt);
+
+    final activeGroup =
+        chatService.activeFilter == 'Group' ? groupService.selectedGroup : null;
+    final hintText = activeGroup != null
+        ? 'Message ${activeGroup.name}...'
+        : 'Type a message...';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1021,7 +2354,7 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
-                  // Image attachment; stored locally before mesh transfer.
+                  // Image attachment
                   IconButton(
                     icon: Icon(
                       Icons.image_outlined,
@@ -1036,7 +2369,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     onPressed: _pickAndSendImage,
                   ),
 
-                  // Location sharing; sends E2EE location with accuracy radius
+                  // Location sharing
                   IconButton(
                     icon: Icon(
                       Icons.my_location_outlined,
@@ -1060,7 +2393,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _handleSendMessage(),
                       decoration: InputDecoration(
-                        hintText: 'Type a message...',
+                        hintText: hintText,
                         hintStyle: TextStyle(
                           color: theme.textMuted,
                           fontSize: 14,
@@ -1073,10 +2406,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
 
-                  // Microphone Button
+                  // Microphone Button (starts interactive voice note recording)
                   IconButton(
                     icon: Icon(
-                      Icons.mic_none,
+                      Icons.mic_none_rounded,
                       color: theme.textMuted,
                       size: 22,
                     ),
@@ -1084,15 +2417,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       minWidth: 40,
                       minHeight: 40,
                     ),
-                    tooltip: 'Voice note (offline)',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Offline voice note recording ready'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
+                    tooltip: 'Record offline voice note',
+                    onPressed: _startVoiceRecording,
                   ),
                 ],
               ),

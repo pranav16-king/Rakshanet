@@ -67,3 +67,7 @@ Thumbs.db
 .vscode/
 *.sublime-project
 *.sublime-workspace
+
+# Video generation workspace & outputs
+video/
+

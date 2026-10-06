@@ -10,6 +10,7 @@ class ChatGroup {
   final DateTime updatedAt;
   final String conversationId;
   final int memberCount;
+  final List<GroupMember> members;
 
   const ChatGroup({
     required this.id,
@@ -20,6 +21,7 @@ class ChatGroup {
     required this.updatedAt,
     required this.conversationId,
     this.memberCount = 1,
+    this.members = const [],
   });
 
   Map<String, dynamic> toMap() => {

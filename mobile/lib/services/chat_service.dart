@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/chat_message.dart';
@@ -12,17 +13,25 @@ import 'mesh_engine.dart';
 
 /// Chat Service with Save-Before-Send guarantee
 /// Source of truth: SQLite database.
-/// Provides reactive state for Screen 5 (Community Chat) and Screen 10 (My Messages).
+/// Provides reactive state for Screen 5 (Community Chat & Mesh Groups) and Screen 10 (My Messages).
 class ChatService extends ChangeNotifier {
+  static final ChatService _instance = ChatService._internal();
+  factory ChatService() => _instance;
+
   final DatabaseService _dbService = DatabaseService();
   final BluetoothRadioService _radioService = BluetoothRadioService();
   final MeshEngine _meshEngine = MeshEngine();
   final MediaStorageService _mediaStorage = MediaStorageService();
   final Uuid _uuid = const Uuid();
 
+  static const String _prefBookmarksKey = 'rakshanet_bookmarked_messages';
+
   List<ChatMessage> _messages = [];
   bool _isLoading = true;
   String _activeFilter = 'Nearby'; // 'Nearby', 'Group', 'Rescue', 'Saved'
+  String? _activeGroupConversationId; // e.g., 'CONV_GRP-XXXX' when a specific group is selected
+  String _searchQuery = '';
+  final Set<String> _bookmarkedMessageIds = <String>{};
   bool _isSyncing = false;
 
   // Deduplication structures (Bloom filter + in-memory Set)
@@ -37,10 +46,13 @@ class ChatService extends ChangeNotifier {
   List<ChatMessage> get allMessages => List.unmodifiable(_messages);
   bool get isLoading => _isLoading;
   String get activeFilter => _activeFilter;
+  String? get activeGroupConversationId => _activeGroupConversationId;
+  String get searchQuery => _searchQuery;
+  Set<String> get bookmarkedMessageIds => Set.unmodifiable(_bookmarkedMessageIds);
   int get onlineDevices => _radioService.connectedCount;
   bool get isSyncing => _isSyncing;
 
-  ChatService() {
+  ChatService._internal() {
     _initialization = _initialize();
   }
 
@@ -48,6 +60,7 @@ class ChatService extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
+    await _loadBookmarks();
     await _meshEngine.initialize();
     await _radioService.initialize(
       deviceId: DatabaseService.myDeviceId,
@@ -61,9 +74,7 @@ class ChatService extends ChangeNotifier {
       _bloomFilter.add(msg.messageId);
     }
 
-    // 1. MeshEngine is the only radio consumer. A second listener used to
-    // persist and forward every packet twice, creating duplicate broadcasts.
-    // Listen only to the durable mesh events here.
+    // 1. MeshEngine is the only radio consumer.
     _statusSubscription = _meshEngine.messageStatusUpdates.listen((updatedMsg) {
       final index = _messages.indexWhere(
         (m) => m.messageId == updatedMsg.messageId,
@@ -89,9 +100,62 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _loadBookmarks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList(_prefBookmarksKey) ?? const <String>[];
+      _bookmarkedMessageIds
+        ..clear()
+        ..addAll(saved);
+    } catch (e) {
+      debugPrint('[ChatService] Failed to load bookmarks: $e');
+    }
+  }
+
+  Future<void> _persistBookmarks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _prefBookmarksKey,
+        _bookmarkedMessageIds.toList(),
+      );
+    } catch (e) {
+      debugPrint('[ChatService] Failed to persist bookmarks: $e');
+    }
+  }
+
+  bool isBookmarked(String messageId) => _bookmarkedMessageIds.contains(messageId);
+
+  Future<bool> toggleBookmark(String messageId) async {
+    final bool added;
+    if (_bookmarkedMessageIds.contains(messageId)) {
+      _bookmarkedMessageIds.remove(messageId);
+      added = false;
+    } else {
+      _bookmarkedMessageIds.add(messageId);
+      added = true;
+    }
+    notifyListeners();
+    await _persistBookmarks();
+    return added;
+  }
+
   Future<void> _loadMessagesFromDb() async {
     _messages = await _dbService.getAllMessages();
     notifyListeners();
+  }
+
+  /// Public reload helper for GroupService / external updates
+  Future<void> reloadMessages() async {
+    await _loadMessagesFromDb();
+  }
+
+  Future<void> deleteMessage(String messageId) async {
+    await _dbService.deleteMessage(messageId);
+    _messages.removeWhere((m) => m.messageId == messageId);
+    _bookmarkedMessageIds.remove(messageId);
+    notifyListeners();
+    await _persistBookmarks();
   }
 
   Future<void> _handleIncomingMedia(IncomingMediaPayload incoming) async {
@@ -128,32 +192,54 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Messages for Screen 5 (Community Chat filtered by selected tab)
-  List<ChatMessage> get communityMessages {
-    final list = _messages
-        .where(
-          (m) =>
-              m.conversationId == 'CONV_COMMUNITY' ||
-              m.conversationId == 'COMMUNITY_MESH' ||
-              m.conversationId == 'community' ||
-              m.conversationId == 'global_emergency' ||
-              m.conversationId.isEmpty,
-        )
-        .toList();
+  void setActiveGroupConversation(String? conversationId) {
+    _activeGroupConversationId = conversationId;
+    notifyListeners();
+  }
 
-    if (_activeFilter == 'Nearby') {
-      return list;
-    } else if (_activeFilter == 'Group') {
-      return list
-          .where((m) => m.category == 'Group' || m.messageType == 'GROUP')
-          .toList();
+  void setSearchQuery(String query) {
+    _searchQuery = query.trim();
+    notifyListeners();
+  }
+
+  bool _matchesSearch(ChatMessage m) {
+    if (_searchQuery.isEmpty) return true;
+    final q = _searchQuery.toLowerCase();
+    return m.content.toLowerCase().contains(q) ||
+        m.senderName.toLowerCase().contains(q) ||
+        (m.location?.title.toLowerCase().contains(q) ?? false) ||
+        (m.category?.toLowerCase().contains(q) ?? false);
+  }
+
+  /// Messages for Screen 5 (Community Chat filtered by selected tab & search query)
+  List<ChatMessage> get communityMessages {
+    List<ChatMessage> filtered;
+
+    if (_activeFilter == 'Group') {
+      if (_activeGroupConversationId != null &&
+          _activeGroupConversationId!.isNotEmpty) {
+        filtered = _messages
+            .where((m) => m.conversationId == _activeGroupConversationId)
+            .toList();
+      } else {
+        filtered = _messages
+            .where(
+              (m) =>
+                  m.conversationId.startsWith('CONV_GRP-') ||
+                  m.category == 'Group' ||
+                  m.messageType == 'GROUP',
+            )
+            .toList();
+      }
     } else if (_activeFilter == 'Rescue') {
-      return list
+      filtered = _messages
           .where(
             (m) =>
                 m.content.toLowerCase().contains('help') ||
                 m.content.toLowerCase().contains('safe') ||
                 m.content.toLowerCase().contains('blocked') ||
+                m.content.toLowerCase().contains('water') ||
+                m.content.toLowerCase().contains('trapped') ||
                 m.content.toLowerCase().contains('sos') ||
                 m.messageType == 'SOS' ||
                 m.messageType == 'LOCATION' ||
@@ -162,11 +248,41 @@ class ChatService extends ChangeNotifier {
           )
           .toList();
     } else if (_activeFilter == 'Saved') {
-      return list
-          .where((m) => m.status == MessageDeliveryStatus.saved || m.isMine)
+      filtered = _messages
+          .where(
+            (m) =>
+                _bookmarkedMessageIds.contains(m.messageId) ||
+                m.status == MessageDeliveryStatus.saved,
+          )
+          .toList();
+    } else {
+      // 'Nearby' tab: community broadcast + general mesh messages
+      filtered = _messages
+          .where(
+            (m) =>
+                m.conversationId == 'CONV_COMMUNITY' ||
+                m.conversationId == 'COMMUNITY_MESH' ||
+                m.conversationId == 'community' ||
+                m.conversationId == 'global_emergency' ||
+                m.conversationId.isEmpty,
+          )
           .toList();
     }
-    return list;
+
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where(_matchesSearch).toList();
+    }
+    return filtered;
+  }
+
+  /// Resolves the target conversationId based on the current tab & selected group
+  String get currentTargetConversationId {
+    if (_activeFilter == 'Group' &&
+        _activeGroupConversationId != null &&
+        _activeGroupConversationId!.isNotEmpty) {
+      return _activeGroupConversationId!;
+    }
+    return 'CONV_COMMUNITY';
   }
 
   /// Pending messages for Screen 10 (items with status SAVED or QUEUED waiting for sync)
@@ -202,7 +318,7 @@ class ChatService extends ChangeNotifier {
   Future<ChatMessage> sendMessage({
     required String content,
     String? messageId,
-    String conversationId = 'CONV_COMMUNITY',
+    String? conversationId,
     String messageType = 'TEXT',
     String? category,
     String? recipientTarget,
@@ -214,11 +330,16 @@ class ChatService extends ChangeNotifier {
     final now = DateTime.now();
     final resolvedMessageId =
         messageId ?? 'MSG-${_uuid.v4().substring(0, 8).toUpperCase()}';
+    final resolvedConversationId = conversationId ?? currentTargetConversationId;
+    final resolvedCategory = category ??
+        (resolvedConversationId.startsWith('CONV_GRP-')
+            ? 'Group'
+            : _activeFilter);
 
     // 1. Construct local chat message object with status SAVED (Single grey tick)
     final chatMsg = ChatMessage(
       messageId: resolvedMessageId,
-      conversationId: conversationId,
+      conversationId: resolvedConversationId,
       senderId: DatabaseService.myDeviceId,
       senderName: DatabaseService.myDisplayName,
       isMine: true,
@@ -230,12 +351,18 @@ class ChatService extends ChangeNotifier {
       messageType: messageType,
       recipientTarget: recipientTarget,
       location: location,
-      category: category ?? _activeFilter,
+      category: resolvedCategory,
       attachment: attachment,
     );
 
     // 2. CRITICAL AXIOM: Write to SQLite messages table with status 'SAVED'
     await _dbService.insertMessage(chatMsg.toDbMap());
+
+    // If user is on the 'Saved' tab when sending, also bookmark it automatically
+    if (_activeFilter == 'Saved') {
+      _bookmarkedMessageIds.add(resolvedMessageId);
+      _persistBookmarks().ignore();
+    }
 
     // Mark as seen in local deduplication filter
     _seenMessageIds.add(resolvedMessageId);
@@ -245,12 +372,12 @@ class ChatService extends ChangeNotifier {
     _messages.add(chatMsg);
     notifyListeners();
 
-    // 3. Pack into MessageEnvelope (Kabootar/MeshChat DTN envelope with UUID, senderId, TTL=5, timestamp, payload)
+    // 3. Pack into MessageEnvelope
     final envelope = MessageEnvelope(
       uuid: resolvedMessageId,
       senderId: DatabaseService.myDeviceId,
       senderName: DatabaseService.myDisplayName,
-      conversationId: conversationId,
+      conversationId: resolvedConversationId,
       timestamp: now.millisecondsSinceEpoch,
       ttl: 5,
       hops: 0,
@@ -265,8 +392,7 @@ class ChatService extends ChangeNotifier {
           'attachment_mime_type': attachment.mimeType,
           'attachment_bytes': attachment.byteLength,
         },
-        if (category != null || _activeFilter != 'Nearby')
-          'category': category ?? _activeFilter,
+        'category': resolvedCategory,
       },
     );
 
@@ -277,8 +403,7 @@ class ChatService extends ChangeNotifier {
     );
     _updateLocalMessageStatus(resolvedMessageId, MessageDeliveryStatus.queued);
 
-    // 5. MeshEngine owns the one physical send path and advances the durable
-    // status only after Nearby Connections accepts a peer payload.
+    // 5. MeshEngine owns the one physical send path
     _meshEngine.queueOutboxMessage(
       envelope,
       attachmentPath: attachment?.localPath,
@@ -307,7 +432,18 @@ class ChatService extends ChangeNotifier {
     await sendMessage(
       content: shortcutText,
       messageType: 'TEXT',
-      category: 'Rescue',
+      category: _activeFilter == 'Group' ? 'Group' : 'Rescue',
+    );
+  }
+
+  /// Sends an offline voice note message with duration metadata
+  Future<ChatMessage> sendVoiceNote(int durationSeconds) async {
+    final mins = (durationSeconds ~/ 60).toString().padLeft(2, '0');
+    final secs = (durationSeconds % 60).toString().padLeft(2, '0');
+    return sendMessage(
+      content: '🎤 Offline Voice Note ($mins:$secs)',
+      messageType: 'VOICE',
+      metadata: {'voice_duration_sec': durationSeconds},
     );
   }
 
@@ -315,7 +451,7 @@ class ChatService extends ChangeNotifier {
     await _initialization;
     final attachment = await _mediaStorage.stageImage(sourcePath);
     return sendMessage(
-      content: 'Image: ${attachment.fileName}',
+      content: '📷 Image: ${attachment.fileName}',
       messageType: 'IMAGE',
       attachment: attachment,
     );
@@ -329,6 +465,8 @@ class ChatService extends ChangeNotifier {
     try {
       await _initialization;
       await _meshEngine.syncAllPendingMessages();
+      await _meshEngine.uploadQueuedPacketsToGateway();
+      await _loadMessagesFromDb();
     } finally {
       _isSyncing = false;
       notifyListeners();

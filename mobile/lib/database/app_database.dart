@@ -495,6 +495,48 @@ class AppDatabase {
         signature TEXT
       )
     ''');
+
+    // 13. Mesh Groups
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS groups (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        creator_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        conversation_id TEXT NOT NULL,
+        member_count INTEGER DEFAULT 1
+      )
+    ''');
+
+    // 14. Group Members
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS group_members (
+        id TEXT PRIMARY KEY,
+        group_id TEXT NOT NULL,
+        member_device_id TEXT NOT NULL,
+        member_name TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        joined_at INTEGER,
+        invited_at INTEGER NOT NULL
+      )
+    ''');
+
+    // 15. Group Invites
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS group_invites (
+        id TEXT PRIMARY KEY,
+        group_id TEXT NOT NULL,
+        group_name TEXT NOT NULL,
+        inviter_id TEXT NOT NULL,
+        inviter_name TEXT NOT NULL,
+        invitee_device_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        sent_at INTEGER NOT NULL,
+        responded_at INTEGER
+      )
+    ''');
   }
 
   Future<void> _seedInitialData(Database db) async {
@@ -952,8 +994,19 @@ class AppDatabase {
     );
   }
 
-  /// Fetch active user profile
+  /// Fetch active user profile (prioritizing registered session rows)
   Future<UserProfile?> getUserProfile() async {
+    final registeredRows = await query(
+      'user_profile',
+      where: 'is_registered = ?',
+      whereArgs: [1],
+      orderBy: 'updated_at DESC',
+      limit: 1,
+    );
+    if (registeredRows.isNotEmpty) {
+      return UserProfile.fromMap(registeredRows.first);
+    }
+
     final rows = await query(
       'user_profile',
       orderBy: 'updated_at DESC',
@@ -965,6 +1018,15 @@ class AppDatabase {
 
   /// Save or replace user profile
   Future<void> saveUserProfile(UserProfile profile) async {
+    if (profile.isRegistered && profile.id != 'unregistered') {
+      try {
+        await delete(
+          'user_profile',
+          where: 'id = ?',
+          whereArgs: ['unregistered'],
+        );
+      } catch (_) {}
+    }
     await insert(
       'user_profile',
       profile.toMap(),

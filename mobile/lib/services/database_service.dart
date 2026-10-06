@@ -92,6 +92,14 @@ class DatabaseService {
         .toList();
   }
 
+  Future<void> deleteMessage(String messageId) async {
+    await AppDatabase.instance.delete(
+      'messages',
+      where: 'message_id = ?',
+      whereArgs: [messageId],
+    );
+  }
+
   Future<void> recordRelayAudit({
     required String messageId,
     required String fromDeviceId,

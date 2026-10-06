@@ -261,6 +261,23 @@ class MeshEngine extends ChangeNotifier {
       return _receiveAcknowledgement(envelope);
     }
 
+    // Handle group invitation and response control envelopes directly
+    if (envelope.type == 'GROUP_INVITE' ||
+        envelope.type == 'GROUP_INVITE_RESPONSE') {
+      _envelopeController.add(envelope);
+      notifyListeners();
+      if (envelope.ttl > 1) {
+        await _forwardDownstream(envelope);
+      }
+      return RelayAction.deliveredToMe;
+    }
+
+    final bool hasLocationCoords =
+        envelope.type == 'LOCATION' ||
+        (envelope.metadata != null &&
+            envelope.metadata!['latitude'] != null &&
+            envelope.metadata!['longitude'] != null);
+
     // 2. Check TTL: if TTL <= 1, store locally and halt radio forward (prevents infinite loop)
     if (envelope.ttl <= 1) {
       debugPrint(
@@ -281,7 +298,8 @@ class MeshEngine extends ChangeNotifier {
         ttl: envelope.ttl,
         messageType: envelope.type,
         recipientTarget: envelope.recipientTarget,
-        location: envelope.metadata != null
+        category: envelope.metadata?['category']?.toString(),
+        location: hasLocationCoords && envelope.metadata != null
             ? LocationPreview.fromJson(envelope.metadata!)
             : null,
       );
@@ -324,6 +342,7 @@ class MeshEngine extends ChangeNotifier {
 
     final bool isBroadcast =
         envelope.conversationId == 'CONV_COMMUNITY' ||
+        envelope.conversationId.startsWith('CONV_GRP-') ||
         (envelope.recipientUserId == null &&
             envelope.recipientDeviceId == null);
 
@@ -346,7 +365,8 @@ class MeshEngine extends ChangeNotifier {
         ttl: envelope.ttl,
         messageType: envelope.type,
         recipientTarget: envelope.recipientTarget,
-        location: envelope.metadata != null
+        category: envelope.metadata?['category']?.toString(),
+        location: hasLocationCoords && envelope.metadata != null
             ? LocationPreview.fromJson(envelope.metadata!)
             : null,
       );

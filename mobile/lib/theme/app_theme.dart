@@ -44,7 +44,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
+          minimumSize: const Size(AppTokens.touchMin, AppTokens.buttonPrimary), // 56dp
           backgroundColor: AppTokens.darkPrimary,
           foregroundColor: AppTokens.darkOnPrimary,
           textStyle: const TextStyle(
@@ -60,7 +60,7 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
+          minimumSize: const Size(AppTokens.touchMin, AppTokens.buttonPrimary), // 56dp
           backgroundColor: AppTokens.darkPrimary,
           foregroundColor: AppTokens.darkOnPrimary,
           textStyle: const TextStyle(
@@ -74,7 +74,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
+          minimumSize: const Size(AppTokens.touchMin, AppTokens.buttonPrimary), // 56dp
           foregroundColor: AppTokens.darkText,
           side: const BorderSide(color: AppTokens.darkBorder, width: 1.5),
           textStyle: const TextStyle(
@@ -188,7 +188,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
+          minimumSize: const Size(AppTokens.touchMin, AppTokens.buttonPrimary), // 56dp
           backgroundColor: AppTokens.lightPrimary,
           foregroundColor: AppTokens.lightOnPrimary,
           textStyle: const TextStyle(
@@ -204,7 +204,7 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
+          minimumSize: const Size(AppTokens.touchMin, AppTokens.buttonPrimary), // 56dp
           backgroundColor: AppTokens.lightPrimary,
           foregroundColor: AppTokens.lightOnPrimary,
           textStyle: const TextStyle(
@@ -218,7 +218,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
+          minimumSize: const Size(AppTokens.touchMin, AppTokens.buttonPrimary), // 56dp
           foregroundColor: AppTokens.lightText,
           side: const BorderSide(color: AppTokens.lightBorder, width: 1.5),
           textStyle: const TextStyle(
@@ -332,7 +332,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
+          minimumSize: const Size(AppTokens.touchMin, AppTokens.buttonPrimary), // 56dp
           backgroundColor: AppTokens.oledPrimary,
           foregroundColor: AppTokens.oledOnPrimary,
           textStyle: const TextStyle(
@@ -348,7 +348,7 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
+          minimumSize: const Size(AppTokens.touchMin, AppTokens.buttonPrimary), // 56dp
           backgroundColor: AppTokens.oledPrimary,
           foregroundColor: AppTokens.oledOnPrimary,
           textStyle: const TextStyle(
@@ -362,7 +362,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(AppTokens.buttonPrimary), // 56dp
+          minimumSize: const Size(AppTokens.touchMin, AppTokens.buttonPrimary), // 56dp
           foregroundColor: AppTokens.oledText,
           side: const BorderSide(color: AppTokens.oledBorder, width: 1.5),
           textStyle: const TextStyle(

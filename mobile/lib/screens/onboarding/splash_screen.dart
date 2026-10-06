@@ -20,14 +20,16 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _beaconPulseAnimation;
-  Timer? _navTimer;
+  Timer? _phaseTimer;
+  bool _showLandingPage = false;
+  bool _isNavigating = false;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 2000),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -44,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    _beaconPulseAnimation = Tween<double>(begin: 0.8, end: 1.25).animate(
+    _beaconPulseAnimation = Tween<double>(begin: 0.85, end: 1.25).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeInOut,
@@ -53,329 +55,562 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.repeat(reverse: true);
 
-    _navTimer = Timer(const Duration(milliseconds: 2800), _checkRegistrationAndNavigate);
+    // Phase 1: Show dedicated Splash Screen for 1.8s while checking session store
+    _initializeSessionAndTransition();
+  }
+
+  Future<void> _initializeSessionAndTransition() async {
+    final minSplashDelay = Future.delayed(const Duration(milliseconds: 1800));
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+
+    bool hasValidSession = false;
+
+    try {
+      final profileProvider =
+          Provider.of<ProfileProvider>(context, listen: false);
+      await profileProvider.loadProfile();
+      final offlineAvailable =
+          await UserAuthService.instance.checkOfflineLoginAvailable();
+
+      if (offlineAvailable ||
+          (profileProvider.isRegistered &&
+              profileProvider.profile.name.trim().isNotEmpty &&
+              profileProvider.profile.id != 'unregistered')) {
+        hasValidSession = true;
+      }
+    } catch (e) {
+      debugPrint('[SplashScreen] Session restore check error: $e');
+    }
+
+    await minSplashDelay;
+    if (!mounted) return;
+
+    if (hasValidSession) {
+      // Active session exists in session store — restore directly into MainShell
+      setState(() => _isNavigating = true);
+      UserAuthService.instance.syncNow();
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, _, _) => const MainShell(),
+          transitionsBuilder: (_, a, _, c) =>
+              FadeTransition(opacity: a, child: c),
+          transitionDuration: const Duration(milliseconds: 350),
+        ),
+      );
+    } else {
+      setState(() {
+        _showLandingPage = true;
+      });
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _navTimer?.cancel();
+    _phaseTimer?.cancel();
     super.dispose();
   }
 
-  /// Checks offline login availability and routes accordingly:
-  /// 1. If offline login is available AND a local profile exists → go to /main
-  ///    and trigger a background cloud sync.
-  /// 2. If offline login is available but no profile in SQLite → go to /profile-setup
-  /// 3. If not registered at all → go to /profile-setup
-  Future<void> _checkRegistrationAndNavigate() async {
-    if (!mounted) return;
+  /// Triggered when the user taps "Get Started" on the Landing Screen:
+  /// Checks session store first; if registered -> MainShell, else -> ProfileSetupScreen.
+  Future<void> _onGetStartedPressed() async {
+    if (!mounted || _isNavigating) return;
+    setState(() => _isNavigating = true);
 
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-
-    // Check offline login availability first via UserAuthService
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    await profileProvider.loadProfile();
     final offlineLoginAvailable =
         await UserAuthService.instance.checkOfflineLoginAvailable();
-
     if (!mounted) return;
 
-    if (offlineLoginAvailable && profileProvider.isRegistered) {
-      // Offline login: profile found in SQLite → go to main shell
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, _, _) => const MainShell(),
-          transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
-          transitionDuration: const Duration(milliseconds: 400),
-        ),
-      );
-      // Trigger background cloud sync without blocking navigation
+    if (offlineLoginAvailable ||
+        (profileProvider.isRegistered &&
+            profileProvider.profile.name.trim().isNotEmpty &&
+            profileProvider.profile.id != 'unregistered')) {
       UserAuthService.instance.syncNow();
-    } else if (profileProvider.isRegistered) {
-      // Legacy path: registered via SharedPreferences only → go to main
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (_, _, _) => const MainShell(),
-          transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
-          transitionDuration: const Duration(milliseconds: 400),
+          transitionsBuilder: (_, a, _, c) =>
+              FadeTransition(opacity: a, child: c),
+          transitionDuration: const Duration(milliseconds: 350),
         ),
       );
     } else {
-      // No profile → go to profile setup
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (_, _, _) => const ProfileSetupScreen(),
-          transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
-          transitionDuration: const Duration(milliseconds: 400),
+          transitionsBuilder: (_, a, _, c) =>
+              FadeTransition(opacity: a, child: c),
+          transitionDuration: const Duration(milliseconds: 350),
         ),
       );
     }
+  }
+
+  Future<void> _onSetupProfilePressed() async {
+    if (!mounted || _isNavigating) return;
+    setState(() => _isNavigating = true);
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, _, _) => const ProfileSetupScreen(),
+        transitionsBuilder: (_, a, _, c) =>
+            FadeTransition(opacity: a, child: c),
+        transitionDuration: const Duration(milliseconds: 350),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTokens.nightNavy,
-      body: Stack(
-        children: [
-          // Background Atmospheric Search Beam Gradients
-          Positioned(
-            top: -120,
-            left: -60,
-            right: -60,
-            height: 480,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0.2, -0.4),
-                  radius: 0.9,
-                  colors: [
-                    AppTokens.beaconTeal.withValues(alpha: 0.25),
-                    AppTokens.signalYellow.withValues(alpha: 0.12),
-                    Colors.transparent,
-                  ],
-                ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 650),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: _showLandingPage
+            ? _buildLandingView(context)
+            : _buildSplashIntroView(context),
+      ),
+    );
+  }
+
+  /// PHASE 1: Dedicated Animated Splash Screen
+  Widget _buildSplashIntroView(BuildContext context) {
+    return Stack(
+      key: const ValueKey('splash_intro'),
+      children: [
+        // Background Atmospheric Search Beam Gradients
+        Positioned(
+          top: -120,
+          left: -60,
+          right: -60,
+          height: 480,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0.0, -0.3),
+                radius: 0.9,
+                colors: [
+                  AppTokens.beaconTeal.withValues(alpha: 0.28),
+                  AppTokens.signalYellow.withValues(alpha: 0.14),
+                  Colors.transparent,
+                ],
               ),
             ),
           ),
+        ),
 
-          // Main Content
-          SafeArea(
-            child: Column(
-              children: [
-                const Spacer(flex: 1),
+        SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(flex: 2),
 
-                // Animated Beacon Logo and Title
-                AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return Opacity(
-                      opacity: _fadeAnimation.value,
-                      child: Transform.scale(
-                        scale: _scaleAnimation.value,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Column(
-                    children: [
-                      // Beacon Icon with Glowing Pulse Ring
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          AnimatedBuilder(
-                            animation: _beaconPulseAnimation,
-                            builder: (context, child) {
-                              return Container(
-                                width: 96 * _beaconPulseAnimation.value,
-                                height: 96 * _beaconPulseAnimation.value,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppTokens.signalYellow.withValues(alpha: 0.15),
-                                ),
-                              );
-                            },
-                          ),
-                          Container(
-                            width: 130,
-                            height: 130,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTokens.beaconTeal.withValues(alpha: 0.45),
-                                  blurRadius: 28,
-                                  spreadRadius: 6,
-                                ),
-                                BoxShadow(
-                                  color: AppTokens.signalYellow.withValues(alpha: 0.35),
-                                  blurRadius: 18,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/images/rakshanet_logo.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Container(
-                                  color: AppTokens.nightNavy,
-                                  child: const Icon(
-                                    Icons.radar_rounded,
-                                    size: 54,
-                                    color: AppTokens.signalYellow,
-                                  ),
-                                ),
+                  // Pulsing Radar / Crest Logo
+                  AnimatedBuilder(
+                    animation: _animationController,
+                    builder: (context, child) {
+                      return Opacity(
+                        opacity: _fadeAnimation.value.clamp(0.4, 1.0),
+                        child: Transform.scale(
+                          scale: _scaleAnimation.value,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AnimatedBuilder(
+                          animation: _beaconPulseAnimation,
+                          builder: (context, _) {
+                            return Container(
+                              width: 112 * _beaconPulseAnimation.value,
+                              height: 112 * _beaconPulseAnimation.value,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppTokens.signalYellow
+                                    .withValues(alpha: 0.14),
                               ),
-                            ),
+                            );
+                          },
+                        ),
+                        Container(
+                          width: 118,
+                          height: 118,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    AppTokens.beaconTeal.withValues(alpha: 0.45),
+                                blurRadius: 28,
+                                spreadRadius: 6,
+                              ),
+                              BoxShadow(
+                                color: AppTokens.signalYellow
+                                    .withValues(alpha: 0.35),
+                                blurRadius: 18,
+                                spreadRadius: 2,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Brand Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'SignalRescue ',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppTokens.signalYellow,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'AI',
-                              style: TextStyle(
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/rakshanet_logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
                                 color: AppTokens.nightNavy,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.0,
+                                child: const Icon(
+                                  Icons.radar_rounded,
+                                  size: 54,
+                                  color: AppTokens.signalYellow,
+                                ),
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Tagline matching Mockup Screen 1
-                      const Text(
-                        'Stay Connected.\nSave Lives.\nAnytime. Anywhere.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppTokens.darkText,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          height: 1.45,
-                          letterSpacing: 0.3,
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const Spacer(flex: 2),
-
-                // Rescuer / Beacon Illustration Card
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppTokens.darkSurface.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-                    border: Border.all(
-                      color: AppTokens.beaconTeal.withValues(alpha: 0.4),
-                      width: 1.5,
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
                   ),
-                  child: Row(
+
+                  const SizedBox(height: 28),
+
+                  // Brand Title
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: AppTokens.beaconTeal.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-                        ),
-                        child: const Icon(
-                          Icons.emergency_share_rounded,
-                          color: AppTokens.darkInfo,
-                          size: 30,
+                      const Text(
+                        'SignalRescue ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Hi-Vis Disaster Mesh',
-                              style: TextStyle(
-                                color: AppTokens.signalYellow,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Zero internet required. Device-to-device offline rescue beacon.',
-                              style: TextStyle(
-                                color: AppTokens.darkTextMuted,
-                                fontSize: 12.5,
-                                height: 1.3,
-                              ),
-                            ),
-                          ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTokens.signalYellow,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'AI',
+                          style: TextStyle(
+                            color: AppTokens.nightNavy,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
 
-                const Spacer(flex: 1),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'OFFLINE-FIRST DISASTER MESH NETWORK',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppTokens.beaconTeal,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
 
-                // Bottom Branding Subtext
-                Column(
+                  const Spacer(flex: 2),
+
+                  // Boot Progress Indicator
+                  SizedBox(
+                    width: 180,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        minHeight: 4,
+                        backgroundColor:
+                            AppTokens.darkBorderStrong.withValues(alpha: 0.5),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppTokens.signalYellow,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Initializing BLE & Wi-Fi Direct Mesh...',
+                    style: TextStyle(
+                      color: AppTokens.darkTextMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// PHASE 2: Full-Screen Hero Landing Page with Mountain Rescue Artwork & Get Started CTA
+  Widget _buildLandingView(BuildContext context) {
+    return Stack(
+      key: const ValueKey('landing_hero'),
+      fit: StackFit.expand,
+      children: [
+        // 1. Full-bleed Mountain Rescue Artwork Background
+        Image.asset(
+          'assets/images/splash_hero.jpg',
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(color: AppTokens.nightNavy);
+          },
+        ),
+
+        // 2. Cinematic Gradient Overlay for crisp text readability at top & bottom
+        // while keeping the central rescuer and glowing beacon vivid and clear
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0.0, 0.28, 0.55, 0.76, 1.0],
+              colors: [
+                AppTokens.nightNavy.withValues(alpha: 0.78),
+                AppTokens.nightNavy.withValues(alpha: 0.35),
+                Colors.transparent,
+                AppTokens.nightNavy.withValues(alpha: 0.72),
+                AppTokens.nightNavy.withValues(alpha: 0.95),
+              ],
+            ),
+          ),
+        ),
+
+        // 3. Foreground Content
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 16),
+
+                // Top Brand Title: SignalRescue AI
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Offline Communication',
+                      'SignalRescue ',
                       style: TextStyle(
-                        color: AppTokens.darkText,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'AI-Powered Disaster Response',
-                      style: TextStyle(
-                        color: AppTokens.darkTextMuted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // 5-dot indicator from Mockup Screen 1
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (index) {
-                        final isFirst = index == 0;
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: isFirst ? 20 : 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: isFirst ? AppTokens.signalYellow : AppTokens.darkBorderStrong,
-                            borderRadius: BorderRadius.circular(3),
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.4,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black87,
+                            blurRadius: 12,
+                            offset: Offset(0, 2),
                           ),
-                        );
-                      }),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: AppTokens.signalYellow,
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                AppTokens.signalYellow.withValues(alpha: 0.45),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        'AI',
+                        style: TextStyle(
+                          color: AppTokens.nightNavy,
+                          fontSize: 25,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 14),
+
+                // Primary Hero Headline matching Screen 1
+                const Text(
+                  'Stay Connected.\nSave Lives.\nAnytime. Anywhere.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                    letterSpacing: 0.2,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black87,
+                        blurRadius: 14,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Unobstructed middle area showcasing the Mountain Rescuer & Beacon
+                const Spacer(),
+
+                // Bottom Feature Subtitle
+                const Text(
+                  'Offline Communication',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black,
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'AI-Powered Disaster Response',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Primary CTA: "Get Started" Button (56dp Hi-Vis Signal Yellow)
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isNavigating ? null : _onGetStartedPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTokens.signalYellow,
+                      foregroundColor: AppTokens.nightNavy,
+                      disabledBackgroundColor:
+                          AppTokens.signalYellow.withValues(alpha: 0.6),
+                      elevation: 8,
+                      shadowColor:
+                          AppTokens.signalYellow.withValues(alpha: 0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: _isNavigating
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: AppTokens.nightNavy,
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Get Started',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 22,
+                                color: AppTokens.nightNavy,
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Secondary subtle action to open Profile Setup directly if desired
+                GestureDetector(
+                  onTap: _onSetupProfilePressed,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      'Configure Emergency Profile & Mesh Identity',
+                      style: TextStyle(
+                        color: AppTokens.darkInfo.withValues(alpha: 0.9),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor:
+                            AppTokens.darkInfo.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // 5-dot indicator matching Screen 1 design
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    final isFirst = index == 0;
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: isFirst ? 22 : 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: isFirst
+                            ? AppTokens.signalYellow
+                            : Colors.white.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    );
+                  }),
+                ),
+
+                const SizedBox(height: 18),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

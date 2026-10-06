@@ -13,9 +13,11 @@ import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.security.MessageDigest
 
 class MainActivity : FlutterActivity(), LocationListener {
     private val channelName = "org.rakshanet/telemetry"
@@ -54,11 +56,47 @@ class MainActivity : FlutterActivity(), LocationListener {
                 "getGpsStatus" -> {
                     result.success(getGpsStatus())
                 }
+                "getHardwareImeiId" -> {
+                    result.success(getHardwareImeiId())
+                }
                 else -> {
                     result.notImplemented()
                 }
             }
         }
+    }
+
+    private fun getHardwareImeiId(): String {
+        return try {
+            val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+            val rawFingerprint = "$androidId|${Build.MANUFACTURER}|${Build.MODEL}|${Build.BOARD}|${Build.HARDWARE}|${Build.DEVICE}"
+            val digest = MessageDigest.getInstance("SHA-256").digest(rawFingerprint.toByteArray(Charsets.UTF_8))
+            val digits = StringBuilder("86") // Standard 2-digit TAC prefix for mobile equipment
+            var idx = 0
+            while (digits.length < 14) {
+                val b = (digest[idx % digest.size].toInt() and 0xFF)
+                digits.append((b % 10).toString())
+                idx++
+            }
+            val base14 = digits.toString().substring(0, 14)
+            val checkDigit = computeLuhnCheckDigit(base14)
+            "$base14$checkDigit"
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    private fun computeLuhnCheckDigit(base14: String): Int {
+        var sum = 0
+        for (i in base14.indices) {
+            var d = base14[i].digitToInt()
+            if (i % 2 == 1) {
+                d *= 2
+                if (d > 9) d -= 9
+            }
+            sum += d
+        }
+        return (10 - (sum % 10)) % 10
     }
 
     private fun getBatteryLevel(): Int {
@@ -111,7 +149,8 @@ class MainActivity : FlutterActivity(), LocationListener {
             if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 5f, this)
                 isListeningToLocation = true
-            } else if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            }
+            if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000L, 5f, this)
                 isListeningToLocation = true
             }
@@ -132,32 +171,31 @@ class MainActivity : FlutterActivity(), LocationListener {
 
         var bestLocation = lastGpsLocation
         try {
-            val lastGps = if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) lm.getLastKnownLocation(LocationManager.GPS_PROVIDER) else null
-            val lastNet = if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) else null
-
-            if (lastGps != null && (bestLocation == null || lastGps.time > bestLocation.time)) {
-                bestLocation = lastGps
-            }
-            if (lastNet != null && (bestLocation == null || lastNet.time > bestLocation.time)) {
-                bestLocation = lastNet
+            val providers = listOf(
+                LocationManager.GPS_PROVIDER,
+                LocationManager.NETWORK_PROVIDER,
+                LocationManager.PASSIVE_PROVIDER
+            )
+            for (provider in providers) {
+                if (lm.isProviderEnabled(provider)) {
+                    val loc = lm.getLastKnownLocation(provider)
+                    if (loc != null && (bestLocation == null || loc.time > bestLocation.time)) {
+                        bestLocation = loc
+                    }
+                }
             }
         } catch (_: Exception) {
         }
 
         if (bestLocation != null) {
-            // Fresh GPS fix within last 3 minutes
-            val isFresh = (System.currentTimeMillis() - bestLocation.time) < 180000L
-            if (isFresh) {
-                return mapOf(
-                    "hasGpsFix" to true,
-                    "latitude" to bestLocation.latitude,
-                    "longitude" to bestLocation.longitude,
-                    "accuracy" to bestLocation.accuracy.toDouble()
-                )
-            }
+            return mapOf(
+                "hasGpsFix" to true,
+                "latitude" to bestLocation.latitude,
+                "longitude" to bestLocation.longitude,
+                "accuracy" to bestLocation.accuracy.toDouble()
+            )
         }
 
-        // Never fake coordinates! Accurately report hasGpsFix = false
         return mapOf("hasGpsFix" to false, "latitude" to null, "longitude" to null, "accuracy" to null)
     }
 

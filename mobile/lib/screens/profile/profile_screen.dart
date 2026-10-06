@@ -103,24 +103,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// Formats any ID string into canonical SR-XXXX-XXXX format
+  /// Formats the user's Unique ID (preserving 15-digit Mobile IMEI ID)
   String _formatAnonymousId(String raw) {
-    if (raw.isEmpty) return 'SR-7B1A-4D21';
-    final upper = raw.toUpperCase().replaceAll(' ', '');
-    if (RegExp(r'^SR-[A-Z0-9]{4}-[A-Z0-9]{4}$').hasMatch(upper)) {
-      return upper;
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || trimmed == 'unregistered') return 'Not detected';
+    if (RegExp(r'^\d{15}$').hasMatch(trimmed)) {
+      return 'IMEI: $trimmed';
     }
-    if (upper.startsWith('SR-')) {
-      final remainder = upper.substring(3).replaceAll('-', '');
-      if (remainder.length >= 8) {
-        return 'SR-${remainder.substring(0, 4)}-${remainder.substring(4, 8)}';
-      } else {
-        final padded = remainder.padRight(8, '0');
-        return 'SR-${padded.substring(0, 4)}-${padded.substring(4, 8)}';
-      }
-    }
-    final cleanAlpha = upper.replaceAll(RegExp(r'[^A-Z0-9]'), '').padRight(8, '0');
-    return 'SR-${cleanAlpha.substring(0, 4)}-${cleanAlpha.substring(4, 8)}';
+    return trimmed;
   }
 
   @override
@@ -141,7 +131,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ? profile.name
         : 'Registered Volunteer';
     final canonicalId = _formatAnonymousId(
-      profile.deviceId.isNotEmpty ? profile.deviceId : profile.meshId,
+      (profile.id.isNotEmpty && profile.id != 'unregistered')
+          ? profile.id
+          : profile.deviceId,
     );
     final bloodGroupText = profile.bloodGroup.trim().isNotEmpty
         ? profile.bloodGroup
