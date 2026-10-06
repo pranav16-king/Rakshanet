@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme/emergency_design_tokens.dart';
+import 'app_bar_actions.dart';
 
 /// 1. Compact Sticky Header for Safety & Survival Tools (64dp height, zero truncation, no logo).
 class SafetyHeader extends StatelessWidget {
@@ -30,6 +33,7 @@ class SafetyHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     final batColor = _batteryColor();
 
     return Container(
@@ -38,10 +42,10 @@ class SafetyHeader extends StatelessWidget {
         horizontal: AppSpacing.md,
         vertical: AppSpacing.xs,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.background,
+      decoration: BoxDecoration(
+        color: theme.surface,
         border: Border(
-          bottom: BorderSide(color: AppColors.borderSubtle, width: 1),
+          bottom: BorderSide(color: theme.border, width: 1),
         ),
       ),
       child: Row(
@@ -58,13 +62,13 @@ class SafetyHeader extends StatelessWidget {
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.connectivityCardBg,
+                  color: theme.bgAlt,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(color: AppColors.connectivityCardBorder),
+                  border: Border.all(color: theme.border),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_back_rounded,
-                  color: AppColors.textPrimary,
+                  color: theme.text,
                   size: 20,
                 ),
               ),
@@ -73,12 +77,17 @@ class SafetyHeader extends StatelessWidget {
           const SizedBox(width: 12),
 
           // Non-truncated Header Title
-          const Expanded(
+          Expanded(
             child: Text(
               'Safety & Survival',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.headerTitle,
+              style: TextStyle(
+                color: theme.text,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
+              ),
             ),
           ),
 
@@ -86,9 +95,9 @@ class SafetyHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.connectivityCardBg,
+              color: theme.bgAlt,
               borderRadius: BorderRadius.circular(AppRadius.sm),
-              border: Border.all(color: AppColors.connectivityCardBorder),
+              border: Border.all(color: theme.border),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -106,7 +115,11 @@ class SafetyHeader extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
+
+          // Theme Toggle Button
+          const ThemeToggleButton(compact: true),
+          const SizedBox(width: 4),
 
           // Compact 44x44dp Profile / Status Button
           Semantics(
@@ -120,13 +133,13 @@ class SafetyHeader extends StatelessWidget {
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.connectivityCardBg,
+                  color: theme.bgAlt,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(color: AppColors.connectivityCardBorder),
+                  border: Border.all(color: theme.border),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.person_outline_rounded,
-                  color: AppColors.textPrimary,
+                  color: theme.text,
                   size: 20,
                 ),
               ),
@@ -151,6 +164,7 @@ class OfflineReadinessBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     final String subtitleText = isOnline
         ? 'Essential survival tools operate offline; cloud sync is currently active.'
         : 'Essential tools remain available without internet.';
@@ -159,7 +173,7 @@ class OfflineReadinessBanner extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 76),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.connectivityCardBg,
+        color: theme.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(
           color: AppColors.success.withValues(alpha: 0.35),
@@ -196,10 +210,10 @@ class OfflineReadinessBanner extends StatelessWidget {
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'OFFLINE SURVIVAL MODE',
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: theme.text,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.7,
@@ -243,8 +257,8 @@ class OfflineReadinessBanner extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitleText,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    color: theme.textMuted,
                     fontSize: 13,
                     height: 1.3,
                   ),
@@ -273,6 +287,7 @@ class ToolSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -284,8 +299,8 @@ class ToolSection extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: theme.text,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
@@ -295,8 +310,8 @@ class ToolSection extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle!,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: theme.textMuted,
                       fontSize: 13,
                     ),
                   ),
@@ -330,15 +345,16 @@ class QuickActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 8),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
           child: Text(
             'Quick Actions',
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: theme.text,
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -348,6 +364,7 @@ class QuickActionRow extends StatelessWidget {
           children: [
             Expanded(
               child: _buildCompactTile(
+                theme: theme,
                 icon: Icons.medical_services_outlined,
                 label: 'First Aid',
                 accent: AppColors.sosRed,
@@ -357,6 +374,7 @@ class QuickActionRow extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _buildCompactTile(
+                theme: theme,
                 icon: Icons.phone_in_talk_outlined,
                 label: 'Numbers',
                 accent: AppColors.blue,
@@ -366,6 +384,7 @@ class QuickActionRow extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _buildCompactTile(
+                theme: theme,
                 icon: Icons.verified_user_outlined,
                 label: 'I Am Safe',
                 accent: AppColors.success,
@@ -375,6 +394,7 @@ class QuickActionRow extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _buildCompactTile(
+                theme: theme,
                 icon: Icons.notifications_none_rounded,
                 label: 'Alerts',
                 accent: AppColors.primaryAmber,
@@ -389,6 +409,7 @@ class QuickActionRow extends StatelessWidget {
   }
 
   Widget _buildCompactTile({
+    required ThemeProvider theme,
     required IconData icon,
     required String label,
     required Color accent,
@@ -405,9 +426,9 @@ class QuickActionRow extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 78),
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.connectivityCardBg,
+            color: theme.surface,
             borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.connectivityCardBorder),
+            border: Border.all(color: theme.border),
           ),
           child: Stack(
             alignment: Alignment.center,
@@ -430,8 +451,8 @@ class QuickActionRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: theme.text,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -482,6 +503,7 @@ class SafetyStatusAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     final List<String> activeChannels = [];
     if (isMeshActive) activeChannels.add('Mesh (BLE / Wi-Fi)');
     if (isOnline) activeChannels.add('Internet');
@@ -498,7 +520,7 @@ class SafetyStatusAction extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: AppColors.connectivityCardBg,
+            color: theme.surface,
             borderRadius: BorderRadius.circular(AppRadius.card),
             border: Border.all(
               color: AppColors.success.withValues(alpha: 0.45),
@@ -528,19 +550,19 @@ class SafetyStatusAction extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'I Am Safe',
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: theme.text,
                         fontSize: 15.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
-                    const Text(
+                    Text(
                       'Broadcast your safe status',
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color: theme.textMuted,
                         fontSize: 13,
                       ),
                     ),
@@ -607,6 +629,7 @@ class SurvivalToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     return Semantics(
       button: true,
       label: '$title. $description',
@@ -617,10 +640,10 @@ class SurvivalToolCard extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 136),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.connectivityCardBg,
+            color: theme.surface,
             borderRadius: BorderRadius.circular(AppRadius.card),
             border: Border.all(
-              color: AppColors.connectivityCardBorder,
+              color: theme.border,
               width: 1,
             ),
             boxShadow: AppElevation.card,
@@ -643,10 +666,10 @@ class SurvivalToolCard extends StatelessWidget {
                     ),
                     child: Icon(icon, size: 22, color: semanticColor),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.arrow_outward_rounded,
                     size: 16,
-                    color: AppColors.textMuted,
+                    color: theme.textMuted,
                   ),
                 ],
               ),
@@ -655,8 +678,8 @@ class SurvivalToolCard extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: theme.text,
                   fontSize: 15.5,
                   fontWeight: FontWeight.w700,
                   height: 1.2,
@@ -667,8 +690,8 @@ class SurvivalToolCard extends StatelessWidget {
                 description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: theme.textMuted,
                   fontSize: 12.5,
                   height: 1.3,
                 ),
@@ -713,6 +736,7 @@ class ReliefOperationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     return Semantics(
       button: true,
       label: '$title. $description',
@@ -723,10 +747,10 @@ class ReliefOperationCard extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 82),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: AppColors.connectivityCardBg,
+            color: theme.surface,
             borderRadius: BorderRadius.circular(AppRadius.card),
             border: Border.all(
-              color: AppColors.connectivityCardBorder,
+              color: theme.border,
               width: 1,
             ),
           ),
@@ -754,8 +778,8 @@ class ReliefOperationCard extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: TextStyle(
+                        color: theme.text,
                         fontSize: 15.5,
                         fontWeight: FontWeight.w600,
                       ),
@@ -765,8 +789,8 @@ class ReliefOperationCard extends StatelessWidget {
                       description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        color: theme.textMuted,
                         fontSize: 13,
                         height: 1.3,
                       ),
@@ -775,9 +799,9 @@ class ReliefOperationCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
+                color: theme.textMuted,
                 size: 22,
               ),
             ],
@@ -801,9 +825,10 @@ class DisasterAlertCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     final bool hasAlerts = activeAlertCount > 0;
     final Color badgeColor =
-        hasAlerts ? AppColors.primaryAmber : AppColors.textMuted;
+        hasAlerts ? AppColors.primaryAmber : theme.textMuted;
     final String badgeText =
         hasAlerts ? '$activeAlertCount active' : 'No active alerts';
 
@@ -817,12 +842,12 @@ class DisasterAlertCard extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 82),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: AppColors.connectivityCardBg,
+            color: theme.surface,
             borderRadius: BorderRadius.circular(AppRadius.card),
             border: Border.all(
               color: hasAlerts
                   ? AppColors.primaryAmber.withValues(alpha: 0.45)
-                  : AppColors.connectivityCardBorder,
+                  : theme.border,
               width: 1,
             ),
           ),
@@ -852,13 +877,13 @@ class DisasterAlertCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Flexible(
+                        Flexible(
                           child: Text(
                             'Disaster Alerts',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: AppColors.textPrimary,
+                              color: theme.text,
                               fontSize: 15.5,
                               fontWeight: FontWeight.w600,
                             ),
@@ -889,12 +914,12 @@ class DisasterAlertCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 3),
-                    const Text(
+                    Text(
                       'Emergency warnings & updates',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color: theme.textMuted,
                         fontSize: 13,
                       ),
                     ),
@@ -902,9 +927,9 @@ class DisasterAlertCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
+                color: theme.textMuted,
                 size: 22,
               ),
             ],
@@ -926,6 +951,7 @@ class OfflineAIAssistantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     return Semantics(
       button: true,
       label:
@@ -936,7 +962,7 @@ class OfflineAIAssistantCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.connectivityCardBg,
+            color: theme.surface,
             borderRadius: BorderRadius.circular(AppRadius.card),
             border: Border.all(
               color: AppColors.aiPurple.withValues(alpha: 0.45),
@@ -972,10 +998,10 @@ class OfflineAIAssistantCard extends StatelessWidget {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           'Offline AI Survival Assistant',
                           style: TextStyle(
-                            color: AppColors.textPrimary,
+                            color: theme.text,
                             fontSize: 15.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -1015,10 +1041,10 @@ class OfflineAIAssistantCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Step-by-step guidance for emergency situations.',
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color: theme.textMuted,
                         fontSize: 13,
                         height: 1.35,
                       ),
@@ -1027,9 +1053,9 @@ class OfflineAIAssistantCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
+                color: theme.textMuted,
                 size: 22,
               ),
             ],

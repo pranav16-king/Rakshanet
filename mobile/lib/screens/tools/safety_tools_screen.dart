@@ -5,6 +5,7 @@ import '../../models/emergency_report.dart';
 import '../../providers/emergency_report_provider.dart';
 import '../../providers/mesh_provider.dart';
 import '../../providers/telemetry_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
 import '../../theme/emergency_design_tokens.dart';
 import '../../widgets/safety_tools_components.dart';
@@ -92,6 +93,7 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     final meshProvider = context.watch<MeshProvider>();
     final telemetryProvider = context.watch<TelemetryProvider>();
     final reportProvider = context.watch<EmergencyReportProvider>();
@@ -102,7 +104,7 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
     final int activeAlertCount = reportProvider.reports.length;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.bg,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -124,7 +126,7 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                     AppSpacing.md,
                     AppSpacing.sm,
                     AppSpacing.md,
-                    36,
+                    110,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -296,10 +298,11 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
   // 1. FIRST AID GUIDE SHEET
   // ===========================================================================
   void _showFirstAidSheet(BuildContext context) {
+    final theme = context.read<ThemeProvider>();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.cardSurface,
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
@@ -376,10 +379,11 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
   // 2. EMERGENCY TIPS SHEET
   // ===========================================================================
   void _showEmergencyTipsSheet(BuildContext context) {
+    final theme = context.read<ThemeProvider>();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.cardSurface,
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
@@ -447,6 +451,7 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
   // 3. "I AM SAFE" CHECK-IN DIALOG (Real Channel State & Real Broadcast)
   // ===========================================================================
   void _showCheckInDialog(BuildContext context) {
+    final theme = context.read<ThemeProvider>();
     final meshProvider = context.read<MeshProvider>();
     final telemetryProvider = context.read<TelemetryProvider>();
     final chatService = context.read<ChatService>();
@@ -459,24 +464,24 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardSurface,
+        backgroundColor: theme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          side: const BorderSide(color: AppColors.connectivityCardBorder),
+          side: BorderSide(color: theme.border),
         ),
         title: Row(
-          children: const [
-            Icon(
+          children: [
+            const Icon(
               Icons.verified_user_outlined,
               color: AppColors.success,
               size: 24,
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Broadcast Safe Status',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: theme.text,
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                 ),
@@ -488,10 +493,10 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Send an "I Am Safe" status update so responders and nearby peers know you do not require immediate rescue.',
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color: theme.textMuted,
                 fontSize: 13.5,
                 height: 1.4,
               ),
@@ -500,17 +505,17 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.secondarySurface,
+                color: theme.surfaceSunken,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(color: AppColors.borderSubtle),
+                border: Border.all(color: theme.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'ACTIVE TRANSMISSION CHANNELS',
                     style: TextStyle(
-                      color: AppColors.textMuted,
+                      color: theme.textMuted,
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.7,
@@ -525,18 +530,21 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                             ? '$peerCount peers connected'
                             : 'Queued for relay',
                     isActive: isMeshActive,
+                    theme: theme,
                   ),
                   const SizedBox(height: 5),
                   _buildChannelRow(
                     label: 'Internet Cloud Sync',
                     status: isOnline ? 'Online' : 'Unavailable',
                     isActive: isOnline,
+                    theme: theme,
                   ),
                   const SizedBox(height: 5),
                   _buildChannelRow(
                     label: 'GPS Coordinates',
                     status: hasGpsFix ? 'Attached' : 'Unavailable',
                     isActive: hasGpsFix,
+                    theme: theme,
                   ),
                 ],
               ),
@@ -546,9 +554,9 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: theme.textMuted),
             ),
           ),
           ElevatedButton(
@@ -573,20 +581,21 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
               } catch (_) {}
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: AppColors.elevatedSurface,
+                SnackBar(
+                  backgroundColor: theme.surface,
                   behavior: SnackBarBehavior.floating,
                   content: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.check_circle_rounded,
                         color: AppColors.success,
                         size: 18,
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           '"I Am Safe" status saved locally and queued for broadcast.',
+                          style: TextStyle(color: theme.text),
                         ),
                       ),
                     ],
@@ -608,21 +617,22 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
     required String label,
     required String status,
     required bool isActive,
+    required ThemeProvider theme,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
+          style: TextStyle(
+            color: theme.textMuted,
             fontSize: 12.5,
           ),
         ),
         Text(
           status,
           style: TextStyle(
-            color: isActive ? AppColors.success : AppColors.textMuted,
+            color: isActive ? AppColors.success : theme.textMuted,
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
           ),
@@ -635,6 +645,7 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
   // 4. EMERGENCY NUMBERS SHEET
   // ===========================================================================
   void _showEmergencyNumbersSheet(BuildContext context) {
+    final theme = context.read<ThemeProvider>();
     const numbers = [
       {
         'name': 'National Emergency Helpline',
@@ -671,7 +682,7 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.cardSurface,
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
@@ -697,17 +708,17 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
-                  color: AppColors.connectivityCardBg,
+                  color: theme.surface,
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.connectivityCardBorder),
+                  border: Border.all(color: theme.border),
                 ),
                 child: ListTile(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   title: Text(
                     item['name']!,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: theme.text,
                       fontWeight: FontWeight.w600,
                       fontSize: 14.5,
                     ),
@@ -716,8 +727,8 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       item['desc']!,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        color: theme.textMuted,
                         fontSize: 12.5,
                       ),
                     ),
@@ -753,10 +764,12 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                     Clipboard.setData(ClipboardData(text: item['num']!));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        backgroundColor: AppColors.elevatedSurface,
+                        backgroundColor: theme.surface,
                         behavior: SnackBarBehavior.floating,
-                        content:
-                            Text('Copied ${item['num']} (${item['name']})'),
+                        content: Text(
+                          'Copied ${item['num']} (${item['name']})',
+                          style: TextStyle(color: theme.text),
+                        ),
                         duration: const Duration(seconds: 2),
                       ),
                     );
@@ -774,10 +787,11 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
   // 5. DISASTER ALERTS SHEET (Driven 100% by Real SQLite EmergencyReportProvider)
   // ===========================================================================
   void _showDisasterAlertsSheet(BuildContext context) {
+    final theme = context.read<ThemeProvider>();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.cardSurface,
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
@@ -808,33 +822,32 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: AppColors.connectivityCardBg,
+                      color: theme.surface,
                       borderRadius: BorderRadius.circular(AppRadius.card),
-                      border:
-                          Border.all(color: AppColors.connectivityCardBorder),
+                      border: Border.all(color: theme.border),
                     ),
                     child: Column(
-                      children: const [
+                      children: [
                         Icon(
                           Icons.notifications_paused_outlined,
                           size: 36,
-                          color: AppColors.textMuted,
+                          color: theme.textMuted,
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 12),
                         Text(
                           'No current alerts',
                           style: TextStyle(
-                            color: AppColors.textPrimary,
+                            color: theme.text,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        SizedBox(height: 6),
+                        const SizedBox(height: 6),
                         Text(
                           'Emergency warnings broadcast across nearby mesh peers or received from command authorities will appear here automatically.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: theme.textMuted,
                             fontSize: 13,
                             height: 1.4,
                           ),
@@ -848,7 +861,7 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.connectivityCardBg,
+                        color: theme.surface,
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(
                           color: AppColors.primaryAmber.withValues(alpha: 0.4),
@@ -897,8 +910,8 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                             report.description.isNotEmpty
                                 ? report.description
                                 : '${report.category} emergency reported (${report.peopleCount} affected)',
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
+                            style: TextStyle(
+                              color: theme.text,
                               fontSize: 14.5,
                               fontWeight: FontWeight.w600,
                             ),
@@ -906,8 +919,8 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                           const SizedBox(height: 4),
                           Text(
                             'People affected: ${report.peopleCount} • ${report.location}',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
+                            style: TextStyle(
+                              color: theme.textMuted,
                               fontSize: 12.5,
                             ),
                           ),
@@ -930,6 +943,7 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
     required String title,
     required String subtitle,
   }) {
+    final theme = ctx.read<ThemeProvider>();
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -949,8 +963,8 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: theme.text,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
@@ -958,8 +972,8 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: theme.textMuted,
                   fontSize: 13,
                 ),
               ),
@@ -968,9 +982,9 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
         ),
         IconButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          icon: const Icon(
+          icon: Icon(
             Icons.close_rounded,
-            color: AppColors.textSecondary,
+            color: theme.textMuted,
           ),
         ),
       ],
@@ -982,13 +996,14 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
     required Color color,
     required List<String> steps,
   }) {
+    final theme = context.read<ThemeProvider>();
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.connectivityCardBg,
+        color: theme.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.connectivityCardBorder),
+        border: Border.all(color: theme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1007,8 +1022,8 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: theme.text,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1033,8 +1048,8 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                   Expanded(
                     child: Text(
                       s,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        color: theme.textMuted,
                         fontSize: 13.5,
                         height: 1.38,
                       ),

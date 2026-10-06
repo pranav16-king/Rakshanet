@@ -41,17 +41,34 @@ class OfflineMapService {
   String? _tileCacheDirPath;
   final Map<bool, Uint8List> _generatedGridTiles = {};
 
-  /// CartoDB Dark Matter / Stadia / OSM endpoints
-  static const String darkTileUrl =
-      'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
-  static const String lightTileUrl =
+  /// 100% Free OpenStreetMap & Humanitarian OSM endpoints (Zero API key required)
+  static const String freeOsmUrl =
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  static const String humanitarianOsmUrl =
+      'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
+
+  // Compatibility aliases pointing to 100% free OpenStreetMap
+  static const String darkTileUrl = freeOsmUrl;
+  static const String lightTileUrl = freeOsmUrl;
 
   /// Returns the base directory for offline map tiles
   Future<String> getTileCacheDirectory() async {
     if (_tileCacheDirPath != null) return _tileCacheDirPath!;
     final appDir = await getApplicationDocumentsDirectory();
-    final dir = Directory('${appDir.path}/offline_map_tiles');
+
+    // Clean up any legacy cache directories that may contain watermarked CartoDB tiles
+    try {
+      final legacyDir = Directory('${appDir.path}/offline_map_tiles');
+      if (await legacyDir.exists()) {
+        await legacyDir.delete(recursive: true);
+      }
+      final legacyV2 = Directory('${appDir.path}/offline_map_tiles_v2');
+      if (await legacyV2.exists()) {
+        await legacyV2.delete(recursive: true);
+      }
+    } catch (_) {}
+
+    final dir = Directory('${appDir.path}/offline_map_tiles_free_v3');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -155,44 +172,56 @@ class OfflineMapService {
     }
 
     int downloaded = 0;
-    final urlTemplate = isDark ? darkTileUrl : lightTileUrl;
+    final urlTemplate = freeOsmUrl;
     final client = http.Client();
 
     try {
-      for (final coord in tileCoords) {
-        final z = coord['z']!;
-        final x = coord['x']!;
-        final y = coord['y']!;
+      const batchSize = 4;
+      for (int i = 0; i < tileCoords.length; i += batchSize) {
+        final batch = tileCoords.sublist(i, math.min(i + batchSize, tileCoords.length));
+        await Future.wait(batch.map((coord) async {
+          final z = coord['z']!;
+          final x = coord['x']!;
+          final y = coord['y']!;
 
-        final filePath = '$baseDir/$z/$x/$y.png';
-        final file = File(filePath);
+          final filePath = '$baseDir/$z/$x/$y.png';
+          final file = File(filePath);
 
-        if (!await file.exists()) {
-          final url = urlTemplate
-              .replaceAll('{z}', z.toString())
-              .replaceAll('{x}', x.toString())
-              .replaceAll('{y}', y.toString());
+          if (!await file.exists()) {
+            final url = urlTemplate
+                .replaceAll('{z}', z.toString())
+                .replaceAll('{x}', x.toString())
+                .replaceAll('{y}', y.toString());
 
-          try {
-            final resp = await client.get(
-              Uri.parse(url),
-              headers: {'User-Agent': 'org.rakshanet.rakshanet_mobile/1.0'},
-            ).timeout(const Duration(seconds: 5));
+            try {
+              final resp = await client.get(
+                Uri.parse(url),
+                headers: const {
+                  'User-Agent':
+                      'org.rakshanet.rakshanet_mobile/1.0.0 (Emergency Rescue; support@rakshanet.org)'
+                },
+              ).timeout(const Duration(seconds: 4));
 
-            if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
-              await file.parent.create(recursive: true);
-              await file.writeAsBytes(resp.bodyBytes);
-            }
-          } catch (_) {}
-        }
+              if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+                final b = resp.bodyBytes;
+                final isPng = b.length > 8 && b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47;
+                final isJpg = b.length > 3 && b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF;
+                if (isPng || isJpg) {
+                  await file.parent.create(recursive: true);
+                  await file.writeAsBytes(resp.bodyBytes);
+                }
+              }
+            } catch (_) {}
+          }
+          downloaded++;
+        }));
 
-        downloaded++;
-        final pct = downloaded / total;
+        final pct = (downloaded / total).clamp(0.0, 1.0);
         yield TileDownloadProgress(
           downloaded: downloaded,
           total: total,
           percentage: pct,
-          status: 'Caching tile $downloaded of $total (zoom ${coord['z']})...',
+          status: 'Cached $downloaded of $total tiles (${(pct * 100).toInt()}%)...',
         );
       }
     } finally {
@@ -330,7 +359,10 @@ class OfflineFallbackTileProvider extends TileProvider {
   OfflineFallbackTileProvider({
     this.isDark = true,
     this.forceOfflineGrid = false,
-  }) : super(headers: {'User-Agent': 'org.rakshanet.rakshanet_mobile/1.0'});
+  }) : super(headers: <String, String>{
+          'User-Agent':
+              'org.rakshanet.rakshanet_mobile/1.0.0 (Emergency Rescue; support@rakshanet.org)',
+        });
 
   @override
   ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
@@ -428,16 +460,29 @@ class OfflineCachedTileImageProvider
             .timeout(const Duration(seconds: 4));
 
         if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-          // Asynchronously write to local disk cache for future offline access
-          unawaited(() async {
-            try {
-              await localFile.parent.create(recursive: true);
-              await localFile.writeAsBytes(response.bodyBytes);
-            } catch (_) {}
-          }());
+          final bytes = response.bodyBytes;
+          final isPng = bytes.length > 8 &&
+              bytes[0] == 0x89 &&
+              bytes[1] == 0x50 &&
+              bytes[2] == 0x4E &&
+              bytes[3] == 0x47;
+          final isJpg = bytes.length > 3 &&
+              bytes[0] == 0xFF &&
+              bytes[1] == 0xD8 &&
+              bytes[2] == 0xFF;
 
-          final buffer = await ui.ImmutableBuffer.fromUint8List(response.bodyBytes);
-          return await decode(buffer);
+          if (isPng || isJpg) {
+            // Asynchronously write to local disk cache for future offline access
+            unawaited(() async {
+              try {
+                await localFile.parent.create(recursive: true);
+                await localFile.writeAsBytes(bytes);
+              } catch (_) {}
+            }());
+
+            final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+            return await decode(buffer);
+          }
         }
       } catch (_) {
         // Network unavailable or timeout -> fallback to tactical grid

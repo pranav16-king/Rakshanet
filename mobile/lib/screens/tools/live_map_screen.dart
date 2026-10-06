@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -34,9 +35,11 @@ class LiveMapScreen extends StatefulWidget {
 }
 
 class _LiveMapScreenState extends State<LiveMapScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final MapController _mapController;
   late final AnimationController _pulseController;
+  AnimationController? _moveAnimationController;
+  StateSetter? _sheetStateSetter;
 
   // Active filter chip keys
   final Set<String> _activeFilters = {
@@ -84,9 +87,10 @@ class _LiveMapScreenState extends State<LiveMapScreen>
 
   @override
   void dispose() {
-    _meshEventSubscription?.cancel();
+    _moveAnimationController?.dispose();
     _pulseController.dispose();
     _mapController.dispose();
+    _meshEventSubscription?.cancel();
     super.dispose();
   }
 
@@ -114,25 +118,57 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   }
 
   void _centerOnUser() {
+    HapticFeedback.mediumImpact();
     final telemetry = context.read<TelemetryProvider>();
     if (telemetry.latitude != null && telemetry.longitude != null) {
       final userPos = LatLng(telemetry.latitude!, telemetry.longitude!);
-      _animatedMapMove(userPos, 15.5);
-    } else if (_emergencyReports.isNotEmpty) {
-      final r = _emergencyReports.firstWhere(
-        (e) => e.latitude != null && e.longitude != null,
-        orElse: () => _emergencyReports.first,
+      _animatedMapMove(userPos, 16.0);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.gps_fixed, color: AppTokens.signalYellow, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Centered on your GPS location (${telemetry.latitude!.toStringAsFixed(4)}, ${telemetry.longitude!.toStringAsFixed(4)})',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(milliseconds: 1800),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
-      if (r.latitude != null && r.longitude != null) {
-        _animatedMapMove(LatLng(r.latitude!, r.longitude!), 14.0);
-      }
     } else {
-      // Default to National Center
-      _animatedMapMove(const LatLng(20.5937, 78.9629), 5.5);
+      telemetry.refreshTelemetry();
+      if (_emergencyReports.isNotEmpty) {
+        final r = _emergencyReports.firstWhere(
+          (e) => e.latitude != null && e.longitude != null,
+          orElse: () => _emergencyReports.first,
+        );
+        if (r.latitude != null && r.longitude != null) {
+          _animatedMapMove(LatLng(r.latitude!, r.longitude!), 14.0);
+        }
+      } else {
+        _animatedMapMove(const LatLng(20.5937, 78.9629), 5.5);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Acquiring satellite GPS fix... Please check Location services.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
+    _moveAnimationController?.stop();
+    _moveAnimationController?.dispose();
+    _moveAnimationController = null;
+
     final camera = _mapController.camera;
     final latTween = Tween<double>(
       begin: camera.center.latitude,
@@ -151,6 +187,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
+    _moveAnimationController = controller;
 
     final Animation<double> animation = CurvedAnimation(
       parent: controller,
@@ -167,6 +204,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     animation.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         controller.dispose();
+        if (_moveAnimationController == controller) {
+          _moveAnimationController = null;
+        }
       }
     });
 
@@ -199,12 +239,13 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     setState(() {
       _isDownloadingRegion = true;
     });
+    _sheetStateSetter?.call(() {});
 
     final stream = OfflineMapService.instance.downloadRegion(
       center: center,
       radiusKm: 10.0,
-      minZoom: 12,
-      maxZoom: 15,
+      minZoom: 11,
+      maxZoom: 14,
       isDark: context.read<ThemeProvider>().isDarkMode,
     );
 
@@ -218,6 +259,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               _refreshCacheStats();
             }
           });
+          _sheetStateSetter?.call(() {});
         }
       },
       onError: (_) {
@@ -225,6 +267,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
           setState(() {
             _isDownloadingRegion = false;
           });
+          _sheetStateSetter?.call(() {});
         }
       },
     );
@@ -240,6 +283,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSheetState) {
+          _sheetStateSetter = setSheetState;
           final telemetry = context.read<TelemetryProvider>();
           final userCenter = LatLng(
             telemetry.latitude ?? 20.5937,
@@ -458,7 +502,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
           );
         },
       ),
-    );
+    ).whenComplete(() {
+      _sheetStateSetter = null;
+    });
   }
 
   void _showIncidentSheet(EmergencyReport report, ThemeProvider theme) {
@@ -926,16 +972,16 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                   onTap: _onMapTapped,
                 ),
                 children: [
-                  // Base Tile Layer with Disk Caching & Tactical Grid Fallback
+                  // Base Tile Layer with Disk Caching, Dark Inversion, & Tactical Grid Fallback
                   TileLayer(
-                    urlTemplate: theme.isDarkMode
-                        ? OfflineMapService.darkTileUrl
-                        : OfflineMapService.lightTileUrl,
+                    urlTemplate: OfflineMapService.freeOsmUrl,
                     tileProvider: OfflineFallbackTileProvider(
                       isDark: theme.isDarkMode,
                       forceOfflineGrid: _forceTacticalGrid,
                     ),
-                    maxZoom: 18,
+                    tileBuilder: theme.isDarkMode ? darkModeTileBuilder : null,
+                    userAgentPackageName: 'org.rakshanet.rakshanet_mobile',
+                    maxZoom: 19,
                   ),
 
                   // Hazard / Accuracy Buffer Circles
@@ -993,17 +1039,17 @@ class _LiveMapScreenState extends State<LiveMapScreen>
           children: [
             // Radar Icon
             Container(
-              width: 38,
-              height: 38,
+              width: 36,
+              height: 36,
               decoration: const BoxDecoration(
                 color: AppTokens.signalYellow,
                 shape: BoxShape.circle,
               ),
               child: const Center(
-                child: Icon(Icons.radar_rounded, color: AppTokens.nightNavy, size: 21),
+                child: Icon(Icons.radar_rounded, color: AppTokens.nightNavy, size: 20),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             // Title & GPS/Offline subtitle
             Expanded(
               child: Column(
@@ -1012,17 +1058,20 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                 children: [
                   Row(
                     children: [
-                      Text(
-                        'Live Offline Map',
-                        style: TextStyle(
-                          color: theme.text,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      Flexible(
+                        child: Text(
+                          'Live Offline Map',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: theme.text,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                         decoration: BoxDecoration(
                           color: _forceTacticalGrid
                               ? AppTokens.darkWarning.withValues(alpha: 0.2)
@@ -1030,10 +1079,10 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                           borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                         ),
                         child: Text(
-                          _forceTacticalGrid ? 'TACTICAL' : 'OFFLINE TILE',
+                          _forceTacticalGrid ? 'TACTICAL' : 'FREE OSM',
                           style: TextStyle(
                             color: _forceTacticalGrid ? AppTokens.darkWarning : AppTokens.beaconTeal,
-                            fontSize: 9.5,
+                            fontSize: 9,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1053,9 +1102,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                         child: Text(
                           telemetry.hasGpsFix
                               ? 'GPS Fixed • ${mesh.nearbyDevices.length} peers'
-                              : 'Searching GPS satellites • Offline ready',
+                              : 'Searching GPS • Free Maps Ready',
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: theme.textMuted, fontSize: 11.5),
+                          style: TextStyle(color: theme.textMuted, fontSize: 11),
                         ),
                       ),
                     ],
@@ -1065,6 +1114,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
             ),
             // Offline Cache Manager button
             IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               icon: const Icon(Icons.download_for_offline_outlined, color: AppTokens.signalYellow, size: 22),
               tooltip: 'Offline Map Cache',
               onPressed: () => _showOfflineManagerSheet(theme),

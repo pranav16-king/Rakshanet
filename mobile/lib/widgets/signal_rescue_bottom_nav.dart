@@ -4,6 +4,8 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 
 /// Centralized Navigation Constants for SignalRescue AI Bottom Dock
 class NavConstants {
@@ -393,10 +395,13 @@ class NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+    final isDark = theme.isDark;
+    final Color accentColor = isDark ? NavConstants.cyanAccent : const Color(0xFF0E8A94);
     final Color iconColor =
-        isSelected ? NavConstants.cyanAccent : NavConstants.inactiveColor;
+        isSelected ? accentColor : (isDark ? NavConstants.inactiveColor : const Color(0xFF6B7280));
     final Color labelColor =
-        isSelected ? NavConstants.activeText : NavConstants.inactiveColor;
+        isSelected ? (isDark ? NavConstants.activeText : accentColor) : (isDark ? NavConstants.inactiveColor : const Color(0xFF6B7280));
 
     return Expanded(
       child: Semantics(
@@ -418,12 +423,12 @@ class NavItem extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? NavConstants.cyanAccent.withValues(alpha: 0.12)
+                    ? accentColor.withValues(alpha: 0.12)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isSelected
-                      ? NavConstants.cyanAccent.withValues(alpha: 0.28)
+                      ? accentColor.withValues(alpha: 0.28)
                       : Colors.transparent,
                   width: 1,
                 ),
@@ -475,6 +480,8 @@ class SignalRescueBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+    final isDark = theme.isDark;
     final double screenWidth = MediaQuery.sizeOf(context).width;
     final bool isCompact = screenWidth < 375;
 
@@ -482,6 +489,13 @@ class SignalRescueBottomNav extends StatelessWidget {
         isCompact ? NavConstants.navBarHeightCompact : NavConstants.navBarHeight;
     final double sosSize =
         isCompact ? NavConstants.sosButtonSizeCompact : NavConstants.sosButtonSize;
+
+    final Color dockBg = isDark
+        ? (theme.isLowPower ? Colors.black : NavConstants.navSurface.withValues(alpha: 0.96))
+        : Colors.white.withValues(alpha: 0.96);
+    final Color dockBorder = isDark
+        ? (theme.isLowPower ? const Color(0xFF1E1E1E) : NavConstants.navBorder)
+        : const Color(0xFFE2DCC8);
 
     return SafeArea(
       top: false,
@@ -514,7 +528,7 @@ class SignalRescueBottomNav extends StatelessWidget {
                 ),
               ),
 
-              // Floating Rounded Dock Container (#0B1322 with 1px #263754 border + top edge highlight)
+              // Floating Rounded Dock Container
               ClipRRect(
                 borderRadius: BorderRadius.circular(NavConstants.navBarRadius),
                 child: BackdropFilter(
@@ -522,24 +536,24 @@ class SignalRescueBottomNav extends StatelessWidget {
                   child: Container(
                     height: barHeight,
                     decoration: BoxDecoration(
-                      color: NavConstants.navSurface.withValues(alpha: 0.96),
+                      color: dockBg,
                       borderRadius:
                           BorderRadius.circular(NavConstants.navBarRadius),
                       border: Border.all(
-                        color: NavConstants.navBorder,
+                        color: dockBorder,
                         width: 1.0,
                       ),
                       boxShadow: [
-                        // Soft dark floating elevation shadow
+                        // Soft floating elevation shadow
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.55),
+                          color: isDark ? Colors.black.withValues(alpha: 0.55) : Colors.black.withValues(alpha: 0.12),
                           blurRadius: 20,
                           spreadRadius: 1,
                           offset: const Offset(0, 8),
                         ),
                         // Subtle ambient shadow
                         BoxShadow(
-                          color: const Color(0xFF040812).withValues(alpha: 0.4),
+                          color: isDark ? const Color(0xFF040812).withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.05),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -547,24 +561,25 @@ class SignalRescueBottomNav extends StatelessWidget {
                     ),
                     child: Stack(
                       children: [
-                        // Top 1px subtle highlight edge along the capsule
-                        Positioned(
-                          top: 0,
-                          left: 24,
-                          right: 24,
-                          child: Container(
-                            height: 1,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.transparent,
-                                  const Color(0xFF6482AD).withValues(alpha: 0.32),
-                                  Colors.transparent,
-                                ],
+                        // Top 1px subtle highlight edge along the capsule (in dark mode)
+                        if (isDark)
+                          Positioned(
+                            top: 0,
+                            left: 24,
+                            right: 24,
+                            child: Container(
+                              height: 1,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.transparent,
+                                    const Color(0xFF6482AD).withValues(alpha: 0.32),
+                                    Colors.transparent,
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
 
                         // Evenly distributed left & right navigation items with center spacer
                         Padding(

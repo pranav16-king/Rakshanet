@@ -18,23 +18,23 @@ export interface TileLayerConfig {
 }
 
 export const TILE_CONFIGS: Record<Exclude<MapTileTheme, 'offline'>, TileLayerConfig> = {
-  // Dark Theme: CartoDB Dark Matter (Command Center Default)
+  // Dark Theme: Free Humanitarian OSM (High visibility emergency roads)
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: ['a', 'b', 'c', 'd'],
-    maxZoom: 20,
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Humanitarian OpenStreetMap Team',
+    subdomains: ['a', 'b', 'c'],
+    maxZoom: 19,
     minZoom: 1,
   },
 
-  // Light Theme: CartoDB Positron
+  // Light Theme: OpenStreetMap Standard (100% Free, zero API key)
   light: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: ['a', 'b', 'c', 'd'],
-    maxZoom: 20,
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    subdomains: ['a', 'b', 'c'],
+    maxZoom: 19,
     minZoom: 1,
   },
 
