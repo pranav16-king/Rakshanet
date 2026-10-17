@@ -566,6 +566,79 @@ export async function fetchIncidents(filters: IncidentFilterOptions): Promise<Pa
   };
 }
 
+function normalizeIncidentAiExplainability(d: any, people: number): import('../types/incident.ts').AIExplainability {
+  const rawAi = d.ai_explainability || {};
+  const rawFactorsList: string[] = Array.isArray(rawAi.factors)
+    ? rawAi.factors
+    : Array.isArray(rawAi.factorList)
+    ? rawAi.factorList
+    : [];
+
+  const existingFactors =
+    rawAi.factors && typeof rawAi.factors === 'object' && !Array.isArray(rawAi.factors)
+      ? rawAi.factors
+      : {};
+
+  const rawConf = d.ai_confidence ?? rawAi.confidencePct ?? 0.94;
+  const confidencePct = Math.min(100, Math.max(10, Math.round(rawConf > 1 ? rawConf : rawConf * 100)));
+
+  return {
+    priorityScore: rawAi.priorityScore ?? (d.severity === 'CRITICAL' ? 96 : 84),
+    confidencePct,
+    confidenceGrade: rawAi.confidenceGrade || (confidencePct >= 90 ? 'VERY_HIGH' : 'HIGH'),
+    modelVersion: rawAi.model_version || rawAi.modelVersion || 'SignalRescue-SpatialTriage-v2.1',
+    synthesis:
+      rawAi.synthesis ||
+      (rawFactorsList.length > 0
+        ? `AI Spatial Triage: ${rawFactorsList.join('. ')}`
+        : 'High confidence cluster of distress transmissions. Spatiotemporal velocity indicates flash disaster event. Urgent unit deployment recommended.'),
+    disclaimer: rawAi.disclaimer || 'Probabilistic casualty & search zone model. Values are estimated, not exact.',
+    factors: {
+      lastContactTime: existingFactors.lastContactTime || {
+        name: 'Last Contact Time',
+        factorKey: 'last_contact',
+        weightPct: 25,
+        valueDisplay: '2 min ago',
+        status: 'critical',
+        details: rawFactorsList[1] || 'Recent mesh beacon received via volunteer mule',
+      },
+      incidentSeverity: existingFactors.incidentSeverity || {
+        name: 'Incident Severity',
+        factorKey: 'severity',
+        weightPct: 30,
+        valueDisplay: d.severity || 'Critical',
+        status: 'critical',
+        details: rawFactorsList[0] || 'Flash disaster with life threat indicators',
+      },
+      affectedPopulation: existingFactors.affectedPopulation || {
+        name: 'Estimated Population',
+        factorKey: 'population',
+        weightPct: 20,
+        valueDisplay: `${people} survivors`,
+        status: 'warning',
+        details: rawFactorsList[2] || 'Based on DBSCAN device clustering and Poisson multiplier',
+      },
+      hazardBoundaryProximity: existingFactors.hazardBoundaryProximity || {
+        name: 'Hazard Proximity',
+        factorKey: 'hazard',
+        weightPct: 15,
+        valueDisplay: 'Active Inundation',
+        status: 'critical',
+        details: 'Within primary disaster hazard zone boundary',
+      },
+      communicationStatus: existingFactors.communicationStatus || {
+        name: 'Mesh Relay Hops',
+        factorKey: 'comms',
+        weightPct: 10,
+        valueDisplay: '3 hops away',
+        status: 'warning',
+        details: 'Cellular network dead, mesh relay active',
+      },
+      ...existingFactors,
+    },
+  };
+}
+
 export async function fetchIncidentById(id: string): Promise<Incident | null> {
   try {
     const res = await apiClient.get<any>(`/api/v1/incidents/${id}`);
@@ -646,56 +719,7 @@ export async function fetchIncidentById(id: string): Promise<Incident | null> {
                 statusText: 'Community hall high-ground coordination',
               },
             ],
-        aiExplainability: d.ai_explainability || {
-          priorityScore: 96,
-          confidencePct: Math.round((d.ai_confidence || 0.94) * 100),
-          confidenceGrade: 'VERY_HIGH',
-          modelVersion: 'SignalRescue Bayesian Spatial v2.4 (DBSCAN + Poisson Mules)',
-          synthesis: 'High confidence cluster of distress transmissions. Spatiotemporal velocity indicates flash water level increase. Urgent boat deployment recommended.',
-          disclaimer: 'Probabilistic casualty & search zone model. Values are estimated, not exact.',
-          factors: {
-            lastContactTime: {
-              name: 'Last Contact Time',
-              factorKey: 'last_contact',
-              weightPct: 25,
-              valueDisplay: '2 min ago',
-              status: 'critical',
-              details: 'Recent mesh beacon received via volunteer mule',
-            },
-            incidentSeverity: {
-              name: 'Incident Severity',
-              factorKey: 'severity',
-              weightPct: 30,
-              valueDisplay: d.severity || 'Critical',
-              status: 'critical',
-              details: 'Flash flood with life threat indicators',
-            },
-            affectedPopulation: {
-              name: 'Estimated Population',
-              factorKey: 'population',
-              weightPct: 20,
-              valueDisplay: `${people} survivors`,
-              status: 'warning',
-              details: 'Based on DBSCAN device clustering and Poisson multiplier',
-            },
-            hazardBoundaryProximity: {
-              name: 'Hazard Proximity',
-              factorKey: 'hazard',
-              weightPct: 15,
-              valueDisplay: 'Active Inundation',
-              status: 'critical',
-              details: 'Within primary river flood basin boundary',
-            },
-            communicationStatus: {
-              name: 'Mesh Relay Hops',
-              factorKey: 'comms',
-              weightPct: 10,
-              valueDisplay: '3 hops away',
-              status: 'warning',
-              details: 'Cellular network dead, mesh relay active',
-            },
-          },
-        },
+        aiExplainability: normalizeIncidentAiExplainability(d, people),
       };
     }
   } catch (err) {
