@@ -137,6 +137,7 @@ class MissingPersonCreate(BaseModel):
     lng: Optional[float] = None
     description: Optional[str] = ""
     photo_url: Optional[str] = None
+    photo_base64: Optional[str] = None
     contact_phone: Optional[str] = None
     status: Optional[str] = "MISSING"
     reported_by: Optional[str] = "Anonymous"
@@ -144,4 +145,22 @@ class MissingPersonCreate(BaseModel):
 
 class MissingPersonStatusUpdate(BaseModel):
     status: str = Field(..., description="New status: 'MISSING' or 'FOUND'")
+
+
+class PhotoSearchRequest(BaseModel):
+    photo_base64: Optional[str] = None
+    photo_url: Optional[str] = None
+    top_k: int = 5
+    score_threshold: float = 0.65
+
+
+class PhotoSearchResponse(BaseModel):
+    match_found: bool
+    matches: List[Dict[str, Any]] = Field(default_factory=list)
+    top_match: Optional[Dict[str, Any]] = None
+
+
+class PhotoUploadRequest(BaseModel):
+    photo_base64: Optional[str] = None
+    photo_url: Optional[str] = None
 

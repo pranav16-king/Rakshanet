@@ -1058,6 +1058,24 @@ class GatewayStorage:
             )
         return res
 
+    def update_missing_person_photo(self, person_id: str, photo_url: str) -> Optional[Dict[str, Any]]:
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE missing_persons SET photo_url = ? WHERE id = ?", (photo_url, person_id))
+            if cursor.rowcount == 0:
+                return None
+            conn.commit()
+
+        res = self.get_missing_person(person_id)
+        if res:
+            self._async_mongo(
+                lambda: self.mongo_db.missing_persons.update_one(
+                    {"id": person_id},
+                    {"$set": {"photo_url": photo_url}}
+                )
+            )
+        return res
+
     def add_missing_person_sighting(self, person_id: str, sighting: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         person = self.get_missing_person(person_id)
         if not person:

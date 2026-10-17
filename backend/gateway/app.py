@@ -10,7 +10,7 @@ Features:
   - OASIS CAP v1.2 XML & Legacy CAD JSON Interoperability
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, status, Response, Depends, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, status, Response, Depends, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Dict, Any, Optional
@@ -18,6 +18,7 @@ import time
 import os
 import uuid
 import sys
+import logging
 from pathlib import Path
 import jwt
 
@@ -25,6 +26,8 @@ import jwt
 backend_root = str(Path(__file__).parent.parent)
 if backend_root not in sys.path:
     sys.path.insert(0, backend_root)
+
+logger = logging.getLogger("rakshanet.gateway")
 
 from ai_engine.clustering import spatial_cluster_engine, MasterIncident, SpatialClusterEngine
 from ai_engine.black_hole import black_hole_detector, BlackHoleAnomaly, BlackHoleDetector
@@ -52,13 +55,21 @@ from .models import (
     DeviceStats,
     SightingCreate,
     MissingPersonCreate,
-    MissingPersonStatusUpdate
+    MissingPersonStatusUpdate,
+    PhotoSearchRequest,
+    PhotoSearchResponse,
+    PhotoUploadRequest
 )
 from .storage import (
     gateway_storage,
     GatewayStorage,
     verify_password,
     hash_password
+)
+from .qdrant_service import (
+    qdrant_service,
+    extract_image_features,
+    decode_image_bytes
 )
 
 # JWT Configuration
@@ -633,13 +644,46 @@ def get_missing_person_by_id(person_id: str):
 
 
 @app.post("/api/v1/missing-persons", status_code=status.HTTP_201_CREATED)
-def create_missing_person_report(req: MissingPersonCreate):
-    """Register a new missing person bulletin."""
-    return gateway_storage.create_missing_person(req.model_dump())
+async def create_missing_person_report(req: MissingPersonCreate):
+    """
+    Register a new missing person bulletin.
+    If a photo is provided (via photo_url or photo_base64), automatically extracts
+    a 512-D visual feature embedding and indexes it into the Qdrant Cloud Vector Database.
+    """
+    created = gateway_storage.create_missing_person(req.model_dump())
+
+    photo_input = req.photo_url or req.photo_base64
+    if photo_input:
+        try:
+            image_bytes = decode_image_bytes(photo_input)
+            indexed = qdrant_service.upsert_person_photo(
+                person_id=created["id"],
+                image_bytes=image_bytes,
+                metadata={
+                    "name": created.get("name"),
+                    "age": created.get("age"),
+                    "gender": created.get("gender"),
+                    "last_seen_location": created.get("last_seen_location"),
+                    "photo_url": created.get("photo_url"),
+                    "status": created.get("status"),
+                    "reported_by": created.get("reported_by"),
+                }
+            )
+            created["indexed_in_qdrant"] = indexed
+        except Exception as e:
+            logger.warning(f"Could not index photo for missing person {created['id']} into Qdrant: {e}")
+            created["indexed_in_qdrant"] = False
+
+    await ws_manager.broadcast({
+        "event": "MISSING_PERSON_CREATED",
+        "data": created,
+        "timestamp": int(time.time() * 1000)
+    })
+    return created
 
 
 @app.patch("/api/v1/missing-persons/{person_id}/status")
-def update_missing_person_status(person_id: str, req: MissingPersonStatusUpdate):
+async def update_missing_person_status(person_id: str, req: MissingPersonStatusUpdate):
     """Update status of a missing person report (e.g. mark FOUND or MISSING)."""
     updated = gateway_storage.update_missing_person_status(person_id, req.status)
     if not updated:
@@ -647,11 +691,18 @@ def update_missing_person_status(person_id: str, req: MissingPersonStatusUpdate)
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Missing person record '{person_id}' not found."
         )
+    await ws_manager.broadcast({
+        "event": "MISSING_PERSON_STATUS_UPDATED",
+        "person_id": person_id,
+        "status": req.status,
+        "data": updated,
+        "timestamp": int(time.time() * 1000)
+    })
     return updated
 
 
 @app.post("/api/v1/missing-persons/{person_id}/sightings")
-def add_missing_person_sighting(person_id: str, req: SightingCreate):
+async def add_missing_person_sighting(person_id: str, req: SightingCreate):
     """Record a citizen sighting for a missing person."""
     updated = gateway_storage.add_missing_person_sighting(person_id, req.model_dump())
     if not updated:
@@ -659,7 +710,334 @@ def add_missing_person_sighting(person_id: str, req: SightingCreate):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Missing person record '{person_id}' not found."
         )
+    await ws_manager.broadcast({
+        "event": "MISSING_PERSON_SIGHTING_ADDED",
+        "person_id": person_id,
+        "data": updated,
+        "timestamp": int(time.time() * 1000)
+    })
     return updated
+
+
+@app.post("/api/v1/missing-persons/{person_id}/photo")
+async def upload_missing_person_photo(
+    person_id: str,
+    request: Request,
+):
+    """
+    Upload and index an identifying photo for an existing missing person record.
+    Extracts 512-D visual features and indexes them into Qdrant Cloud Vector Database.
+    Accepts multipart/form-data ('photo' or 'file') or JSON ('photo_base64' or 'photo_url').
+    """
+    person = gateway_storage.get_missing_person(person_id)
+    if not person:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Missing person record '{person_id}' not found."
+        )
+
+    content_type = request.headers.get("content-type", "").lower()
+    image_bytes: Optional[bytes] = None
+    photo_url: Optional[str] = None
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        upload = form.get("photo") or form.get("file") or form.get("image")
+        if upload and hasattr(upload, "read"):
+            image_bytes = await upload.read()
+    else:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        photo_input = (
+            body.get("photo_base64")
+            or body.get("photo_url")
+            or body.get("photo")
+            or body.get("image")
+        )
+        if photo_input:
+            try:
+                image_bytes = decode_image_bytes(photo_input)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to decode photo: {e}"
+                )
+            if isinstance(photo_input, str) and (photo_input.startswith("http://") or photo_input.startswith("https://")):
+                photo_url = photo_input
+
+    if not image_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No photo provided. Provide file upload ('photo') or JSON body ('photo_base64' / 'photo_url')."
+        )
+
+    # Persist photo file locally
+    photos_dir = Path(backend_root) / "data" / "photos"
+    photos_dir.mkdir(parents=True, exist_ok=True)
+    photo_file = photos_dir / f"{person_id}.jpg"
+    with open(photo_file, "wb") as f:
+        f.write(image_bytes)
+
+    if not photo_url:
+        photo_url = f"/api/v1/missing-persons/{person_id}/photo"
+
+    # Update in gateway storage
+    updated_person = gateway_storage.update_missing_person_photo(person_id, photo_url) or person
+    updated_person["photo_url"] = photo_url
+
+    # Upsert vector into Qdrant
+    indexed = qdrant_service.upsert_person_photo(
+        person_id=person_id,
+        image_bytes=image_bytes,
+        metadata={
+            "name": updated_person.get("name"),
+            "age": updated_person.get("age"),
+            "gender": updated_person.get("gender"),
+            "last_seen_location": updated_person.get("last_seen_location"),
+            "photo_url": photo_url,
+            "status": updated_person.get("status"),
+            "reported_by": updated_person.get("reported_by"),
+        }
+    )
+
+    if not indexed:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to index visual features into Qdrant for person '{person_id}'."
+        )
+
+    await ws_manager.broadcast({
+        "event": "MISSING_PERSON_PHOTO_UPDATED",
+        "person_id": person_id,
+        "photo_url": photo_url,
+        "timestamp": int(time.time() * 1000)
+    })
+
+    return {
+        "status": "SUCCESS",
+        "person_id": person_id,
+        "photo_url": photo_url,
+        "indexed_in_qdrant": True,
+        "message": f"Photo indexed successfully in Qdrant Vector Cloud for {person.get('name')}.",
+        "person": updated_person
+    }
+
+
+@app.get("/api/v1/missing-persons/{person_id}/photo")
+def get_missing_person_photo(person_id: str):
+    """Retrieve stored photo for a missing person."""
+    photo_file = Path(backend_root) / "data" / "photos" / f"{person_id}.jpg"
+    if photo_file.exists():
+        from fastapi.responses import FileResponse
+        return FileResponse(str(photo_file), media_type="image/jpeg")
+
+    person = gateway_storage.get_missing_person(person_id)
+    if person and person.get("photo_url"):
+        from fastapi.responses import RedirectResponse
+        if person["photo_url"].startswith("http"):
+            return RedirectResponse(url=person["photo_url"])
+        return {"photo_url": person["photo_url"]}
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Photo for person '{person_id}' not found."
+    )
+
+
+@app.post("/api/v1/missing-persons/search-by-photo")
+async def search_missing_persons_by_photo(
+    request: Request,
+):
+    """
+    Biometric visual search endpoint for missing individuals.
+    Accepts multipart/form-data with a file upload ('photo' or 'file')
+    OR application/json payload with 'photo_base64' (or 'photo_url').
+    Extracts 512-D visual features and performs cosine similarity search via Qdrant Cloud.
+    Returns:
+        {
+            "match_found": bool,
+            "matches": list,
+            "top_match": dict or None
+        }
+    """
+    start_ts = time.time()
+    content_type = request.headers.get("content-type", "").lower()
+    image_bytes: Optional[bytes] = None
+    top_k: int = 5
+    score_threshold: float = 0.65
+
+    # Check query params
+    qp = request.query_params
+    if "top_k" in qp:
+        try:
+            top_k = int(qp["top_k"])
+        except ValueError:
+            pass
+    if "score_threshold" in qp:
+        try:
+            score_threshold = float(qp["score_threshold"])
+        except ValueError:
+            pass
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        upload = form.get("photo") or form.get("file") or form.get("image")
+        if upload and hasattr(upload, "read"):
+            image_bytes = await upload.read()
+        if "top_k" in form:
+            try:
+                top_k = int(form["top_k"])
+            except ValueError:
+                pass
+        if "score_threshold" in form:
+            try:
+                score_threshold = float(form["score_threshold"])
+            except ValueError:
+                pass
+    else:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        photo_input = (
+            body.get("photo_base64")
+            or body.get("photo_url")
+            or body.get("photo")
+            or body.get("image")
+        )
+        if photo_input:
+            try:
+                image_bytes = decode_image_bytes(photo_input)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to decode photo: {e}"
+                )
+        if "top_k" in body:
+            try:
+                top_k = int(body["top_k"])
+            except ValueError:
+                pass
+        if "score_threshold" in body:
+            try:
+                score_threshold = float(body["score_threshold"])
+            except ValueError:
+                pass
+
+    if not image_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid photo provided. Supply a file upload ('photo') or JSON field ('photo_base64'/'photo_url')."
+        )
+
+    # Perform visual feature search against Qdrant Vector Cloud
+    qdrant_matches = qdrant_service.search_by_photo(
+        image_bytes=image_bytes,
+        top_k=top_k,
+        score_threshold=score_threshold,
+    )
+
+    # Enrich matches with database records
+    enriched_matches = []
+    for m in qdrant_matches:
+        p_id = m.get("person_id")
+        db_person = gateway_storage.get_missing_person(p_id) if p_id else None
+        record = {
+            "person_id": p_id,
+            "score": m["score"],
+            "confidence_score": round(m["score"] * 100, 1),
+            "point_id": m.get("point_id"),
+            "person": db_person or m.get("metadata", {}),
+            "name": m.get("name") or (db_person.get("name") if db_person else None),
+            "age": m.get("age") or (db_person.get("age") if db_person else None),
+            "gender": m.get("gender") or (db_person.get("gender") if db_person else None),
+            "last_seen_location": m.get("last_seen_location") or (db_person.get("last_seen_location") if db_person else None),
+            "photo_url": m.get("photo_url") or (db_person.get("photo_url") if db_person else None),
+            "status": m.get("status") or (db_person.get("status") if db_person else None),
+            "metadata": m.get("metadata", {}),
+        }
+        enriched_matches.append(record)
+
+    match_found = len(enriched_matches) > 0
+    top_match = enriched_matches[0] if match_found else None
+    latency_ms = int((time.time() - start_ts) * 1000)
+
+    return {
+        "match_found": match_found,
+        "matches": enriched_matches,
+        "top_match": top_match,
+        "success": True,
+        "total_candidates_scanned": len(enriched_matches),
+        "engine": "Qdrant Vector Cloud Engine (missing_persons, 512-D COSINE)",
+        "search_latency_ms": latency_ms,
+    }
+
+
+@app.get("/api/v1/missing-persons/stats/visual-index")
+def get_visual_index_stats():
+    """Retrieve indexing statistics for the Qdrant Cloud visual search collection."""
+    count = qdrant_service.count_indexed_photos()
+    return {
+        "status": "ONLINE",
+        "collection_name": qdrant_service.collection_name,
+        "vector_size": qdrant_service.vector_size,
+        "distance_metric": "COSINE",
+        "indexed_photos_count": count,
+        "cloud_url": qdrant_service.url,
+    }
+
+
+@app.post("/api/v1/missing-persons/index-all")
+async def index_all_missing_persons_photos():
+    """
+    Batch index all registered missing persons with photos into Qdrant Cloud.
+    Scans the missing persons registry and computes 512-D embeddings for records with photos.
+    """
+    all_persons = gateway_storage.get_missing_persons(status="ALL")
+    indexed_count = 0
+    failed_count = 0
+    details = []
+
+    for person in all_persons:
+        photo_url = person.get("photo_url")
+        if not photo_url:
+            continue
+        try:
+            image_bytes = decode_image_bytes(photo_url)
+            ok = qdrant_service.upsert_person_photo(
+                person_id=person["id"],
+                image_bytes=image_bytes,
+                metadata={
+                    "name": person.get("name"),
+                    "age": person.get("age"),
+                    "gender": person.get("gender"),
+                    "last_seen_location": person.get("last_seen_location"),
+                    "photo_url": photo_url,
+                    "status": person.get("status"),
+                    "reported_by": person.get("reported_by"),
+                }
+            )
+            if ok:
+                indexed_count += 1
+                details.append({"person_id": person["id"], "name": person.get("name"), "status": "INDEXED"})
+            else:
+                failed_count += 1
+                details.append({"person_id": person["id"], "name": person.get("name"), "status": "FAILED"})
+        except Exception as e:
+            logger.warning(f"Failed to batch index photo for {person['id']}: {e}")
+            failed_count += 1
+            details.append({"person_id": person["id"], "name": person.get("name"), "status": f"ERROR: {str(e)}"})
+
+    return {
+        "total_scanned": len(all_persons),
+        "indexed_count": indexed_count,
+        "failed_count": failed_count,
+        "total_in_qdrant": qdrant_service.count_indexed_photos(),
+        "details": details,
+    }
+
 
 
 # =============================================================================
@@ -874,7 +1252,7 @@ ACTIVE_RESCUE_FLEET = [
 ]
 
 
-@app.get("/api/v1/search/isochrone", response_model=SearchIsochrone)
+@app.get("/api/v1/search/isochrone")
 def get_missing_person_isochrone(
     person_id: str,
     last_lat: float,
@@ -889,7 +1267,7 @@ def get_missing_person_isochrone(
     Computes expanding 68% and 95% search envelopes and drift offsets
     for missing survivors whose telemetry terminated.
     """
-    return SearchIsochroneEngine.calculate_search_zone(
+    iso = SearchIsochroneEngine.calculate_search_zone(
         person_id=person_id,
         last_lat=last_lat,
         last_lng=last_lng,
@@ -898,6 +1276,19 @@ def get_missing_person_isochrone(
         drift_heading_deg=drift_heading_deg,
         pedestrian_speed_mps=pedestrian_speed_mps
     )
+    res = iso.model_dump()
+    res["isochrone_68_pct"] = {
+        "confidence": 0.68,
+        "radius_meters": iso.radius_68_meters,
+        "center": {"lat": iso.projected_center_lat, "lng": iso.projected_center_lng}
+    }
+    res["isochrone_95_pct"] = {
+        "confidence": 0.95,
+        "radius_meters": iso.radius_95_meters,
+        "center": {"lat": iso.projected_center_lat, "lng": iso.projected_center_lng}
+    }
+    return res
+
 
 
 @app.get("/api/v1/dispatch/units", response_model=List[RescueUnit])
