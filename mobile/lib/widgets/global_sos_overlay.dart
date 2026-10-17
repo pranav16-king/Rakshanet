@@ -79,6 +79,8 @@ class _GlobalSosOverlayState extends State<GlobalSosOverlay>
           builder: (_) => LiveMapScreen(
             initialCenter: LatLng(alert.lat!, alert.lng!),
             initialZoom: 16.5,
+            initialNavTarget: LatLng(alert.lat!, alert.lng!),
+            initialNavTargetName: 'SOS: ${alert.formattedSender}',
           ),
         ),
       );

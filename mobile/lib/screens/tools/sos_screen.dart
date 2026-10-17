@@ -2,10 +2,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import '../../providers/sos_provider.dart';
 
+import '../../database/app_database.dart';
+import '../../models/emergency_report.dart';
+import '../../models/message_envelope.dart';
+import '../../providers/sos_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/database_service.dart';
 import '../../services/location/location_service.dart';
+import '../../services/mesh_engine.dart';
 import '../../services/sos_alert_service.dart';
 import '../../theme/app_tokens.dart';
 import '../../utils/haversine_distance.dart';
@@ -58,13 +63,15 @@ class _SosScreenState extends State<SosScreen>
     super.dispose();
   }
 
-  void _openMapToDistress(double? lat, double? lng) {
+  void _openMapToDistress(double? lat, double? lng, {String? targetName}) {
     if (lat != null && lng != null) {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => LiveMapScreen(
             initialCenter: LatLng(lat, lng),
             initialZoom: 16.5,
+            initialNavTarget: LatLng(lat, lng),
+            initialNavTargetName: targetName ?? 'SOS Distress Node',
           ),
         ),
       );
@@ -72,6 +79,89 @@ class _SosScreenState extends State<SosScreen>
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => const LiveMapScreen(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleSosTriggered(DeviceLocationFix? fix) async {
+    final now = DateTime.now();
+    final messageId = 'SOS-BEACON-${now.millisecondsSinceEpoch}';
+    final lat = fix?.latitude;
+    final lng = fix?.longitude;
+    final accuracy = fix?.horizontalAccuracyMeters;
+    const notes = 'Emergency SOS beacon triggered from SOS Screen';
+
+    // 1. Save to SQLite via AppDatabase for immediate offline persistence
+    try {
+      final realReport = EmergencyReport.create(
+        id: messageId,
+        category: 'GENERAL_EMERGENCY',
+        description: notes,
+        peopleCount: 1,
+        latitude: lat,
+        longitude: lng,
+        location: (lat != null && lng != null)
+            ? '$lat, $lng'
+            : 'GPS fix pending',
+        status: 'ACTIVE_DISTRESS',
+        timestamp: now,
+        syncPending: true,
+        severity: 'CRITICAL',
+      );
+      await AppDatabase.instance.saveEmergencyReport(realReport);
+    } catch (e) {
+      debugPrint('[SosScreen] Error saving local emergency report: $e');
+    }
+
+    // 2. Broadcast SOS packet via SosProvider (activates local siren & alert state)
+    SosProvider.instance.triggerLocalSos(
+      category: 'GENERAL_EMERGENCY',
+      peopleCount: 1,
+      latitude: lat,
+      longitude: lng,
+      notes: notes,
+      messageId: messageId,
+    );
+
+    // 3. Broadcast SOS packet over mesh network via MeshEngine outbox
+    try {
+      final envelope = MessageEnvelope(
+        uuid: messageId,
+        senderId: DatabaseService.myDeviceId,
+        senderName: DatabaseService.myDisplayName,
+        conversationId: 'CONV_COMMUNITY',
+        timestamp: now.millisecondsSinceEpoch,
+        ttl: 7,
+        hops: 0,
+        type: 'SOS',
+        payload: 'EMERGENCY SOS: Distress beacon activated from SOS Screen.',
+        metadata: {
+          'category': 'GENERAL_EMERGENCY',
+          'peopleCount': 1,
+          'latitude': lat,
+          'longitude': lng,
+          'accuracy_m': accuracy,
+          'urgency': 'CRITICAL',
+        },
+      );
+      MeshEngine().queueOutboxMessage(envelope);
+    } catch (e) {
+      debugPrint('[SosScreen] Error queuing mesh outbox SOS: $e');
+    }
+
+    // 4. Immediately navigate to LiveMapScreen with distress beacon active,
+    // showing all connected nearby peers!
+    if (mounted) {
+      final targetLoc = (lat != null && lng != null) ? LatLng(lat, lng) : null;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => LiveMapScreen(
+            initialCenter: targetLoc,
+            initialZoom: 16.5,
+            initialNavTarget: targetLoc,
+            initialNavTargetName: 'Your Distress Beacon',
+          ),
         ),
       );
     }
@@ -162,15 +252,7 @@ class _SosScreenState extends State<SosScreen>
               children: [
                 const SizedBox(height: 12),
                 BeaconSosButton(
-                  onTriggered: () {
-                    final fix = localFix;
-                    SosProvider.instance.triggerLocalSos(
-                      category: 'GENERAL_EMERGENCY',
-                      latitude: fix?.latitude,
-                      longitude: fix?.longitude,
-                      notes: 'Emergency SOS beacon triggered from SOS Screen',
-                    );
-                  },
+                  onTriggered: () => _handleSosTriggered(localFix),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -523,7 +605,7 @@ class _SosScreenState extends State<SosScreen>
                             borderRadius: BorderRadius.circular(AppTokens.radiusSm),
                           ),
                         ),
-                        onPressed: () => _openMapToDistress(alert.lat, alert.lng),
+                        onPressed: () => _openMapToDistress(alert.lat, alert.lng, targetName: alert.formattedSender),
                         icon: const Icon(Icons.map_rounded, size: 16),
                         label: const Text('View On Map', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
@@ -571,52 +653,63 @@ class _SosScreenState extends State<SosScreen>
       timestamp2: alert.timestamp.millisecondsSinceEpoch,
     );
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        border: Border.all(color: theme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                alert.formattedSender,
-                style: TextStyle(
-                  color: theme.text,
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w800,
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+      onTap: () => _openMapToDistress(alert.lat, alert.lng, targetName: alert.formattedSender),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          border: Border.all(color: theme.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  alert.formattedSender,
+                  style: TextStyle(
+                    color: theme.text,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
+                Text(
+                  alert.timeAgo,
+                  style: TextStyle(color: theme.textMuted, fontSize: 11.5),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Distance: ${distanceResult.summaryLabel}',
+                    style: const TextStyle(
+                      color: AppTokens.sosRed,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: AppTokens.sosRed, size: 18),
+              ],
+            ),
+            if (!distanceResult.isCoordinatesAvailable &&
+                distanceResult.fallbackPrompt != null) ...[
+              const SizedBox(height: 3),
               Text(
-                alert.timeAgo,
-                style: TextStyle(color: theme.textMuted, fontSize: 11.5),
+                distanceResult.fallbackPrompt!,
+                style: TextStyle(color: theme.textMuted, fontSize: 11),
               ),
             ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Distance: ${distanceResult.summaryLabel}',
-            style: const TextStyle(
-              color: AppTokens.sosRed,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          if (!distanceResult.isCoordinatesAvailable &&
-              distanceResult.fallbackPrompt != null) ...[
-            const SizedBox(height: 3),
-            Text(
-              distanceResult.fallbackPrompt!,
-              style: TextStyle(color: theme.textMuted, fontSize: 11),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

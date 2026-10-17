@@ -323,6 +323,213 @@ class HaversineDistance {
       return '± ${(meters / 1000.0).toStringAsFixed(1)} km';
     }
   }
+
+  /// Formats age of a timestamp into human-readable string (e.g. "Just now", "2m ago", "1h ago")
+  static String formatTimestampAge(int timestampMs) {
+    if (timestampMs <= 0) return 'Unknown';
+    final ageMs = DateTime.now().millisecondsSinceEpoch - timestampMs;
+    if (ageMs < 0) return 'Just now';
+    final seconds = ageMs ~/ 1000;
+    if (seconds < 60) return 'Just now';
+    final minutes = seconds ~/ 60;
+    if (minutes < 60) return '${minutes}m ago';
+    final hours = minutes ~/ 60;
+    if (hours < 24) return '${hours}h ago';
+    final days = hours ~/ 24;
+    return '${days}d ago';
+  }
+
+  /// Calculates real-time navigation guidance from current user position to target destination
+  static NavigationTarget calculateNavigationTarget({
+    required double currentLat,
+    required double currentLng,
+    required double targetLat,
+    required double targetLng,
+    String targetId = 'target',
+    String targetName = 'Target Destination',
+    double userHeadingDegrees = 0.0,
+    double walkingSpeedMps = 1.2,
+    double arrivalThresholdMeters = 15.0,
+  }) {
+    // 1. Calculate great-circle distance
+    final distRes = calculateDistance(
+      lat1: currentLat,
+      lng1: currentLng,
+      accuracy1: 5.0,
+      timestamp1: DateTime.now().millisecondsSinceEpoch,
+      lat2: targetLat,
+      lng2: targetLng,
+      accuracy2: 5.0,
+      timestamp2: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    final distanceMeters = distRes.distanceMeters ?? 0.0;
+    final distanceFormatted = distRes.distanceFormatted;
+    final bearing = calculateBearingDegrees(currentLat, currentLng, targetLat, targetLng);
+    final compass = cardinalDirection(bearing);
+
+    // 2. Relative bearing (-180..+180) relative to user's heading
+    final relBearing = calculateRelativeBearing(bearing, userHeadingDegrees);
+    final instruction = getTurnInstruction(relBearing);
+
+    // 3. ETA walking pace
+    final speed = walkingSpeedMps > 0.1 ? walkingSpeedMps : 1.2;
+    final totalSeconds = (distanceMeters / speed).round();
+    final etaStr = formatEta(totalSeconds);
+
+    final isArrived = distanceMeters <= arrivalThresholdMeters;
+
+    return NavigationTarget(
+      targetId: targetId,
+      targetName: targetName,
+      targetLat: targetLat,
+      targetLng: targetLng,
+      distanceMeters: distanceMeters,
+      distanceFormatted: distanceFormatted,
+      bearingDegrees: bearing,
+      cardinalDirection: compass,
+      userHeadingDegrees: userHeadingDegrees,
+      relativeBearingDegrees: relBearing,
+      turnInstruction: isArrived ? 'Arrived at Destination' : instruction,
+      estimatedSeconds: totalSeconds,
+      formattedEta: etaStr,
+      isArrived: isArrived,
+    );
+  }
+
+  /// Calculates relative bearing in range [-180.0, +180.0] degrees relative to user heading
+  static double calculateRelativeBearing(double targetBearing, double userHeading) {
+    final diff = (targetBearing - userHeading + 180.0) % 360.0;
+    final normalized = (diff < 0 ? diff + 360.0 : diff) - 180.0;
+    return double.parse(normalized.toStringAsFixed(2));
+  }
+
+  /// Tactical turn guidance based on relative bearing angle
+  static String getTurnInstruction(double relativeBearing) {
+    if (relativeBearing >= -20.0 && relativeBearing <= 20.0) {
+      return 'Head straight';
+    } else if (relativeBearing > 20.0 && relativeBearing <= 60.0) {
+      return 'Bear right';
+    } else if (relativeBearing > 60.0 && relativeBearing <= 120.0) {
+      return 'Turn right';
+    } else if (relativeBearing > 120.0 && relativeBearing <= 160.0) {
+      return 'Sharp right';
+    } else if (relativeBearing > 160.0 || relativeBearing < -160.0) {
+      return 'Turn around';
+    } else if (relativeBearing >= -160.0 && relativeBearing < -120.0) {
+      return 'Sharp left';
+    } else if (relativeBearing >= -120.0 && relativeBearing < -60.0) {
+      return 'Turn left';
+    } else {
+      return 'Bear left';
+    }
+  }
+
+  /// Formats estimated duration into human-readable time (e.g. "45 sec", "4 min", "1 hr 12 min")
+  static String formatEta(int totalSeconds) {
+    if (totalSeconds < 60) {
+      return '$totalSeconds sec';
+    } else if (totalSeconds < 3600) {
+      final mins = (totalSeconds / 60).round();
+      return '$mins min';
+    } else {
+      final hours = totalSeconds ~/ 3600;
+      final remainingMins = ((totalSeconds % 3600) / 60).round();
+      if (remainingMins == 0) {
+        return '$hours hr';
+      }
+      return '$hours hr $remainingMins min';
+    }
+  }
+
+  /// Forward Geodetic Problem: Computes destination coordinates given origin, distance in meters, and bearing degrees.
+  static Map<String, double> calculateDestinationPoint({
+    required double lat,
+    required double lng,
+    required double distanceMeters,
+    required double bearingDegrees,
+  }) {
+    final delta = distanceMeters / earthRadiusMeters;
+    final theta = bearingDegrees * math.pi / 180.0;
+    final phi1 = lat * math.pi / 180.0;
+    final lambda1 = lng * math.pi / 180.0;
+
+    final sinPhi1 = math.sin(phi1);
+    final cosPhi1 = math.cos(phi1);
+    final sinDelta = math.sin(delta);
+    final cosDelta = math.cos(delta);
+
+    final sinPhi2 = sinPhi1 * cosDelta + cosPhi1 * sinDelta * math.cos(theta);
+    final phi2 = math.asin(sinPhi2);
+
+    final y = math.sin(theta) * sinDelta * cosPhi1;
+    final x = cosDelta - sinPhi1 * sinPhi2;
+    final lambda2 = lambda1 + math.atan2(y, x);
+
+    final destLat = phi2 * 180.0 / math.pi;
+    final destLng = ((lambda2 * 180.0 / math.pi + 540.0) % 360.0) - 180.0;
+
+    return {
+      'latitude': double.parse(destLat.toStringAsFixed(6)),
+      'longitude': double.parse(destLng.toStringAsFixed(6)),
+    };
+  }
+}
+
+/// Real-time Navigation Target calculation for emergency rescue and tactical SOS tracking.
+class NavigationTarget {
+  final String targetId;
+  final String targetName;
+  final double targetLat;
+  final double targetLng;
+  final double distanceMeters;
+  final String distanceFormatted;
+  final double bearingDegrees;
+  final String cardinalDirection;
+  final double userHeadingDegrees;
+  final double relativeBearingDegrees;
+  final String turnInstruction;
+  final int estimatedSeconds;
+  final String formattedEta;
+  final bool isArrived;
+
+  const NavigationTarget({
+    required this.targetId,
+    required this.targetName,
+    required this.targetLat,
+    required this.targetLng,
+    required this.distanceMeters,
+    required this.distanceFormatted,
+    required this.bearingDegrees,
+    required this.cardinalDirection,
+    required this.userHeadingDegrees,
+    required this.relativeBearingDegrees,
+    required this.turnInstruction,
+    required this.estimatedSeconds,
+    required this.formattedEta,
+    required this.isArrived,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'targetId': targetId,
+        'targetName': targetName,
+        'targetLat': targetLat,
+        'targetLng': targetLng,
+        'distanceMeters': distanceMeters,
+        'distanceFormatted': distanceFormatted,
+        'bearingDegrees': bearingDegrees,
+        'cardinalDirection': cardinalDirection,
+        'userHeadingDegrees': userHeadingDegrees,
+        'relativeBearingDegrees': relativeBearingDegrees,
+        'turnInstruction': turnInstruction,
+        'estimatedSeconds': estimatedSeconds,
+        'formattedEta': formattedEta,
+        'isArrived': isArrived,
+      };
+
+  @override
+  String toString() =>
+      'NavigationTarget($targetName: $distanceFormatted $cardinalDirection ($bearingDegrees°), turn: $turnInstruction, ETA: $formattedEta)';
 }
 
 /// Standalone top-level function matching specification requirement:
