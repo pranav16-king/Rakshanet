@@ -612,15 +612,15 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/mesh_engine.dart": {
-    "mtime": 1792252717.2056425,
-    "seen": 1792253456.1618483,
-    "ast_hash": "c9303c52661a922d51624e054bffba48",
+    "mtime": 1792256639.7802064,
+    "seen": 1792257084.5829484,
+    "ast_hash": "6deb4c0a3615e7a65f15f2cdb8b32a1e",
     "semantic_hash": ""
   },
   "mobile/lib/services/mesh_router.dart": {
-    "mtime": 1791028287.408484,
-    "seen": 1791028584.1848245,
-    "ast_hash": "b083818cf7ed70964a5678c5d67a1005",
+    "mtime": 1792256667.9140708,
+    "seen": 1792257084.5829484,
+    "ast_hash": "ed60cccd80f6bfc3aa16f1307cb322ab",
     "semantic_hash": ""
   },
   "mobile/lib/theme/app_theme.dart": {
@@ -2250,9 +2250,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/user_auth_service.dart": {
-    "mtime": 1791292598.207379,
-    "seen": 1791292644.6214693,
-    "ast_hash": "372a26ea17a9454c173b828418fb11bc",
+    "mtime": 1792256423.0951166,
+    "seen": 1792257084.5829484,
+    "ast_hash": "8b82a9380557364dcfc01c6a519fcb4d",
     "semantic_hash": ""
   },
   "mobile/lib/models/crypto/device_keypair.dart": {
@@ -2844,9 +2844,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/providers/missing_persons_provider.dart": {
-    "mtime": 1792252760.0208468,
-    "seen": 1792253456.1613402,
-    "ast_hash": "8258d749ff507943b676b7225cf9c5c9",
+    "mtime": 1792256699.8458443,
+    "seen": 1792257084.5829484,
+    "ast_hash": "207d000b17a46d23cc26b5c7b209daf6",
     "semantic_hash": ""
   },
   "mobile/lib/screens/home/sos_screen.dart": {
@@ -2886,9 +2886,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/network/network_state_service.dart": {
-    "mtime": 1792253299.8332856,
-    "seen": 1792253456.1618483,
-    "ast_hash": "81f113795653e62dae5e78a747b6c9af",
+    "mtime": 1792256547.390521,
+    "seen": 1792257084.5829484,
+    "ast_hash": "23dbc9c9c9feae1334a1b33363984fec",
     "semantic_hash": ""
   },
   "mobile/lib/services/offline_map_manager.dart": {
@@ -3345,6 +3345,12 @@
     "mtime": 1792256076.1412947,
     "seen": 1792256185.091639,
     "ast_hash": "89247f6c8041947c60a46726e76cbe05",
+    "semantic_hash": ""
+  },
+  "mobile/lib/config/app_config.dart": {
+    "mtime": 1792256513.9545023,
+    "seen": 1792257084.5829484,
+    "ast_hash": "45542a5ed06277d2de1cb783e3f4effe",
     "semantic_hash": ""
   }
 }

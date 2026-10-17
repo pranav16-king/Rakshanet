@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/app_config.dart';
 import '../database/app_database.dart';
 import '../models/user_profile.dart';
 import 'device_identity_service.dart';
@@ -23,7 +24,7 @@ class UserAuthService extends ChangeNotifier {
   static final UserAuthService instance = UserAuthService._();
   UserAuthService._();
 
-  static const String _baseUrl = 'http://localhost:8000';
+  static const String _baseUrl = AppConfig.backendUrl;
   static const String _prefUniqueIdKey = 'rakshanet_unique_imei_id';
   static const String _prefUserIdKey = 'rakshanet_user_id';
   static const String _prefEmailKey = 'rakshanet_user_email';

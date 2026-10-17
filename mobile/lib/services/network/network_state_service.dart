@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../../config/app_config.dart';
 import '../../database/app_database.dart';
 import '../device_identity_service.dart';
 import '../transport/transport_manager.dart';
@@ -180,7 +181,7 @@ class NetworkStateService extends ChangeNotifier {
 
   /// Evaluates current radio interfaces and performs verified HTTP ping to determine state.
   Future<TransportState> evaluateTransportState({
-    String gatewayHealthUrl = 'http://localhost:8000/api/v1/health',
+    String gatewayHealthUrl = AppConfig.healthUrl,
   }) async {
     if (_mockState != null) {
       _applyStateTransition(_mockState!);
@@ -229,7 +230,7 @@ class NetworkStateService extends ChangeNotifier {
 
   /// Performs verified HTTP ping to FastAPI gateway or 8.8.8.8.
   Future<bool> verifyInternetHttpPing({
-    String gatewayHealthUrl = 'http://localhost:8000/api/v1/health',
+    String gatewayHealthUrl = AppConfig.healthUrl,
     Duration timeout = const Duration(seconds: 3),
   }) async {
     // 1. Primary check: FastAPI gateway health endpoint
@@ -302,7 +303,7 @@ class NetworkStateService extends ChangeNotifier {
   /// 4. On 200 OK, marks records as `syncedToServer`.
   /// 5. Emits `lastSyncTimestamp`.
   Future<SyncResult> triggerAutoRecoverySync({
-    String gatewayPacketsUrl = 'http://localhost:8000/api/v1/packets',
+    String gatewayPacketsUrl = AppConfig.packetsUrl,
     int maxRetries = 5,
   }) async {
     if (_isSyncing) {

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import '../config/app_config.dart';
 import '../database/app_database.dart';
 import '../models/delivery_receipt.dart';
 import '../models/delivery_state.dart';
@@ -301,10 +302,10 @@ class MeshRouterNode {
     return sorted.first;
   }
 
-  /// Automatically push queued mesh packets to FastAPI backend (http://localhost:8000/api/v1/packets)
+  /// Automatically push queued mesh packets to FastAPI backend (AppConfig.packetsUrl)
   /// On successful upload, update status to syncedToServer.
   Future<int> uploadQueuedPacketsToServer({
-    String endpoint = 'http://localhost:8000/api/v1/packets',
+    String endpoint = AppConfig.packetsUrl,
   }) async {
     final hasInternet =
         isInternetGateway || peerRoutingTable.any((p) => p.isInternetGateway);

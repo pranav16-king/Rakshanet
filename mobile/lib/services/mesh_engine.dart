@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../config/app_config.dart';
 import '../database/app_database.dart';
 import '../models/chat_message.dart';
 import '../models/delivery_receipt.dart';
@@ -1023,10 +1024,10 @@ class MeshEngine extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Automatically push queued mesh packets to FastAPI backend (http://localhost:8000/api/v1/packets).
+  /// Automatically push queued mesh packets to FastAPI backend (AppConfig.packetsUrl).
   /// On successful upload, updates status to syncedToServer.
   Future<int> uploadQueuedPacketsToGateway({
-    String endpoint = 'http://localhost:8000/api/v1/packets',
+    String endpoint = AppConfig.packetsUrl,
   }) async {
     final hasInternet = await hasInternetConnectivity();
     if (!hasInternet) return 0;
