@@ -12,6 +12,7 @@ import '../models/encrypted_mesh_packet.dart';
 import '../models/mesh_message.dart';
 import '../models/missing_person.dart';
 import '../models/nearby_device.dart';
+import '../models/offline_map_region.dart';
 import '../models/peer_capability.dart';
 import '../models/shelter_resource.dart';
 import '../models/user_profile.dart';
