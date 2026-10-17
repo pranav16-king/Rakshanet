@@ -49,7 +49,10 @@ from .models import (
     UserCreateRequest,
     AssignTeamRequest,
     DashboardOverview,
-    DeviceStats
+    DeviceStats,
+    SightingCreate,
+    MissingPersonCreate,
+    MissingPersonStatusUpdate
 )
 from .storage import (
     gateway_storage,
@@ -594,6 +597,66 @@ def update_resource_allocation(resource_id: str, patch_data: Dict[str, Any]):
 def get_rescue_teams():
     """Retrieve all registered rescue teams and their operational readiness."""
     return gateway_storage.get_rescue_teams()
+
+
+# =============================================================================
+# MISSING PERSONS REGISTRY & SIGHTINGS
+# =============================================================================
+
+@app.get("/api/v1/missing-persons")
+def get_missing_persons(
+    status: Optional[str] = None,
+    search: Optional[str] = None
+):
+    """
+    Retrieve missing person registry records.
+    Filters:
+      - status: ALL, MISSING, FOUND
+      - search: matches name, location, or description text
+    """
+    return gateway_storage.get_missing_persons(status=status, search=search)
+
+
+@app.get("/api/v1/missing-persons/{person_id}")
+def get_missing_person_by_id(person_id: str):
+    """Retrieve details for a specific missing person report."""
+    person = gateway_storage.get_missing_person(person_id)
+    if not person:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Missing person record '{person_id}' not found."
+        )
+    return person
+
+
+@app.post("/api/v1/missing-persons", status_code=status.HTTP_201_CREATED)
+def create_missing_person_report(req: MissingPersonCreate):
+    """Register a new missing person bulletin."""
+    return gateway_storage.create_missing_person(req.model_dump())
+
+
+@app.patch("/api/v1/missing-persons/{person_id}/status")
+def update_missing_person_status(person_id: str, req: MissingPersonStatusUpdate):
+    """Update status of a missing person report (e.g. mark FOUND or MISSING)."""
+    updated = gateway_storage.update_missing_person_status(person_id, req.status)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Missing person record '{person_id}' not found."
+        )
+    return updated
+
+
+@app.post("/api/v1/missing-persons/{person_id}/sightings")
+def add_missing_person_sighting(person_id: str, req: SightingCreate):
+    """Record a citizen sighting for a missing person."""
+    updated = gateway_storage.add_missing_person_sighting(person_id, req.model_dump())
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Missing person record '{person_id}' not found."
+        )
+    return updated
 
 
 # =============================================================================

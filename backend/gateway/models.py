@@ -113,3 +113,35 @@ class DeviceStats(BaseModel):
     relay: int
     offline: int
 
+
+# =============================================================================
+# MISSING PERSONS MODELS
+# =============================================================================
+
+class SightingCreate(BaseModel):
+    reported_by: str = Field(default="Anonymous Citizen")
+    location: str = Field(..., description="Location where person was sighted")
+    timestamp: Optional[int] = None
+    notes: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+
+
+class MissingPersonCreate(BaseModel):
+    id: Optional[str] = None
+    name: str = Field(..., description="Name of the missing individual")
+    age: int = Field(..., description="Age in years")
+    gender: Optional[str] = "Unspecified"
+    last_seen_location: str = Field(..., description="Last known location / landmark")
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    description: Optional[str] = ""
+    photo_url: Optional[str] = None
+    contact_phone: Optional[str] = None
+    status: Optional[str] = "MISSING"
+    reported_by: Optional[str] = "Anonymous"
+
+
+class MissingPersonStatusUpdate(BaseModel):
+    status: str = Field(..., description="New status: 'MISSING' or 'FOUND'")
+

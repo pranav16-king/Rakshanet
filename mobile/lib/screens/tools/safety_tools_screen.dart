@@ -254,9 +254,9 @@ class _SafetyToolsScreenState extends State<SafetyToolsScreen>
                       ),
                       const SizedBox(height: 10),
                       ReliefOperationCard(
-                        title: 'Report Missing Person',
+                        title: 'Missing Persons Registry',
                         description:
-                            'Submit and distribute missing-person information',
+                            'Track & report separated family in disaster zones',
                         icon: Icons.person_search_outlined,
                         semanticColor: AppColors.primaryAmber,
                         onTap: () {

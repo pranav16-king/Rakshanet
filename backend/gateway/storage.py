@@ -239,6 +239,40 @@ class GatewayStorage:
                     value_json TEXT NOT NULL
                 )
             """)
+
+            # Missing Persons Registry & Bulletins
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS missing_persons (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    age INTEGER NOT NULL,
+                    gender TEXT DEFAULT 'Unspecified',
+                    last_seen_location TEXT NOT NULL,
+                    lat REAL,
+                    lng REAL,
+                    description TEXT,
+                    photo_url TEXT,
+                    contact_phone TEXT,
+                    status TEXT DEFAULT 'MISSING',
+                    reported_at INTEGER NOT NULL,
+                    reported_by TEXT DEFAULT 'Anonymous',
+                    sightings_json TEXT DEFAULT '[]'
+                )
+            """)
+            for col, col_type in [
+                ("gender", "TEXT DEFAULT 'Unspecified'"),
+                ("lat", "REAL"),
+                ("lng", "REAL"),
+                ("photo_url", "TEXT"),
+                ("reported_at", "INTEGER DEFAULT 0"),
+                ("reported_by", "TEXT DEFAULT 'Anonymous'"),
+                ("sightings_json", "TEXT DEFAULT '[]'"),
+            ]:
+                try:
+                    cursor.execute(f"ALTER TABLE missing_persons ADD COLUMN {col} {col_type}")
+                except Exception:
+                    pass
+
             conn.commit()
 
     def _warm_cache(self):
@@ -317,6 +351,22 @@ class GatewayStorage:
                             total_packets_carried = total_packets_carried + 1
                     """, (mule_id, now))
                     conn.commit()
+
+                    # Auto-ingest missing person mesh bulletins if transmitted via packet
+                    if packet_type == "MISSING_PERSON":
+                        try:
+                            mp_data = json.loads(payload) if isinstance(payload, str) and payload.strip().startswith("{") else meta
+                            if isinstance(mp_data, dict) and mp_data.get("name"):
+                                self.create_missing_person(mp_data)
+                        except Exception as e:
+                            logger.debug(f"Failed to auto-ingest MISSING_PERSON payload: {e}")
+                    elif packet_type == "MISSING_PERSON_SIGHTING":
+                        try:
+                            sight_data = json.loads(payload) if isinstance(payload, str) and payload.strip().startswith("{") else meta
+                            if isinstance(sight_data, dict) and sight_data.get("person_id"):
+                                self.add_missing_person_sighting(sight_data["person_id"], sight_data)
+                        except Exception as e:
+                            logger.debug(f"Failed to auto-ingest MISSING_PERSON_SIGHTING payload: {e}")
 
                     # Asynchronous dual-persistence to MongoDB Atlas
                     mongo_doc = {
@@ -877,6 +927,157 @@ class GatewayStorage:
             ),
             res
         )
+        return res
+
+    # =========================================================================
+    # MISSING PERSONS REGISTRY & SIGHTINGS
+    # =========================================================================
+
+    def get_missing_persons(self, status: Optional[str] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM missing_persons WHERE 1=1"
+            params = []
+            if status and status.upper() != "ALL":
+                query += " AND UPPER(status) = ?"
+                params.append(status.upper())
+            if search and search.strip():
+                query += " AND (name LIKE ? OR last_seen_location LIKE ? OR description LIKE ?)"
+                term = f"%{search.strip()}%"
+                params.extend([term, term, term])
+            query += " ORDER BY reported_at DESC"
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d["sightings"] = json.loads(d.get("sightings_json") or "[]")
+                except Exception:
+                    d["sightings"] = []
+                results.append(d)
+            return results
+
+    def get_missing_person(self, person_id: str) -> Optional[Dict[str, Any]]:
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM missing_persons WHERE id = ?", (person_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            try:
+                d["sightings"] = json.loads(d.get("sightings_json") or "[]")
+            except Exception:
+                d["sightings"] = []
+            return d
+
+    def create_missing_person(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        now = int(time.time() * 1000)
+        person_id = data.get("id") or f"mp_{secrets.token_hex(6)}"
+        reported_at = data.get("reported_at") or now
+        sightings = data.get("sightings") or []
+        sightings_json = json.dumps(sightings)
+
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO missing_persons (
+                    id, name, age, gender, last_seen_location, lat, lng,
+                    description, photo_url, contact_phone, status, reported_at,
+                    reported_by, sightings_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    name = excluded.name,
+                    age = excluded.age,
+                    gender = excluded.gender,
+                    last_seen_location = excluded.last_seen_location,
+                    lat = excluded.lat,
+                    lng = excluded.lng,
+                    description = excluded.description,
+                    photo_url = excluded.photo_url,
+                    contact_phone = excluded.contact_phone,
+                    status = excluded.status,
+                    reported_at = excluded.reported_at,
+                    reported_by = excluded.reported_by,
+                    sightings_json = excluded.sightings_json
+            """, (
+                person_id,
+                data.get("name", "Unknown"),
+                data.get("age", 0),
+                data.get("gender", "Unspecified"),
+                data.get("last_seen_location", "Disaster Zone"),
+                data.get("lat"),
+                data.get("lng"),
+                data.get("description", ""),
+                data.get("photo_url", ""),
+                data.get("contact_phone", ""),
+                data.get("status", "MISSING").upper(),
+                reported_at,
+                data.get("reported_by", "Anonymous"),
+                sightings_json
+            ))
+            conn.commit()
+
+        res = self.get_missing_person(person_id)
+
+        # Dual-persist to MongoDB Atlas
+        if res:
+            self._async_mongo(
+                lambda doc: self.mongo_db.missing_persons.update_one(
+                    {"id": doc["id"]},
+                    {"$set": doc},
+                    upsert=True
+                ),
+                res
+            )
+        return res or {"id": person_id}
+
+    def update_missing_person_status(self, person_id: str, new_status: str) -> Optional[Dict[str, Any]]:
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE missing_persons SET status = ? WHERE id = ?", (new_status.upper(), person_id))
+            if cursor.rowcount == 0:
+                return None
+            conn.commit()
+
+        res = self.get_missing_person(person_id)
+        if res:
+            self._async_mongo(
+                lambda: self.mongo_db.missing_persons.update_one(
+                    {"id": person_id},
+                    {"$set": {"status": new_status.upper()}}
+                )
+            )
+        return res
+
+    def add_missing_person_sighting(self, person_id: str, sighting: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        person = self.get_missing_person(person_id)
+        if not person:
+            return None
+
+        sightings = list(person.get("sightings", []))
+        if "timestamp" not in sighting or not sighting["timestamp"]:
+            sighting["timestamp"] = int(time.time() * 1000)
+        sightings.append(sighting)
+        sightings_json = json.dumps(sightings)
+
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE missing_persons SET sightings_json = ? WHERE id = ?",
+                (sightings_json, person_id)
+            )
+            conn.commit()
+
+        res = self.get_missing_person(person_id)
+        if res:
+            self._async_mongo(
+                lambda: self.mongo_db.missing_persons.update_one(
+                    {"id": person_id},
+                    {"$set": {"sightings": sightings}}
+                )
+            )
         return res
 
     # =========================================================================
@@ -1515,6 +1716,85 @@ class GatewayStorage:
                 }
             }
             self.update_settings(default_settings)
+
+        # 7. Seed Missing Persons
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM missing_persons")
+            mp_count = cursor.fetchone()[0]
+
+        if mp_count == 0:
+            now_ms = int(time.time() * 1000)
+            missing_persons_seed = [
+                {
+                    "id": "MP-2026-001",
+                    "name": "Rameshwar Sen",
+                    "age": 68,
+                    "gender": "Male",
+                    "last_seen_location": "Near Ward 14 Relief Camp, Sector 3 Bridge",
+                    "lat": 13.0827,
+                    "lng": 80.2707,
+                    "description": "Wearing white cotton kurta, brown woolen shawl. Hearing impaired, separated during water level rise.",
+                    "photo_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
+                    "contact_phone": "+91 98401 22345",
+                    "status": "MISSING",
+                    "reported_at": now_ms - (3 * 3600 * 1000),
+                    "reported_by": "SDRF Volunteer Kavitha",
+                    "sightings": [
+                        {
+                            "reported_by": "Mule Node 04",
+                            "location": "Sector 3 Shelter gate high ground",
+                            "timestamp": now_ms - (1 * 3600 * 1000),
+                            "notes": "Elderly gentleman resting on porch with blue umbrella",
+                            "lat": 13.0840,
+                            "lng": 80.2720
+                        }
+                    ]
+                },
+                {
+                    "id": "MP-2026-002",
+                    "name": "Ananya Sharma",
+                    "age": 9,
+                    "gender": "Female",
+                    "last_seen_location": "Guindy Metro Relief Shelter Point",
+                    "lat": 13.0067,
+                    "lng": 80.2025,
+                    "description": "Yellow raincoat, dark blue trousers, red school backpack with cartoon stickers. Answers to 'Anu'.",
+                    "photo_url": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
+                    "contact_phone": "+91 94440 98765",
+                    "status": "MISSING",
+                    "reported_at": now_ms - (5 * 3600 * 1000),
+                    "reported_by": "Parent Sunita Sharma",
+                    "sightings": []
+                },
+                {
+                    "id": "MP-2026-003",
+                    "name": "Mohammad Irfan",
+                    "age": 34,
+                    "gender": "Male",
+                    "last_seen_location": "Saidapet Riverbank Checkpoint",
+                    "lat": 13.0205,
+                    "lng": 80.2241,
+                    "description": "Blue checkered shirt, denim jeans. Left leg bandaged. Assisted 5 families across canal before losing contact.",
+                    "photo_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+                    "contact_phone": "+91 98840 11223",
+                    "status": "FOUND",
+                    "reported_at": now_ms - (12 * 3600 * 1000),
+                    "reported_by": "Community Volunteer David",
+                    "sightings": [
+                        {
+                            "reported_by": "NDRF Boat Unit 2",
+                            "location": "Saidapet Bridge High Ground Depot",
+                            "timestamp": now_ms - (2 * 3600 * 1000),
+                            "notes": "Safely rescued by boat unit and reunited at relief shelter B",
+                            "lat": 13.0210,
+                            "lng": 80.2250
+                        }
+                    ]
+                }
+            ]
+            for mp in missing_persons_seed:
+                self.create_missing_person(mp)
 
     def clear(self):
         """Reset storage (for unit test isolation)."""

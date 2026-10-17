@@ -24,6 +24,7 @@ import { ResourcesPage } from './pages/resources/ResourcesPage';
 import { AnalyticsPage } from './pages/analytics/AnalyticsPage';
 import { ReportsPage } from './pages/reports/ReportsPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
+import { MissingPersonsPage } from './pages/missing-persons/MissingPersonsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,7 @@ export function App() {
                 <Route path="rescue-ops" element={<RescueOpsPage />} />
                 <Route path="communication-gaps" element={<CommunicationGapsPage />} />
                 <Route path="people" element={<PeoplePage />} />
+                <Route path="missing-persons" element={<MissingPersonsPage />} />
                 <Route path="messages" element={<MessagesPage />} />
                 <Route path="devices" element={<DevicesPage />} />
                 <Route path="resources" element={<ResourcesPage />} />
