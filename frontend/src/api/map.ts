@@ -1,169 +1,197 @@
 import { apiClient } from './client';
-import type { LiveDevice, MapIncidentNode } from '../types/map';
+import type { LiveDevice, MapIncidentNode, RescueTeam, DeviceStats } from '../types/map';
 
-export const INITIAL_MAP_INCIDENTS: MapIncidentNode[] = [
-  {
-    id: 'INC-SOS-01',
-    title: 'SOS Emergency Cluster',
-    type: 'sos',
-    badgeLabel: 'SOS',
-    countLabel: '12 users',
-    userCount: 12,
-    lat: 30.0750,
-    lng: 79.0200,
-    severity: 'CRITICAL',
-    description: '12 individuals stranded on reinforced rooftop due to sudden river overflow. Battery reserves declining.',
-    reportedAgo: '2 min ago',
-  },
-  {
-    id: 'INC-LS-02',
-    title: 'Landslide Debris Block',
-    type: 'landslide',
-    badgeLabel: 'Landslide',
-    countLabel: '5 devices',
-    deviceCount: 5,
-    lat: 30.0910,
-    lng: 79.0490,
-    severity: 'HIGH',
-    description: 'Road blocked on NH-7 ridge. 5 civilian phones acting as ad-hoc relay chain across the pass.',
-    reportedAgo: '26 min ago',
-  },
-  {
-    id: 'INC-FL-03',
-    title: 'River Basin Flood Area',
-    type: 'flood',
-    badgeLabel: 'Flood Area',
-    countLabel: '15 devices',
-    deviceCount: 15,
-    radiusMeters: 550,
-    lat: 30.0610,
-    lng: 79.0340,
-    severity: 'HIGH',
-    description: 'Active flash inundation zone. Mesh network packet relay operational across fringe nodes.',
-    reportedAgo: '12 min ago',
-    polygonCoords: [
-      [30.066, 79.028],
-      [30.068, 79.038],
-      [30.058, 79.042],
-      [30.054, 79.031],
-    ],
-  },
-  {
-    id: 'INC-RT-04',
-    title: 'SDRF Rapid Rescue Alpha',
-    type: 'rescue_team',
-    badgeLabel: 'Rescue Team',
-    countLabel: '8 devices',
-    deviceCount: 8,
-    lat: 30.0510,
-    lng: 79.0280,
-    severity: 'LOW',
-    description: 'Tactical responder unit equipped with inflatable motorboats and satellite-linked LoRa gateway.',
-    reportedAgo: 'Active now',
-  },
-];
-
-export const INITIAL_LIVE_DEVICES: LiveDevice[] = [
-  {
-    id: 'SR-8F42',
-    name: 'Amit Kumar',
-    location: 'Uttarakhand',
-    relativeTime: '2 min ago',
-    status: 'Online',
-    battery: 85,
-    lat: 30.0760,
-    lng: 79.0230,
-    type: 'Smartphone',
-    hops: 1,
-    lastPing: Date.now() - 2 * 60 * 1000,
-  },
-  {
-    id: 'SR-9A1C',
-    name: 'Priya Sharma',
-    location: 'Uttarakhand',
-    relativeTime: '5 min ago',
-    status: 'Relay',
-    battery: 42,
-    lat: 30.0710,
-    lng: 79.0380,
-    type: 'Relay Node',
-    hops: 2,
-    lastPing: Date.now() - 5 * 60 * 1000,
-  },
-  {
-    id: 'SR-3D7B',
-    name: 'Rahul Mehta',
-    location: 'Himachal Pradesh',
-    relativeTime: '5 min ago',
-    status: 'Online',
-    battery: 76,
-    lat: 30.0880,
-    lng: 79.0450,
-    type: 'Smartphone',
-    hops: 1,
-    lastPing: Date.now() - 5 * 60 * 1000,
-  },
-  {
-    id: 'SR-6E2F',
-    name: 'Sneha Patel',
-    location: 'Delhi',
-    relativeTime: '12 min ago',
-    status: 'Offline',
-    battery: 23,
-    lat: 30.0620,
-    lng: 79.0210,
-    type: 'Smartphone',
-    hops: 0,
-    lastPing: Date.now() - 12 * 60 * 1000,
-  },
-  {
-    id: 'SR-7Q3H',
-    name: 'Vikram Singh',
-    location: 'Uttarakhand',
-    relativeTime: '18 min ago',
-    status: 'Online',
-    battery: 89,
-    lat: 30.0530,
-    lng: 79.0260,
-    type: 'Tablet Responder',
-    hops: 1,
-    lastPing: Date.now() - 18 * 60 * 1000,
-  },
-  {
-    id: 'SR-4K2P',
-    name: 'Ananya Gupta',
-    location: 'Uttarakhand',
-    relativeTime: '22 min ago',
-    status: 'Relay',
-    battery: 58,
-    lat: 30.0810,
-    lng: 79.0350,
-    type: 'LoRa Mesh Hop',
-    hops: 3,
-    lastPing: Date.now() - 22 * 60 * 1000,
-  },
-];
+function formatRelativeTime(timestamp?: number | string): string {
+  if (!timestamp) return 'Active now';
+  const timeMs = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp;
+  if (isNaN(timeMs)) return 'Active now';
+  const diffSec = Math.max(0, Math.floor((Date.now() - timeMs) / 1000));
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return `${Math.floor(diffHr / 24)}d ago`;
+}
 
 export async function fetchLiveDevices(): Promise<LiveDevice[]> {
   try {
-    const response = await apiClient.get<LiveDevice[]>('/devices');
-    if (response.data && Array.isArray(response.data)) {
-      return response.data;
-    }
-  } catch {
-    // Return high-fidelity local telemetry
+    const response = await apiClient.get<any[]>('/api/v1/devices');
+    const rawList = Array.isArray(response.data) ? response.data : [];
+
+    return rawList.map((raw: any): LiveDevice => {
+      const id = String(raw.device_id || raw.id || 'DEV-NODE');
+      const name = String(raw.name || raw.owner_name || id);
+
+      const rawStatus = String(raw.status || 'Offline').toLowerCase();
+      let status: LiveDevice['status'] = 'Offline';
+      if (rawStatus === 'online') status = 'Online';
+      else if (rawStatus === 'relay') status = 'Relay';
+
+      const lat = Number(raw.lat ?? 0);
+      const lng = Number(raw.lng ?? 0);
+      const battery = Number(raw.battery_pct ?? raw.battery ?? 100);
+      const hops = Number(raw.hops_away ?? raw.hops ?? 0);
+      const lastPing = Number(raw.last_seen ?? raw.lastPing ?? Date.now());
+
+      let location = raw.location;
+      if (!location) {
+        if (lat !== 0 && lng !== 0) {
+          location = `${lat.toFixed(3)}°N, ${lng.toFixed(3)}°E`;
+        } else {
+          location = 'Sector Grid';
+        }
+      }
+
+      return {
+        id,
+        name,
+        location,
+        relativeTime: formatRelativeTime(lastPing),
+        status,
+        battery,
+        lat,
+        lng,
+        type: String(raw.device_type || raw.type || 'Smartphone'),
+        hops,
+        lastPing,
+      };
+    });
+  } catch (err) {
+    console.warn('Failed to fetch live devices from /api/v1/devices:', err);
+    return [];
   }
-  return INITIAL_LIVE_DEVICES;
 }
 
 export async function fetchMapIncidents(): Promise<MapIncidentNode[]> {
   try {
-    const response = await apiClient.get<MapIncidentNode[]>('/incidents/map');
-    if (response.data && Array.isArray(response.data)) {
-      return response.data;
-    }
-  } catch {
-    // Return high-fidelity local incidents
+    const response = await apiClient.get<any[]>('/api/v1/incidents');
+    const rawList = Array.isArray(response.data) ? response.data : [];
+
+    return rawList.map((raw: any): MapIncidentNode => {
+      const id = String(raw.incident_id || raw.id || `INC-${Math.random().toString(36).substring(2, 7).toUpperCase()}`);
+      const rawCategory = (raw.disaster_type || raw.category || raw.primary_category || '').toLowerCase();
+
+      let type: MapIncidentNode['type'] = 'sos';
+      if (rawCategory.includes('landslide') || rawCategory.includes('mud')) {
+        type = 'landslide';
+      } else if (rawCategory.includes('flood') || rawCategory.includes('water') || rawCategory.includes('inundation')) {
+        type = 'flood';
+      } else if (rawCategory.includes('rescue') || rawCategory.includes('team') || rawCategory.includes('ops')) {
+        type = 'rescue_team';
+      } else {
+        type = 'sos';
+      }
+
+      const rawSeverity = String(raw.urgency || raw.severity || 'CRITICAL').toUpperCase();
+      const severity = (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'].includes(rawSeverity)
+        ? rawSeverity
+        : 'CRITICAL') as MapIncidentNode['severity'];
+
+      const totalDevices = Number(
+        raw.total_devices ?? raw.devices_count ?? (Array.isArray(raw.contributing_devices) ? raw.contributing_devices.length : 0)
+      );
+      const casualties = Number(raw.estimated_casualties ?? raw.casualty_estimate ?? raw.people_count ?? 0);
+
+      let badgeLabel = 'SOS';
+      if (type === 'landslide') badgeLabel = 'Landslide';
+      else if (type === 'flood') badgeLabel = 'Flood Area';
+      else if (type === 'rescue_team') badgeLabel = 'Rescue Team';
+
+      let countLabel = '';
+      if (totalDevices > 0) {
+        countLabel = `${totalDevices} devices`;
+      } else if (casualties > 0) {
+        countLabel = `${casualties} users`;
+      } else {
+        countLabel = severity;
+      }
+
+      const lat = Number(raw.centroid_lat ?? raw.lat ?? 0);
+      const lng = Number(raw.centroid_lng ?? raw.lng ?? 0);
+
+      let polygonCoords: [number, number][] | undefined = undefined;
+      if (Array.isArray(raw.polygon_coords) && raw.polygon_coords.length > 0) {
+        polygonCoords = raw.polygon_coords;
+      } else if (Array.isArray(raw.polygonCoords) && raw.polygonCoords.length > 0) {
+        polygonCoords = raw.polygonCoords;
+      } else if (type === 'flood' && lat !== 0 && lng !== 0) {
+        const delta = 0.005;
+        polygonCoords = [
+          [lat + delta * 0.8, lng - delta * 0.9],
+          [lat + delta * 1.1, lng + delta * 0.7],
+          [lat - delta * 0.6, lng + delta * 1.2],
+          [lat - delta * 0.9, lng - delta * 0.6],
+        ];
+      }
+
+      const description =
+        raw.description ||
+        raw.affected_area ||
+        (Array.isArray(raw.sample_messages) && raw.sample_messages.length > 0 ? raw.sample_messages[0] : undefined) ||
+        (Array.isArray(raw.associated_messages) && raw.associated_messages.length > 0 ? raw.associated_messages[0] : undefined) ||
+        `${badgeLabel} incident affecting ${casualties || totalDevices || 'unknown'} people/devices`;
+
+      return {
+        id,
+        title: raw.title || `${badgeLabel} Alert (${countLabel})`,
+        type,
+        badgeLabel,
+        countLabel,
+        lat,
+        lng,
+        severity,
+        userCount: casualties > 0 ? casualties : undefined,
+        deviceCount: totalDevices > 0 ? totalDevices : undefined,
+        radiusMeters: raw.radius_meters || raw.radiusMeters || 450,
+        polygonCoords,
+        description,
+        reportedAgo: formatRelativeTime(raw.updated_at || raw.created_at || raw.last_beacon_time),
+      };
+    });
+  } catch (err) {
+    console.warn('Failed to fetch map incidents from /api/v1/incidents:', err);
+    return [];
   }
-  return INITIAL_MAP_INCIDENTS;
+}
+
+export async function fetchDeviceStats(): Promise<DeviceStats> {
+  try {
+    const response = await apiClient.get<any>('/api/v1/devices/stats');
+    if (response.data && typeof response.data === 'object') {
+      return {
+        total: Number(response.data.total ?? 0),
+        online: Number(response.data.online ?? 0),
+        relay: Number(response.data.relay ?? 0),
+        offline: Number(response.data.offline ?? 0),
+      };
+    }
+  } catch (err) {
+    console.warn('Failed to fetch device stats from /api/v1/devices/stats:', err);
+  }
+  return { total: 0, online: 0, relay: 0, offline: 0 };
+}
+
+export async function fetchRescueTeams(): Promise<RescueTeam[]> {
+  try {
+    const response = await apiClient.get<any[]>('/api/v1/rescue-teams');
+    const rawList = Array.isArray(response.data) ? response.data : [];
+
+    return rawList.map((raw: any): RescueTeam => ({
+      id: String(raw.team_id || raw.id || 'TEAM-01'),
+      name: String(raw.name || 'Tactical Rescue Unit'),
+      teamType: String(raw.team_type || raw.teamType || 'RESCUE_TEAM'),
+      leader: raw.leader ? String(raw.leader) : undefined,
+      contact: raw.contact ? String(raw.contact) : undefined,
+      membersCount: Number(raw.members_count ?? raw.membersCount ?? 4),
+      status: String(raw.status || 'AVAILABLE'),
+      lat: Number(raw.location_lat ?? raw.lat ?? 0),
+      lng: Number(raw.location_lng ?? raw.lng ?? 0),
+      assignedIncidentId: raw.assigned_incident_id ?? null,
+      capabilities: Array.isArray(raw.capabilities) ? raw.capabilities : [],
+    }));
+  } catch (err) {
+    console.warn('Failed to fetch rescue teams from /api/v1/rescue-teams:', err);
+    return [];
+  }
 }

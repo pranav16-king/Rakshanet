@@ -35,6 +35,27 @@ export interface MapIncidentNode {
   reportedAgo?: string;
 }
 
+export interface RescueTeam {
+  id: string;
+  name: string;
+  teamType: string;
+  leader?: string;
+  contact?: string;
+  membersCount: number;
+  status: string;
+  lat: number;
+  lng: number;
+  assignedIncidentId?: string | null;
+  capabilities?: string[];
+}
+
+export interface DeviceStats {
+  total: number;
+  online: number;
+  relay: number;
+  offline: number;
+}
+
 export interface MapLayersState {
   users: boolean;
   nearbyDevices: boolean;

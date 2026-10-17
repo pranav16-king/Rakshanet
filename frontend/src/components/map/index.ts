@@ -98,3 +98,5 @@ export { mapLayerTokens, brandTokens, darkTokens, lightTokens, oledTokens } from
 export { LiveDeviceItem, type LiveDeviceItemProps } from './LiveDeviceItem';
 export { LiveMapLayersDrawer, type LiveMapLayersDrawerProps } from './LiveMapLayersDrawer';
 export { MapControlBar, type MapControlBarProps } from './MapControlBar';
+export { MapCanvas, type MapCanvasProps } from './MapCanvas';
+export { NodeDetailDrawer, type NodeDetailDrawerProps } from './NodeDetailDrawer';

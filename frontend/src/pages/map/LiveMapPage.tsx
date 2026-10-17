@@ -1,37 +1,175 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Search,
   Layers,
   Radio,
   Eye,
   EyeOff,
-  Crosshair,
-  Maximize2,
+  RefreshCw,
+  ShieldAlert,
+  Wifi,
+  Users,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Card } from '../../components/common/Card';
-import { Badge } from '../../components/common/Badge';
+import { MapCanvas } from '../../components/map/MapCanvas';
+import { NodeDetailDrawer } from '../../components/map/NodeDetailDrawer';
+import { LiveDeviceItem } from '../../components/map/LiveDeviceItem';
+import {
+  fetchMapIncidents,
+  fetchLiveDevices,
+  fetchDeviceStats,
+  fetchRescueTeams,
+} from '../../api/map';
+import type {
+  MapIncidentNode,
+  LiveDevice,
+  RescueTeam,
+  MapLayersState,
+} from '../../types/map';
 
 export const LiveMapPage: React.FC = () => {
-  const [activeLayers, setActiveLayers] = useState({
+  const navigate = useNavigate();
+
+  // Active Layers State
+  const [activeLayers, setActiveLayers] = useState<MapLayersState>({
     users: true,
     nearbyDevices: true,
     incidents: true,
     rescueTeams: true,
     meshConnections: true,
-    hazardZones: false,
+    hazardZones: true,
   });
 
+  // Filter States
   const [searchQuery, setSearchQuery] = useState('');
+  const [severityFilter, setSeverityFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  const toggleLayer = (layer: keyof typeof activeLayers) => {
+  // Selected Entities
+  const [selectedIncident, setSelectedIncident] = useState<MapIncidentNode | null>(null);
+  const [selectedDevice, setSelectedDevice] = useState<LiveDevice | null>(null);
+  const [selectedRescueTeam, setSelectedRescueTeam] = useState<RescueTeam | null>(null);
+
+  // Queries for real backend data (Polling every 6-12s for live mesh refresh)
+  const {
+    data: incidents = [],
+    isLoading: isIncidentsLoading,
+    isFetching: isIncidentsFetching,
+    refetch: refetchIncidents,
+  } = useQuery({
+    queryKey: ['map-incidents'],
+    queryFn: fetchMapIncidents,
+    refetchInterval: 6000,
+  });
+
+  const {
+    data: devices = [],
+    isLoading: isDevicesLoading,
+    refetch: refetchDevices,
+  } = useQuery({
+    queryKey: ['live-devices'],
+    queryFn: fetchLiveDevices,
+    refetchInterval: 6000,
+  });
+
+  const {
+    data: deviceStats = { total: 0, online: 0, relay: 0, offline: 0 },
+    refetch: refetchStats,
+  } = useQuery({
+    queryKey: ['device-stats'],
+    queryFn: fetchDeviceStats,
+    refetchInterval: 10000,
+  });
+
+  const {
+    data: rescueTeams = [],
+    refetch: refetchTeams,
+  } = useQuery({
+    queryKey: ['rescue-teams'],
+    queryFn: fetchRescueTeams,
+    refetchInterval: 15000,
+  });
+
+  const handleRefreshAll = () => {
+    refetchIncidents();
+    refetchDevices();
+    refetchStats();
+    refetchTeams();
+  };
+
+  const toggleLayer = (layer: keyof MapLayersState) => {
     setActiveLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
   };
 
-  const devices = [
-    { id: 'SR-8F42', location: 'Uttarakhand', status: 'Online', role: 'Edge Node' },
-    { id: 'SR-9A1C', location: 'Uttarakhand', status: 'Relay', role: 'Data Mule' },
-    { id: 'SR-3D7B', location: 'Himachal Pradesh', status: 'Online', role: 'Edge Node' },
-    { id: 'SR-4E2F', location: 'Delhi', status: 'Offline', role: 'Edge Node' },
+  // Filtered Devices
+  const filteredDevices = useMemo(() => {
+    return devices.filter((d) => {
+      const query = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !query ||
+        d.id.toLowerCase().includes(query) ||
+        d.name.toLowerCase().includes(query) ||
+        d.location.toLowerCase().includes(query) ||
+        d.type.toLowerCase().includes(query);
+
+      const matchesStatus =
+        statusFilter === 'ALL' || d.status.toLowerCase() === statusFilter.toLowerCase();
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [devices, searchQuery, statusFilter]);
+
+  // Filtered Incidents
+  const filteredIncidents = useMemo(() => {
+    return incidents.filter((inc) => {
+      const query = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !query ||
+        inc.id.toLowerCase().includes(query) ||
+        inc.title.toLowerCase().includes(query) ||
+        (inc.description && inc.description.toLowerCase().includes(query)) ||
+        inc.badgeLabel.toLowerCase().includes(query);
+
+      const matchesSeverity =
+        severityFilter === 'ALL' || inc.severity === severityFilter;
+
+      return matchesSearch && matchesSeverity;
+    });
+  }, [incidents, searchQuery, severityFilter]);
+
+  // Dynamic Sector Centroid Readout
+  const sectorCoordinates = useMemo(() => {
+    const validCoords: [number, number][] = [];
+    incidents.forEach((i) => {
+      if (i.lat && i.lng) validCoords.push([i.lat, i.lng]);
+    });
+    devices.forEach((d) => {
+      if (d.lat && d.lng) validCoords.push([d.lat, d.lng]);
+    });
+    if (validCoords.length === 0) {
+      return '13.0425° N, 80.2285° E · WGS84';
+    }
+    const avgLat = validCoords.reduce((a, b) => a + b[0], 0) / validCoords.length;
+    const avgLng = validCoords.reduce((a, b) => a + b[1], 0) / validCoords.length;
+    return `${avgLat.toFixed(4)}° N, ${avgLng.toFixed(4)}° E · WGS84`;
+  }, [incidents, devices]);
+
+  const layerDefinitions: Array<{
+    key: keyof MapLayersState;
+    label: string;
+    dotColor: string;
+    count?: number;
+  }> = [
+    { key: 'users', label: 'Users & Civilians', dotColor: 'bg-emerald-500', count: deviceStats.total },
+    { key: 'nearbyDevices', label: 'Mesh Devices', dotColor: 'bg-blue-500', count: devices.length },
+    { key: 'incidents', label: 'Distress Incidents', dotColor: 'bg-red-500', count: incidents.length },
+    { key: 'rescueTeams', label: 'Rescue Teams', dotColor: 'bg-teal-500', count: rescueTeams.length },
+    { key: 'meshConnections', label: 'Mesh Radio Links', dotColor: 'bg-cyan-400' },
+    { key: 'hazardZones', label: 'Hazard & Inundation Zones', dotColor: 'bg-amber-500' },
   ];
 
   return (
@@ -39,19 +177,26 @@ export const LiveMapPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1
-            className="text-2xl sm:text-3xl font-black text-[#16202D] dark:text-white tracking-tight"
-            style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
-          >
-            Live Map & Devices
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1
+              className="text-2xl sm:text-3xl font-black text-[#16202D] dark:text-white tracking-tight"
+              style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
+            >
+              Live Map & Devices
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Live Telemetry
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-[#566070] dark:text-[#9FADC2]">
-            Real-time geospatial location of users, mesh nodes, and clustered distress zones
+            Real-time geospatial locations of mesh nodes, rescue units, and AI-clustered disaster incidents
           </p>
         </div>
 
         {/* Filter bar */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Search box */}
           <div className="relative">
             <Search
               size={15}
@@ -61,196 +206,272 @@ export const LiveMapPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search location, device..."
+              placeholder="Search node, ID, incident..."
               className="h-9 pl-9 pr-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs text-[#16202D] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400]"
             />
           </div>
 
-          <select className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs font-semibold text-[#16202D] dark:text-white">
-            <option>All Incidents</option>
-            <option>Critical Only</option>
+          {/* Severity filter */}
+          <select
+            value={severityFilter}
+            onChange={(e) => setSeverityFilter(e.target.value)}
+            className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs font-semibold text-[#16202D] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400] cursor-pointer"
+          >
+            <option value="ALL">All Severities</option>
+            <option value="CRITICAL">Critical Only</option>
+            <option value="HIGH">High Severity</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
           </select>
 
-          <select className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs font-semibold text-[#16202D] dark:text-white">
-            <option>All Devices</option>
-            <option>Online Mules</option>
+          {/* Device status filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs font-semibold text-[#16202D] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400] cursor-pointer"
+          >
+            <option value="ALL">All Devices</option>
+            <option value="Online">Online</option>
+            <option value="Relay">Relay Nodes</option>
+            <option value="Offline">Offline</option>
           </select>
+
+          {/* Refresh button */}
+          <button
+            type="button"
+            onClick={handleRefreshAll}
+            aria-label="Refresh live data"
+            className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs font-bold text-[#16202D] dark:text-white hover:bg-[#FFFCEB] dark:hover:bg-[#1C2844] transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+            title="Force refresh live map telemetry"
+          >
+            <RefreshCw
+              size={14}
+              className={`${isIncidentsFetching ? 'animate-spin text-[#FFC400]' : ''}`}
+            />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </div>
       </div>
 
       {/* Main Map + Right Side Panel Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Map View Canvas */}
-        <div className="lg:col-span-8 xl:col-span-9">
-          <div className="relative h-[600px] w-full rounded-2xl bg-[#0E1627] border-2 border-[#E6DCA8] dark:border-[#26344F] overflow-hidden shadow-lg flex items-center justify-center">
-            {/* Topographic Background Simulation */}
-            <div
-              className="absolute inset-0 opacity-40 bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  'radial-gradient(circle at 50% 50%, #162036 0%, #0B1220 100%)',
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
+        {/* Map View Canvas Container */}
+        <div className="lg:col-span-8 xl:col-span-9 relative">
+          <div className="relative h-[650px] w-full rounded-2xl bg-[#0B1220] border-2 border-[#E6DCA8] dark:border-[#26344F] overflow-hidden shadow-xl">
+            {/* Interactive Real MapCanvas */}
+            <MapCanvas
+              incidents={filteredIncidents}
+              devices={filteredDevices}
+              rescueTeams={rescueTeams}
+              layers={activeLayers}
+              selectedIncident={selectedIncident}
+              selectedDevice={selectedDevice}
+              selectedRescueTeam={selectedRescueTeam}
+              onSelectIncident={(inc) => {
+                setSelectedIncident(inc);
+                setSelectedDevice(null);
+                setSelectedRescueTeam(null);
+              }}
+              onSelectDevice={(dev) => {
+                setSelectedDevice(dev);
+                setSelectedIncident(null);
+                setSelectedRescueTeam(null);
+              }}
+              onSelectRescueTeam={(team) => {
+                setSelectedRescueTeam(team);
+                setSelectedIncident(null);
+                setSelectedDevice(null);
               }}
             />
 
-            {/* Simulated Geospatial Grid */}
-            <div
-              className="absolute inset-0 opacity-20 pointer-events-none"
-              style={{
-                backgroundImage:
-                  'linear-gradient(#26344F 1px, transparent 1px), linear-gradient(90deg, #26344F 1px, transparent 1px)',
-                backgroundSize: '40px 40px',
-              }}
-            />
-
-            {/* Map Controls Overlay */}
-            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-              <button
-                className="w-9 h-9 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-[#16202D] dark:text-white flex items-center justify-center shadow-md hover:bg-[#FFEFA6] dark:hover:bg-[#1E2B48] transition-colors"
-                title="Center on incident centroid"
-              >
-                <Crosshair size={18} />
-              </button>
-              <button
-                className="w-9 h-9 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-[#16202D] dark:text-white flex items-center justify-center shadow-md hover:bg-[#FFEFA6] dark:hover:bg-[#1E2B48] transition-colors"
-                title="Toggle fullscreen"
-              >
-                <Maximize2 size={18} />
-              </button>
-            </div>
-
-            {/* Active Clustered Incident Zones overlay */}
-            <div className="relative z-10 w-full h-full p-8 flex flex-col justify-around">
-              {/* Incident 1: SOS Cluster */}
-              <div className="absolute top-1/4 left-1/4 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
-                <div className="relative flex items-center justify-center">
-                  <div className="w-24 h-24 rounded-full bg-[#D92D20]/20 animate-ping absolute" />
-                  <div className="w-16 h-16 rounded-full bg-[#D92D20] text-white flex flex-col items-center justify-center shadow-lg shadow-red-500/50 border-2 border-white">
-                    <span className="text-xs font-black">SOS</span>
-                    <span className="text-[10px] font-semibold">12 users</span>
-                  </div>
-                </div>
-                <div className="mt-2 bg-[#0B1220]/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#D92D20]/40 text-[11px] font-bold text-white shadow">
-                  Alaknanda Gorge
-                </div>
+            {/* Empty State Banner if 0 active incidents */}
+            {incidents.length === 0 && !isIncidentsLoading && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] px-4 py-2 rounded-xl bg-[#0B1220]/90 backdrop-blur-md border border-[#26344F] text-white shadow-lg flex items-center gap-2.5 text-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>No active distress beacons in sector · Mesh radio scanning active (DBSCAN ε=120m)</span>
               </div>
-
-              {/* Incident 2: Landslide */}
-              <div className="absolute top-1/3 right-1/3 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
-                <div className="w-14 h-14 rounded-full bg-[#E07B00] text-white flex flex-col items-center justify-center shadow-lg shadow-amber-500/50 border-2 border-white">
-                  <span className="text-[11px] font-bold">Landslide</span>
-                  <span className="text-[9px]">6 devices</span>
-                </div>
-                <div className="mt-2 bg-[#0B1220]/90 px-2.5 py-1 rounded-lg border border-[#E07B00]/40 text-[11px] font-bold text-white">
-                  NH-7 Sector 4
-                </div>
-              </div>
-
-              {/* Incident 3: Flood Area */}
-              <div className="absolute bottom-1/4 left-1/3 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
-                <div className="w-16 h-16 rounded-full bg-[#0E8A94] text-white flex flex-col items-center justify-center shadow-lg shadow-teal-500/50 border-2 border-white">
-                  <span className="text-[11px] font-bold">Flood Area</span>
-                  <span className="text-[9px]">15 devices</span>
-                </div>
-                <div className="mt-2 bg-[#0B1220]/90 px-2.5 py-1 rounded-lg border border-[#0E8A94]/40 text-[11px] font-bold text-white">
-                  Koshi Embankment
-                </div>
-              </div>
-
-              {/* Rescue Team Unit */}
-              <div className="absolute bottom-1/5 right-1/4 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
-                <div className="w-14 h-14 rounded-xl bg-[#1E8E4E] text-white flex flex-col items-center justify-center shadow-lg shadow-green-500/50 border-2 border-white">
-                  <span className="text-[10px] font-bold">Rescue Team</span>
-                  <span className="text-[9px]">4 units</span>
-                </div>
-                <div className="mt-2 bg-[#0B1220]/90 px-2 py-0.5 rounded-lg border border-green-500/40 text-[10px] font-bold text-white">
-                  NDRF Zodiac 01
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* Bottom Status Ribbon */}
-            <div className="absolute bottom-4 left-4 right-4 z-10 px-4 py-2.5 rounded-xl bg-[#0B1220]/90 backdrop-blur-md border border-[#26344F] flex items-center justify-between text-xs text-white">
+            <div className="absolute bottom-4 left-4 right-4 z-[400] px-4 py-2.5 rounded-xl bg-[#0B1220]/90 backdrop-blur-md border border-[#26344F] flex flex-wrap items-center justify-between gap-3 text-xs text-white shadow-lg">
               <div className="flex items-center gap-3">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#4CD08A] animate-ping" />
-                <span>Geospatial Mesh Coverage: <strong>89.4% Active</strong></span>
+                <span className="font-medium">
+                  Mesh Radio Telemetry:{' '}
+                  <strong className="text-emerald-400 font-bold">
+                    {deviceStats.online + deviceStats.relay} Active Nodes
+                  </strong>{' '}
+                  ({deviceStats.online} Online, {deviceStats.relay} Relaying)
+                </span>
               </div>
-              <div className="text-[11px] text-[#9FADC2]">
-                Coordinates: 30.0668° N, 79.0193° E · WGS84
+              <div className="text-[11px] text-[#9FADC2] font-mono flex items-center gap-2">
+                <span>Sector Centroid: {sectorCoordinates}</span>
+                <span className="hidden md:inline px-2 py-0.5 rounded bg-[#162036] text-[10px] text-amber-300">
+                  {filteredIncidents.length} Clustered Incident(s)
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Node Detail Drawer Floating Overlay */}
+          <NodeDetailDrawer
+            selectedNode={
+              selectedIncident ||
+              (selectedRescueTeam
+                ? {
+                    id: selectedRescueTeam.id,
+                    title: selectedRescueTeam.name,
+                    type: 'rescue_team',
+                    badgeLabel: 'Rescue Unit',
+                    countLabel: `${selectedRescueTeam.membersCount} Responders`,
+                    lat: selectedRescueTeam.lat,
+                    lng: selectedRescueTeam.lng,
+                    severity: 'LOW',
+                    description: `Status: ${selectedRescueTeam.status} · Leader: ${selectedRescueTeam.leader || 'Field Lead'} · Contact: ${selectedRescueTeam.contact || 'VHF 156.8 MHz'} · Capabilities: ${selectedRescueTeam.capabilities?.join(', ') || 'Tactical Search & Rescue'}`,
+                    reportedAgo: 'Active team',
+                  }
+                : null)
+            }
+            selectedDevice={selectedDevice}
+            onClose={() => {
+              setSelectedIncident(null);
+              setSelectedDevice(null);
+              setSelectedRescueTeam(null);
+            }}
+            onAssignTeam={(id) => {
+              navigate(`/dispatch?incidentId=${encodeURIComponent(id)}`);
+            }}
+          />
         </div>
 
         {/* Right Side Panel: Layers & Live Devices */}
         <div className="lg:col-span-4 xl:col-span-3 space-y-6">
           {/* Map Layers Card */}
           <Card>
-            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#E6DCA8] dark:border-[#26344F]">
-              <Layers size={18} className="text-[#8A5A00] dark:text-[#FFD21F]" />
-              <h3 className="text-sm font-bold text-[#16202D] dark:text-white">
-                Map Layers
-              </h3>
-            </div>
-
-            <div className="space-y-2.5">
-              {Object.entries(activeLayers).map(([key, val]) => (
-                <div
-                  key={key}
-                  onClick={() => toggleLayer(key as keyof typeof activeLayers)}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-black/5 dark:hover:bg-[#0E1627] cursor-pointer transition-colors"
-                >
-                  <span className="text-xs font-semibold text-[#16202D] dark:text-[#EEF2F8] capitalize">
-                    {key.replace(/([A-Z])/g, ' $1')}
-                  </span>
-                  <button className="text-[#8A5A00] dark:text-[#FFD21F]">
-                    {val ? <Eye size={16} /> : <EyeOff size={16} className="text-[#566070]" />}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Live Devices Card */}
-          <Card>
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#E6DCA8] dark:border-[#26344F]">
               <div className="flex items-center gap-2">
-                <Radio size={18} className="text-[#0E8A94] dark:text-[#3CC6D0]" />
+                <Layers size={18} className="text-[#8A5A00] dark:text-[#FFD21F]" />
                 <h3 className="text-sm font-bold text-[#16202D] dark:text-white">
-                  Live Devices (326)
+                  Map Layers
                 </h3>
               </div>
-              <span className="text-[11px] font-bold text-[#8A5A00] dark:text-[#FFD21F] cursor-pointer hover:underline">
-                View All
+              <span className="text-[11px] font-semibold text-[#566070] dark:text-[#9FADC2]">
+                {Object.values(activeLayers).filter(Boolean).length}/6 Active
               </span>
             </div>
 
             <div className="space-y-2">
-              {devices.map((d) => (
-                <div
-                  key={d.id}
-                  className="p-2.5 rounded-lg bg-[#FFFCEB]/50 dark:bg-[#0E1627] border border-[#E6DCA8]/50 dark:border-[#26344F]/50 flex items-center justify-between text-xs"
-                >
-                  <div>
-                    <span className="font-mono font-bold text-[#16202D] dark:text-white block">
-                      {d.id}
-                    </span>
-                    <span className="text-[11px] text-[#566070] dark:text-[#9FADC2]">
-                      {d.location} · {d.role}
-                    </span>
+              {layerDefinitions.map((item) => {
+                const isChecked = activeLayers[item.key];
+                return (
+                  <div
+                    key={item.key}
+                    onClick={() => toggleLayer(item.key)}
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-black/5 dark:hover:bg-[#0E1627] cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${item.dotColor} shadow-2xs`} />
+                      <span className="text-xs font-semibold text-[#16202D] dark:text-[#EEF2F8]">
+                        {item.label}
+                      </span>
+                      {item.count !== undefined && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-gray-100 dark:bg-[#1E293B] text-gray-600 dark:text-gray-300">
+                          {item.count}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={`Toggle layer ${item.label}`}
+                      className="text-[#8A5A00] dark:text-[#FFD21F] cursor-pointer"
+                    >
+                      {isChecked ? (
+                        <Eye size={16} />
+                      ) : (
+                        <EyeOff size={16} className="text-[#566070] dark:text-gray-500" />
+                      )}
+                    </button>
                   </div>
-                  <Badge
-                    variant="status"
-                    label={d.status}
-                    className={
-                      d.status === 'Online'
-                        ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40'
-                        : d.status === 'Relay'
-                        ? 'text-cyan-600 bg-cyan-50 dark:bg-cyan-950/40'
-                        : 'text-gray-500'
-                    }
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Live Devices Card with Real Data */}
+          <Card>
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#E6DCA8] dark:border-[#26344F]">
+              <div className="flex items-center gap-2">
+                <Radio size={18} className="text-[#0E8A94] dark:text-[#3CC6D0]" />
+                <h3 className="text-sm font-bold text-[#16202D] dark:text-white">
+                  Live Devices ({deviceStats.total || devices.length})
+                </h3>
+              </div>
+              <Link
+                to="/devices"
+                className="text-[11px] font-bold text-[#8A5A00] dark:text-[#FFD21F] hover:underline"
+              >
+                View All
+              </Link>
+            </div>
+
+            {/* Quick Status Breakdown */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="p-2 rounded-lg bg-emerald-50 dark:bg-[#0F3322]/50 border border-emerald-200 dark:border-emerald-900/50 text-center">
+                <span className="block text-xs font-black text-[#1E8E4E] dark:text-[#4CD08A]">
+                  {deviceStats.online}
+                </span>
+                <span className="text-[10px] text-emerald-800 dark:text-emerald-300 font-medium">
+                  Online
+                </span>
+              </div>
+              <div className="p-2 rounded-lg bg-cyan-50 dark:bg-[#0F3037]/50 border border-cyan-200 dark:border-cyan-900/50 text-center">
+                <span className="block text-xs font-black text-[#0E8A94] dark:text-[#3CC6D0]">
+                  {deviceStats.relay}
+                </span>
+                <span className="text-[10px] text-cyan-800 dark:text-cyan-300 font-medium">
+                  Relay
+                </span>
+              </div>
+              <div className="p-2 rounded-lg bg-gray-50 dark:bg-[#162036] border border-gray-200 dark:border-gray-800 text-center">
+                <span className="block text-xs font-black text-gray-600 dark:text-gray-400">
+                  {deviceStats.offline}
+                </span>
+                <span className="text-[10px] text-gray-500 font-medium">
+                  Offline
+                </span>
+              </div>
+            </div>
+
+            {/* Real Scrollable Device List */}
+            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+              {filteredDevices.length > 0 ? (
+                filteredDevices.map((d) => (
+                  <LiveDeviceItem
+                    key={d.id}
+                    device={d}
+                    isSelected={selectedDevice?.id === d.id}
+                    onSelect={(device) => {
+                      setSelectedDevice(device);
+                      setSelectedIncident(null);
+                      setSelectedRescueTeam(null);
+                    }}
                   />
+                ))
+              ) : isDevicesLoading ? (
+                <div className="py-8 text-center text-xs text-[#566070] dark:text-[#9FADC2]">
+                  Scanning mesh spectrum for active nodes...
                 </div>
-              ))}
+              ) : (
+                <div className="py-8 text-center px-3 rounded-xl bg-gray-50 dark:bg-[#0E1627] border border-dashed border-[#E6DCA8] dark:border-[#26344F]">
+                  <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2 opacity-80" />
+                  <p className="text-xs font-semibold text-[#16202D] dark:text-white">
+                    No active distress beacons in sector
+                  </p>
+                  <p className="text-[11px] text-[#566070] dark:text-[#9FADC2] mt-1">
+                    Mesh radio scanning active · Waiting for BLE/LoRa peer handshake
+                  </p>
+                </div>
+              )}
             </div>
           </Card>
         </div>
