@@ -11,9 +11,11 @@ import '../models/delivery_state.dart';
 import '../models/emergency_report.dart';
 import '../models/encrypted_mesh_packet.dart';
 import '../models/message_envelope.dart';
+import '../models/missing_person.dart';
 import '../models/peer_capability.dart';
 import 'bluetooth_radio_service.dart';
 import 'database_service.dart';
+import 'sos_alert_service.dart';
 import 'user_auth_service.dart';
 
 /// Actions taken by MeshEngine when processing incoming packets
@@ -321,6 +323,11 @@ class MeshEngine extends ChangeNotifier {
         ),
       );
 
+      if (envelope.type == 'SOS') {
+        await _persistIncomingSos(envelope);
+        SosAlertService.instance.triggerIncomingAlert(envelope);
+      }
+
       _envelopeController.add(envelope);
       notifyListeners();
       return RelayAction.storedTtlExpired;
@@ -392,6 +399,11 @@ class MeshEngine extends ChangeNotifier {
 
       if (envelope.type == 'SOS') {
         await _persistIncomingSos(envelope);
+        SosAlertService.instance.triggerIncomingAlert(envelope);
+      } else if (envelope.type == 'MISSING_PERSON') {
+        await _persistIncomingMissingPerson(envelope);
+      } else if (envelope.type == 'MISSING_PERSON_SIGHTING') {
+        await _persistIncomingMissingPersonSighting(envelope);
       }
 
       // Notify UI immediately (emits to ChatService via incomingEnvelopes stream)
@@ -550,6 +562,35 @@ class MeshEngine extends ChangeNotifier {
       },
     );
     await _radioService.broadcastBytes(ackEnvelope.toBytes());
+  }
+
+  /// Sends back an SOS response acknowledgement to the distress sender over mesh radio
+  Future<void> sendSosResponseAck({
+    required String sosMessageId,
+    required String targetDeviceId,
+    String? note,
+  }) async {
+    final myDeviceId = DatabaseService.myDeviceId;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final ackEnvelope = MessageEnvelope(
+      uuid: 'ACK-SOS-$sosMessageId-$now',
+      senderId: myDeviceId,
+      senderName: DatabaseService.myDisplayName,
+      conversationId: 'CONV_COMMUNITY',
+      timestamp: now,
+      ttl: 7,
+      hops: 0,
+      type: 'DELIVERY_ACK',
+      payload: sosMessageId,
+      recipientDeviceId: targetDeviceId,
+      metadata: {
+        'ack_msg_id': sosMessageId,
+        'status': 'ACKNOWLEDGED_BY_RESPONDER',
+        'responder_id': myDeviceId,
+        'note': note ?? 'Distress acknowledged by responder. Stay calm, help is on the way.',
+      },
+    );
+    queueOutboxMessage(ackEnvelope);
   }
 
   /// Persists an incoming image after the radio layer has copied it into the
@@ -843,6 +884,79 @@ class MeshEngine extends ChangeNotifier {
       severity: 'CRITICAL',
     );
     await AppDatabase.instance.saveEmergencyReport(report);
+  }
+
+  Future<void> _persistIncomingMissingPerson(MessageEnvelope envelope) async {
+    try {
+      Map<String, dynamic> data = {};
+      if (envelope.payload.trim().startsWith('{')) {
+        data = jsonDecode(envelope.payload) as Map<String, dynamic>;
+      } else if (envelope.metadata != null) {
+        data = Map<String, dynamic>.from(envelope.metadata!);
+      }
+      data['id'] = envelope.uuid;
+      final person = MissingPerson.fromMap(data);
+      await AppDatabase.instance.saveMissingPerson(person);
+      debugPrint('[MeshEngine] Persisted incoming MISSING_PERSON mesh packet: ${person.name}');
+    } catch (e) {
+      debugPrint('[MeshEngine] Error parsing MISSING_PERSON packet: $e');
+    }
+  }
+
+  Future<void> _persistIncomingMissingPersonSighting(MessageEnvelope envelope) async {
+    try {
+      Map<String, dynamic> data = {};
+      if (envelope.payload.trim().startsWith('{')) {
+        data = jsonDecode(envelope.payload) as Map<String, dynamic>;
+      } else if (envelope.metadata != null) {
+        data = Map<String, dynamic>.from(envelope.metadata!);
+      }
+      final personId = data['person_id']?.toString() ?? envelope.conversationId.replaceFirst('CONV_MP_', '');
+      final sighting = MissingPersonSighting.fromMap(data);
+      await AppDatabase.instance.addMissingPersonSighting(personId, sighting);
+      debugPrint('[MeshEngine] Persisted incoming MISSING_PERSON_SIGHTING mesh packet for person: $personId');
+    } catch (e) {
+      debugPrint('[MeshEngine] Error parsing MISSING_PERSON_SIGHTING packet: $e');
+    }
+  }
+
+  /// Broadcast a Missing Person report to all nearby mesh peers
+  Future<void> broadcastMissingPerson(MissingPerson person) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final myDeviceId = DatabaseService.myDeviceId;
+    final envelope = MessageEnvelope(
+      uuid: person.id,
+      senderId: myDeviceId,
+      senderName: DatabaseService.myDisplayName,
+      conversationId: 'CONV_COMMUNITY',
+      timestamp: now,
+      ttl: 7,
+      hops: 0,
+      type: 'MISSING_PERSON',
+      payload: jsonEncode(person.toMap()),
+      metadata: person.toMap(),
+    );
+    queueOutboxMessage(envelope);
+  }
+
+  /// Broadcast a Sighting to all nearby mesh peers
+  Future<void> broadcastMissingPersonSighting(String personId, MissingPersonSighting sighting) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final myDeviceId = DatabaseService.myDeviceId;
+    final data = sighting.toMap()..['person_id'] = personId;
+    final envelope = MessageEnvelope(
+      uuid: 'SIGHT-${personId.hashCode.abs()}-$now',
+      senderId: myDeviceId,
+      senderName: DatabaseService.myDisplayName,
+      conversationId: 'CONV_COMMUNITY',
+      timestamp: now,
+      ttl: 7,
+      hops: 0,
+      type: 'MISSING_PERSON_SIGHTING',
+      payload: jsonEncode(data),
+      metadata: data,
+    );
+    queueOutboxMessage(envelope);
   }
 
   double? _toDouble(dynamic value) {

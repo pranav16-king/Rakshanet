@@ -28,7 +28,14 @@ import '../../widgets/app_bar_actions.dart';
 /// 6. Interactive Pin Drop: tap any point on the map to measure distance & bearing
 /// 7. Hi-Vis emergency design system (Light, Dark, OLED Low-Power)
 class LiveMapScreen extends StatefulWidget {
-  const LiveMapScreen({super.key});
+  final LatLng? initialCenter;
+  final double? initialZoom;
+
+  const LiveMapScreen({
+    super.key,
+    this.initialCenter,
+    this.initialZoom,
+  });
 
   @override
   State<LiveMapScreen> createState() => _LiveMapScreenState();
@@ -83,6 +90,14 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     _meshEventSubscription = MeshEngine().incomingEnvelopes.listen((_) {
       _loadSqliteData();
     });
+
+    if (widget.initialCenter != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _animatedMapMove(widget.initialCenter!, widget.initialZoom ?? 16.0);
+        }
+      });
+    }
   }
 
   @override
@@ -850,10 +865,17 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     final activeReports = reportsById.values.toList();
 
     // Determine initial center
-    final LatLng centerPoint = LatLng(
-      telemetry.latitude ?? (activeReports.isNotEmpty && activeReports.first.latitude != null ? activeReports.first.latitude! : 20.5937),
-      telemetry.longitude ?? (activeReports.isNotEmpty && activeReports.first.longitude != null ? activeReports.first.longitude! : 78.9629),
-    );
+    final LatLng centerPoint = widget.initialCenter ??
+        LatLng(
+          telemetry.latitude ??
+              (activeReports.isNotEmpty && activeReports.first.latitude != null
+                  ? activeReports.first.latitude!
+                  : 20.5937),
+          telemetry.longitude ??
+              (activeReports.isNotEmpty && activeReports.first.longitude != null
+                  ? activeReports.first.longitude!
+                  : 78.9629),
+        );
 
     // Build markers
     final markers = <Marker>[];

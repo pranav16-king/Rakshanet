@@ -9,6 +9,7 @@ import '../../models/chat_message.dart';
 import '../../models/emergency_report.dart';
 import '../../providers/emergency_report_provider.dart';
 import '../../providers/mesh_provider.dart';
+import '../../providers/sos_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
 import '../../services/platform_telemetry_service.dart';
@@ -150,7 +151,19 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
       },
     );
 
-    // 3. Update in-memory emergency report provider if active
+    // 3. Trigger global local SOS alert confirmation & siren feedback
+    SosProvider.instance.triggerLocalSos(
+      category: _selectedCategory,
+      peopleCount: _peopleCount,
+      latitude: latitude,
+      longitude: longitude,
+      notes: _notesController.text.trim().isNotEmpty
+          ? _notesController.text.trim()
+          : null,
+      messageId: realReport.id,
+    );
+
+    // 4. Update in-memory emergency report provider if active
     try {
       await emergencyProvider.loadReports();
     } catch (_) {}

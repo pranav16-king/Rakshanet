@@ -8,9 +8,12 @@ import 'providers/chat_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/device_status_provider.dart';
 import 'providers/emergency_report_provider.dart';
+import 'providers/missing_persons_provider.dart';
+import 'providers/sos_provider.dart';
 import 'providers/telemetry_provider.dart';
 import 'services/chat_service.dart';
 import 'services/device_identity_service.dart';
+import 'widgets/global_sos_overlay.dart';
 import 'screens/splash_screen.dart';
 import 'screens/profile/profile_setup_screen.dart';
 import 'screens/shell/main_shell.dart';
@@ -43,6 +46,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         ChangeNotifierProvider(create: (_) => DeviceStatusProvider()),
         ChangeNotifierProvider(create: (_) => EmergencyReportProvider()),
+        ChangeNotifierProvider(create: (_) => MissingPersonsProvider()),
+        ChangeNotifierProvider(create: (_) => SosProvider.instance),
         ChangeNotifierProvider(create: (_) => TelemetryProvider()),
       ],
       child: const RakshaNetApp(),
@@ -61,6 +66,9 @@ class RakshaNetApp extends StatelessWidget {
       title: 'RakshaNet',
       debugShowCheckedModeBanner: false,
       theme: themeProvider.themeData,
+      builder: (context, child) => GlobalSosOverlay(
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: const SplashScreen(),
       routes: {
         '/splash': (_) => const SplashScreen(),

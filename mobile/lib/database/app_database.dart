@@ -46,6 +46,8 @@ class AppDatabase {
     'encrypted_mesh_packets': [],
     'peer_capabilities': [],
     'delivery_receipts': [],
+    'offline_map_regions': [],
+    'location_history': [],
   };
 
   AppDatabase._internal();
@@ -290,6 +292,63 @@ class AppDatabase {
         )
       ''');
     } catch (_) {}
+
+    // Missing Persons columns migration
+    final mpCols = [
+      "gender TEXT DEFAULT 'Unspecified'",
+      'lat REAL',
+      'lng REAL',
+      'photo_url TEXT',
+      'reported_at INTEGER',
+      "reported_by TEXT DEFAULT 'Anonymous'",
+      "sightings_json TEXT DEFAULT '[]'",
+    ];
+    for (final col in mpCols) {
+      try {
+        await db.execute('ALTER TABLE missing_persons ADD COLUMN $col');
+      } catch (_) {}
+    }
+
+    // Offline Map Regions (Spec Sections 2 & 3)
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS offline_map_regions (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          min_lat REAL NOT NULL,
+          max_lat REAL NOT NULL,
+          min_lng REAL NOT NULL,
+          max_lng REAL NOT NULL,
+          min_zoom INTEGER NOT NULL,
+          max_zoom INTEGER NOT NULL,
+          total_tiles INTEGER NOT NULL,
+          downloaded_tiles INTEGER NOT NULL,
+          size_bytes INTEGER DEFAULT 0,
+          status TEXT NOT NULL,
+          downloaded_at INTEGER,
+          file_path TEXT
+        )
+      ''');
+    } catch (_) {}
+
+    // Location History (Spec Section 4)
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS location_history (
+          id TEXT PRIMARY KEY,
+          latitude REAL NOT NULL,
+          longitude REAL NOT NULL,
+          horizontal_accuracy REAL NOT NULL,
+          altitude REAL,
+          speed REAL,
+          bearing REAL,
+          timestamp INTEGER NOT NULL,
+          source TEXT NOT NULL,
+          is_live INTEGER DEFAULT 1,
+          is_stale INTEGER DEFAULT 0
+        )
+      ''');
+    } catch (_) {}
   }
 
   void _activateInMemoryFallback() {
@@ -431,12 +490,19 @@ class AppDatabase {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         age INTEGER NOT NULL,
+        gender TEXT DEFAULT 'Unspecified',
         description TEXT NOT NULL,
         last_seen_location TEXT NOT NULL,
+        lat REAL,
+        lng REAL,
         last_seen_time INTEGER NOT NULL,
+        reported_at INTEGER,
+        photo_url TEXT,
         photo_path TEXT,
         status TEXT NOT NULL,
-        contact_phone TEXT
+        contact_phone TEXT,
+        reported_by TEXT DEFAULT 'Anonymous',
+        sightings_json TEXT DEFAULT '[]'
       )
     ''');
 
@@ -535,6 +601,43 @@ class AppDatabase {
         status TEXT NOT NULL DEFAULT 'PENDING',
         sent_at INTEGER NOT NULL,
         responded_at INTEGER
+      )
+    ''');
+
+    // 16. Offline Map Regions (Spec Sections 2 & 3)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS offline_map_regions (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        min_lat REAL NOT NULL,
+        max_lat REAL NOT NULL,
+        min_lng REAL NOT NULL,
+        max_lng REAL NOT NULL,
+        min_zoom INTEGER NOT NULL,
+        max_zoom INTEGER NOT NULL,
+        total_tiles INTEGER NOT NULL,
+        downloaded_tiles INTEGER NOT NULL,
+        size_bytes INTEGER DEFAULT 0,
+        status TEXT NOT NULL,
+        downloaded_at INTEGER,
+        file_path TEXT
+      )
+    ''');
+
+    // 17. Location History (Spec Section 4)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS location_history (
+        id TEXT PRIMARY KEY,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        horizontal_accuracy REAL NOT NULL,
+        altitude REAL,
+        speed REAL,
+        bearing REAL,
+        timestamp INTEGER NOT NULL,
+        source TEXT NOT NULL,
+        is_live INTEGER DEFAULT 1,
+        is_stale INTEGER DEFAULT 0
       )
     ''');
   }
@@ -1054,19 +1157,78 @@ class AppDatabase {
     );
   }
 
-  /// Fetch missing person bulletins
-  Future<List<MissingPerson>> getMissingPersons() async {
-    final rows = await query('missing_persons', orderBy: 'last_seen_time DESC');
+  /// Fetch missing person bulletins with optional status and search filters
+  Future<List<MissingPerson>> getMissingPersons({String? status, String? search}) async {
+    String? where;
+    List<dynamic>? whereArgs;
+
+    final conditions = <String>[];
+    final args = <dynamic>[];
+
+    if (status != null && status.toUpperCase() != 'ALL') {
+      conditions.add('UPPER(status) = ?');
+      args.add(status.toUpperCase());
+    }
+
+    if (search != null && search.trim().isNotEmpty) {
+      conditions.add('(name LIKE ? OR last_seen_location LIKE ? OR description LIKE ?)');
+      final term = '%${search.trim()}%';
+      args.addAll([term, term, term]);
+    }
+
+    if (conditions.isNotEmpty) {
+      where = conditions.join(' AND ');
+      whereArgs = args;
+    }
+
+    final rows = await query(
+      'missing_persons',
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: 'reported_at DESC, last_seen_time DESC',
+    );
     return rows.map((r) => MissingPerson.fromMap(r)).toList();
   }
 
-  /// Save missing person bulletin
+  /// Get missing person by ID
+  Future<MissingPerson?> getMissingPersonById(String id) async {
+    final rows = await query(
+      'missing_persons',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return MissingPerson.fromMap(rows.first);
+  }
+
+  /// Save or replace missing person bulletin
   Future<void> saveMissingPerson(MissingPerson person) async {
     await insert(
       'missing_persons',
       person.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  /// Update status of a missing person
+  Future<void> updateMissingPersonStatus(String id, String status) async {
+    await update(
+      'missing_persons',
+      {'status': status.toUpperCase()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Add a citizen sighting to a missing person record
+  Future<void> addMissingPersonSighting(String personId, MissingPersonSighting sighting) async {
+    final person = await getMissingPersonById(personId);
+    if (person == null) return;
+
+    final updatedSightings = List<MissingPersonSighting>.from(person.sightings)..add(sighting);
+    final updated = person.copyWith(sightings: updatedSightings);
+    await saveMissingPerson(updated);
   }
 
   // =========================================================================
@@ -1344,6 +1506,74 @@ class AppDatabase {
 
   Future<List<Map<String, dynamic>>> getRelays() async {
     return await query('message_relays', orderBy: 'received_at ASC');
+  }
+
+  // =========================================================================
+  // Offline Map Regions (Spec Sections 2 & 3)
+  // =========================================================================
+
+  /// Save or replace an offline map sector / region
+  Future<void> saveOfflineMapRegion(OfflineMapRegion region) async {
+    await insert(
+      'offline_map_regions',
+      region.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Retrieve all recorded offline map regions
+  Future<List<OfflineMapRegion>> getOfflineMapRegions() async {
+    final rows = await query(
+      'offline_map_regions',
+      orderBy: 'downloaded_at DESC, name ASC',
+    );
+    return rows.map((r) => OfflineMapRegion.fromMap(r)).toList();
+  }
+
+  /// Retrieve a specific offline map region by ID
+  Future<OfflineMapRegion?> getOfflineMapRegion(String id) async {
+    final rows = await query(
+      'offline_map_regions',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return OfflineMapRegion.fromMap(rows.first);
+  }
+
+  /// Update download status, tile progress, and storage metrics
+  Future<void> updateOfflineMapRegionStatus(
+    String id,
+    String status, {
+    int? downloadedTiles,
+    int? sizeBytes,
+    int? downloadedAt,
+    String? filePath,
+  }) async {
+    final values = <String, dynamic>{
+      'status': status,
+    };
+    if (downloadedTiles != null) values['downloaded_tiles'] = downloadedTiles;
+    if (sizeBytes != null) values['size_bytes'] = sizeBytes;
+    if (downloadedAt != null) values['downloaded_at'] = downloadedAt;
+    if (filePath != null) values['file_path'] = filePath;
+
+    await update(
+      'offline_map_regions',
+      values,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Delete an offline map region from database
+  Future<int> deleteOfflineMapRegion(String id) async {
+    return await delete(
+      'offline_map_regions',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }
 
