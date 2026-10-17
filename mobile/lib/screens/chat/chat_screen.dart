@@ -49,10 +49,23 @@ class _ChatScreenState extends State<ChatScreen> {
     'Trapped - send help',
   ];
 
+  int _previousMessageCount = 0;
+  String? _previousFilter;
+  String? _previousGroupId;
+
   @override
   void initState() {
     super.initState();
     _recoverLostImagePick();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) _scrollToBottom();
+      });
+    }
   }
 
   Future<void> _recoverLostImagePick() async {
@@ -341,17 +354,22 @@ class _ChatScreenState extends State<ChatScreen> {
     _textController.dispose();
     _searchController.dispose();
     _scrollController.dispose();
+    _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool immediate = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (!_scrollController.hasClients) return;
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      if (immediate) {
+        _scrollController.jumpTo(maxExtent);
+      } else {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          maxExtent,
           duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
+          curve: Curves.easeOutCubic,
         );
       }
     });
@@ -884,6 +902,30 @@ class _ChatScreenState extends State<ChatScreen> {
     final chatService = context.watch<ChatService>();
     final groupService = context.watch<GroupService>();
     final messages = chatService.communityMessages;
+    final currentFilter = chatService.activeFilter;
+    final currentGroupId = groupService.selectedGroupId;
+
+    final isGroupDirectory =
+        currentFilter == 'Group' && groupService.selectedGroup == null;
+
+    if (!isGroupDirectory) {
+      if (messages.length != _previousMessageCount ||
+          currentFilter != _previousFilter ||
+          currentGroupId != _previousGroupId) {
+        final wasNewMessageAdded = messages.length > _previousMessageCount &&
+            currentFilter == _previousFilter &&
+            currentGroupId == _previousGroupId;
+        _previousMessageCount = messages.length;
+        _previousFilter = currentFilter;
+        _previousGroupId = currentGroupId;
+
+        if (messages.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _scrollToBottom(immediate: !wasNewMessageAdded);
+          });
+        }
+      }
+    }
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -899,43 +941,56 @@ class _ChatScreenState extends State<ChatScreen> {
             // Filter Tabs: "Nearby", "Group", "Rescue", "Saved"
             _buildFilterTabs(theme, chatService, groupService),
 
-            // Group Management & Invite Actions Bar (shown when Group tab is active)
-            if (chatService.activeFilter == 'Group')
-              _buildGroupHeader(theme, chatService, groupService),
+            // WhatsApp Style Group Breadcrumb when inside an active group
+            if (currentFilter == 'Group' && groupService.selectedGroup != null)
+              _buildActiveGroupBreadcrumb(
+                theme,
+                groupService,
+                groupService.selectedGroup!,
+              ),
 
             const SizedBox(height: 6),
 
-            // Chat Messages List (or authentic empty state when SQLite is empty)
-            Expanded(
-              child: chatService.isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppTokens.signalYellow,
+            if (isGroupDirectory)
+              Expanded(
+                child: _buildWhatsAppGroupsDirectory(
+                  theme,
+                  chatService,
+                  groupService,
+                ),
+              )
+            else ...[
+              // Chat Messages List (or authentic empty state when SQLite is empty)
+              Expanded(
+                child: chatService.isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppTokens.signalYellow,
+                        ),
+                      )
+                    : messages.isEmpty
+                    ? _buildEmptyState(theme, chatService, groupService)
+                    : ListView.builder(
+                        controller: _scrollController,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = messages[index];
+                          return _buildMessageRow(theme, chatService, msg);
+                        },
                       ),
-                    )
-                  : messages.isEmpty
-                  ? _buildEmptyState(theme, chatService, groupService)
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = messages[index];
-                        return _buildMessageRow(theme, chatService, msg);
-                      },
-                    ),
-            ),
+              ),
 
-            // Emergency Shortcuts Bar
-            _buildEmergencyShortcutsBar(theme),
+              // Emergency Shortcuts Bar
+              _buildEmergencyShortcutsBar(theme),
 
-            // Bottom Input Bar (or Voice Note Recording Bar)
-            _isRecordingVoice
-                ? _buildVoiceRecordingBar(theme)
-                : _buildInputBar(theme, chatService, groupService),
+              // Bottom Input Bar (or Voice Note Recording Bar)
+              _isRecordingVoice
+                  ? _buildVoiceRecordingBar(theme)
+                  : _buildInputBar(theme, chatService, groupService),
+            ],
           ],
         ),
       ),
@@ -1082,8 +1137,9 @@ class _ChatScreenState extends State<ChatScreen> {
         ? AppTokens.lightSuccess
         : AppTokens.darkSuccess;
 
+    final isGroupFilter = chatService.activeFilter == 'Group';
     final activeGroup =
-        chatService.activeFilter == 'Group' ? groupService.selectedGroup : null;
+        isGroupFilter ? groupService.selectedGroup : null;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1093,33 +1149,76 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       child: Row(
         children: [
-          // Yellow Beacon Icon Avatar
-          Container(
-            width: 42,
-            height: 42,
-            decoration: const BoxDecoration(
-              color: AppTokens.signalYellow,
-              shape: BoxShape.circle,
+          // Back button when inside an active group room
+          if (activeGroup != null) ...[
+            IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              color: theme.text,
+              tooltip: 'All Groups',
+              onPressed: () => groupService.selectGroup(null),
             ),
-            child: Icon(
-              activeGroup != null ? Icons.groups_rounded : Icons.sensors,
-              color: AppTokens.nightNavy,
-              size: 22,
+            const SizedBox(width: 2),
+          ],
+
+          // Avatar: Group initials when in active group, else Yellow Beacon Icon
+          if (activeGroup != null)
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _getSenderColor(activeGroup.id, theme.isLightMode)
+                    .withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: _getSenderColor(activeGroup.id, theme.isLightMode),
+                  width: 1.5,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                activeGroup.name.isNotEmpty
+                    ? activeGroup.name[0].toUpperCase()
+                    : 'G',
+                style: TextStyle(
+                  color: _getSenderColor(activeGroup.id, theme.isLightMode),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            )
+          else
+            Container(
+              width: 42,
+              height: 42,
+              decoration: const BoxDecoration(
+                color: AppTokens.signalYellow,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isGroupFilter ? Icons.groups_rounded : Icons.sensors,
+                color: AppTokens.nightNavy,
+                size: 22,
+              ),
             ),
-          ),
           const SizedBox(width: 12),
 
           // Title & Subtitle
           Expanded(
             child: InkWell(
               onTap: () {
-                mesh.startScan();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Scanning for nearby BLE & Wi-Fi Direct mesh peers...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+                if (activeGroup != null) {
+                  _showGroupMembersSheet(theme, groupService, activeGroup);
+                } else {
+                  mesh.startScan();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Scanning for nearby BLE & Wi-Fi Direct mesh peers...',
+                      ),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               },
               borderRadius: BorderRadius.circular(8),
               child: Column(
@@ -1127,11 +1226,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    activeGroup != null ? activeGroup.name : 'Community Chat',
+                    activeGroup != null
+                        ? activeGroup.name
+                        : (isGroupFilter ? 'Mesh Groups' : 'Community Chat'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 19,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: theme.text,
                       letterSpacing: -0.2,
@@ -1152,8 +1253,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       Flexible(
                         child: Text(
                           activeGroup != null
-                              ? 'Group ${activeGroup.id} • ${activeGroup.memberCount} members'
-                              : 'Nearby devices • $peerCount online',
+                              ? '${activeGroup.memberCount} members • Tap for details'
+                              : (isGroupFilter
+                                  ? '${groupService.groups.length} groups joined • $peerCount online'
+                                  : 'Nearby devices • $peerCount online'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1169,6 +1272,20 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
+
+          // Group Info Icon Button when in group
+          if (activeGroup != null)
+            IconButton(
+              icon: const Icon(
+                Icons.group_rounded,
+                color: AppTokens.beaconTeal,
+                size: 22,
+              ),
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              tooltip: 'Group Members & Info',
+              onPressed: () =>
+                  _showGroupMembersSheet(theme, groupService, activeGroup),
+            ),
 
           // Search Icon Button
           IconButton(
@@ -1294,414 +1411,686 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  /// Group Management Header:
-  /// - Action Buttons ("+ Create Group", "Invites (N)", "Join Code")
-  /// - Inline Pending Invite Card with immediate Accept & Reject buttons
-  /// - Interactive Group Selector Chips ("All Groups" + each joined group)
-  /// - Selected Group Management Strip ("Members & Requests", "+ Invite")
-  Widget _buildGroupHeader(
+  /// Generates a distinct WhatsApp-style color for group senders based on senderId
+  Color _getSenderColor(String senderId, bool isLight) {
+    final hash = senderId.hashCode.abs();
+    final colorsLight = [
+      const Color(0xFF00796B), // Teal
+      const Color(0xFFD84315), // Deep Orange
+      const Color(0xFF1565C0), // Blue
+      const Color(0xFF6A1B9A), // Purple
+      const Color(0xFFC2185B), // Pink
+      const Color(0xFF2E7D32), // Green
+      const Color(0xFFE65100), // Orange
+      const Color(0xFF00838F), // Cyan
+    ];
+    final colorsDark = [
+      const Color(0xFF4DB6AC), // Light Teal
+      const Color(0xFFFF8A65), // Light Deep Orange
+      const Color(0xFF64B5F6), // Light Blue
+      const Color(0xFFBA68C8), // Light Purple
+      const Color(0xFFF06292), // Light Pink
+      const Color(0xFF81C784), // Light Green
+      const Color(0xFFFFB74D), // Light Orange
+      const Color(0xFF4DD0E1), // Light Cyan
+    ];
+    final list = isLight ? colorsLight : colorsDark;
+    return list[hash % list.length];
+  }
+
+  /// WhatsApp Style Active Group Breadcrumb shown below tabs inside a group
+  Widget _buildActiveGroupBreadcrumb(
+    ThemeProvider theme,
+    GroupService groupService,
+    ChatGroup grp,
+  ) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 6, 16, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+        border: Border.all(color: theme.border),
+      ),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: () => groupService.selectGroup(null),
+            borderRadius: BorderRadius.circular(4),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.arrow_back_rounded,
+                    size: 16,
+                    color: AppTokens.beaconTeal,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'All Groups',
+                    style: TextStyle(
+                      color: AppTokens.beaconTeal,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 1,
+            height: 16,
+            color: theme.border,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: InkWell(
+              onTap: () => _showGroupMembersSheet(theme, groupService, grp),
+              borderRadius: BorderRadius.circular(4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${grp.name} (${grp.id})',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: theme.text,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${grp.memberCount} members',
+                    style: TextStyle(
+                      color: theme.textMuted,
+                      fontSize: 11.5,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 15,
+                    color: AppTokens.beaconTeal,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// WhatsApp Style Groups Directory:
+  /// - Top Quick Actions: "+ New Group" & "Join with Code"
+  /// - Pending Invitations Banner (with direct Accept & Decline buttons)
+  /// - Section header: "YOUR MESH GROUPS"
+  /// - WhatsApp-style group tiles (Avatar with initials, Name + Code pill, Last message preview, Timestamp, Member count)
+  Widget _buildWhatsAppGroupsDirectory(
     ThemeProvider theme,
     ChatService chatService,
     GroupService groupService,
   ) {
     final pendingInvites = groupService.pendingInvites;
-    final pendingCount = pendingInvites.length;
-    final selectedGroup = groupService.selectedGroup;
+    final groups = groupService.groups;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        // 1. Top Quick Action Buttons: "+ New Group" and "Join with Code"
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 44,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTokens.signalYellow,
+                    foregroundColor: AppTokens.nightNavy,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                    ),
+                  ),
+                  icon: const Icon(Icons.group_add_rounded, size: 20),
+                  label: const Text(
+                    'New Group',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  onPressed: () async {
+                    final created = await Navigator.pushNamed(
+                      context,
+                      '/create-group',
+                    );
+                    if (created is ChatGroup && mounted) {
+                      groupService.selectGroup(created.id);
+                      _scrollToBottom();
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.text,
+                    side: BorderSide(color: theme.border, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.tag_rounded,
+                    size: 20,
+                    color: AppTokens.beaconTeal,
+                  ),
+                  label: const Text(
+                    'Join with Code',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  onPressed: () => _showJoinByCodeDialog(theme, groupService),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // 2. Pending Invitations Section (if any)
+        if (pendingInvites.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTokens.beaconTeal.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+              border: Border.all(
+                color: AppTokens.beaconTeal.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.mark_email_unread_rounded,
+                      color: AppTokens.beaconTeal,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Group Invitations (${pendingInvites.length})',
+                      style: TextStyle(
+                        color: theme.text,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ...pendingInvites.map(
+                  (inv) => _buildPendingInviteTile(theme, groupService, inv),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // 3. Section Title
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'JOINED MESH GROUPS (${groups.length})',
+              style: TextStyle(
+                color: theme.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+            ),
+            Text(
+              'Offline Mesh Chat',
+              style: TextStyle(
+                color: theme.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // 4. Groups List or Empty State
+        if (groups.isEmpty)
+          _buildEmptyGroupsCard(theme, groupService)
+        else
+          ...groups.map(
+            (grp) => _buildWhatsAppGroupTile(
+              theme,
+              chatService,
+              groupService,
+              grp,
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Single WhatsApp Group Tile
+  Widget _buildWhatsAppGroupTile(
+    ThemeProvider theme,
+    ChatService chatService,
+    GroupService groupService,
+    ChatGroup grp,
+  ) {
+    final groupMessages = chatService.allMessages
+        .where((m) => m.conversationId == grp.conversationId)
+        .toList();
+    final lastMsg = groupMessages.isNotEmpty ? groupMessages.last : null;
+
+    String snippet = 'No messages yet • Tap to start chat';
+    if (lastMsg != null) {
+      final prefix = lastMsg.isMine ? 'You: ' : '${lastMsg.senderName}: ';
+      snippet = prefix + lastMsg.content;
+    }
+
+    final timestamp = lastMsg?.formattedTime ?? '';
+
+    // 2-letter uppercase initials
+    final words = grp.name.trim().split(RegExp(r'\s+'));
+    String initials = 'GP';
+    if (words.length >= 2) {
+      initials = (words[0][0] + words[1][0]).toUpperCase();
+    } else if (grp.name.isNotEmpty) {
+      initials = grp.name
+          .substring(0, grp.name.length >= 2 ? 2 : 1)
+          .toUpperCase();
+    }
+
+    final avatarColor = _getSenderColor(grp.id, theme.isLightMode);
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        border: Border.all(color: theme.border),
+      ),
+      child: InkWell(
+        onTap: () {
+          groupService.selectGroup(grp.id);
+          _scrollToBottom();
+        },
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              // Circular Avatar with Initials & Badge
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: avatarColor.withValues(alpha: 0.2),
+                    child: Text(
+                      initials,
+                      style: TextStyle(
+                        color: avatarColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -2,
+                    right: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: AppTokens.beaconTeal,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: theme.surface, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.groups_rounded,
+                        size: 10,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
+
+              // Middle: Name, Code Pill, Last Message Preview
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            grp.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: theme.text,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.surfaceSunken,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: theme.border),
+                          ),
+                          child: Text(
+                            grp.id,
+                            style: TextStyle(
+                              color: theme.textMuted,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      snippet,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: lastMsg != null ? theme.text : theme.textMuted,
+                        fontSize: 13,
+                        fontWeight: lastMsg != null
+                            ? FontWeight.w500
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline_rounded,
+                          size: 13,
+                          color: theme.textMuted,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${grp.memberCount} member(s)',
+                          style: TextStyle(
+                            color: theme.textMuted,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Right: Timestamp and Chevron
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (timestamp.isNotEmpty)
+                    Text(
+                      timestamp,
+                      style: TextStyle(
+                        color: theme.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: theme.textMuted,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Pending Invite Tile
+  Widget _buildPendingInviteTile(
+    ThemeProvider theme,
+    GroupService groupService,
+    GroupInvite inv,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+        border: Border.all(color: theme.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Group Actions Row: "+ Create Group", "Invites (N)", "Join Code"
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  inv.groupName,
+                  style: TextStyle(
+                    color: theme.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTokens.beaconTeal.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  inv.groupId,
+                  style: const TextStyle(
+                    color: AppTokens.beaconTeal,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Invited by ${inv.inviterName}',
+            style: TextStyle(color: theme.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: SizedBox(
-                  height: 38,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTokens.signalYellow,
-                      foregroundColor: AppTokens.lightOnPrimary,
-                      elevation: 0,
-                      minimumSize: const Size(48, 38),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppTokens.radiusPill,
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                  height: 32,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTokens.sosRed,
+                      side: const BorderSide(color: AppTokens.sosRed),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
-                    icon: const Icon(Icons.add_circle_outline_rounded, size: 17),
-                    label: const Text(
-                      'Create Group',
+                    onPressed: () => groupService.respondToInvite(inv, false),
+                    child: const Text(
+                      'Decline',
                       style: TextStyle(
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12.5,
                       ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 32,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTokens.beaconTeal,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                     onPressed: () async {
-                      final created = await Navigator.pushNamed(
-                        context,
-                        '/create-group',
-                      );
-                      if (created is ChatGroup && mounted) {
-                        groupService.selectGroup(created.id);
+                      await groupService.respondToInvite(inv, true);
+                      if (mounted) {
                         _scrollToBottom();
                       }
                     },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              SizedBox(
-                height: 38,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: theme.text,
-                    minimumSize: const Size(48, 38),
-                    side: BorderSide(
-                      color: pendingCount > 0
-                          ? AppTokens.beaconTeal
-                          : theme.border,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                  icon: Icon(
-                    Icons.mail_outline_rounded,
-                    size: 17,
-                    color: pendingCount > 0
-                        ? AppTokens.beaconTeal
-                        : theme.textMuted,
-                  ),
-                  label: Text(
-                    pendingCount > 0 ? 'Invites ($pendingCount)' : 'Invites',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12.5,
-                      color: pendingCount > 0
-                          ? AppTokens.beaconTeal
-                          : theme.text,
-                    ),
-                  ),
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/pending-invites'),
-                ),
-              ),
-              const SizedBox(width: 6),
-              SizedBox(
-                height: 38,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: theme.text,
-                    minimumSize: const Size(44, 38),
-                    side: BorderSide(color: theme.border),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                  onPressed: () => _showJoinByCodeDialog(theme, groupService),
-                  child: const Text(
-                    'Join Code',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                    child: const Text(
+                      'Accept & Join',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
 
-          // 2. Inline Pending Invite Card (Immediate Accept / Reject directly on Group tab!)
-          if (pendingInvites.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppTokens.beaconTeal.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                border: Border.all(
-                  color: AppTokens.beaconTeal.withValues(alpha: 0.6),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.mark_email_unread_rounded,
-                        color: AppTokens.beaconTeal,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Invite: ${pendingInvites.first.groupName}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: theme.text,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      if (pendingInvites.length > 1)
-                        InkWell(
-                          onTap: () =>
-                              Navigator.pushNamed(context, '/pending-invites'),
-                          child: Text(
-                            '+${pendingInvites.length - 1} more',
-                            style: const TextStyle(
-                              color: AppTokens.beaconTeal,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11.5,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'From ${pendingInvites.first.inviterName} (${pendingInvites.first.groupId})',
-                    style: TextStyle(color: theme.textMuted, fontSize: 11.5),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 32,
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTokens.sosRed,
-                              side: const BorderSide(color: AppTokens.sosRed),
-                              minimumSize: const Size(48, 32),
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppTokens.radiusSm,
-                                ),
-                              ),
-                            ),
-                            icon: const Icon(Icons.close_rounded, size: 15),
-                            label: const Text(
-                              'Reject',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            onPressed: () async {
-                              final inv = pendingInvites.first;
-                              await groupService.respondToInvite(inv, false);
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Rejected invite to "${inv.groupName}"',
-                                    ),
-                                    action: SnackBarAction(
-                                      label: 'Undo',
-                                      onPressed: () {
-                                        groupService.respondToInvite(inv, true);
-                                      },
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: SizedBox(
-                          height: 32,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTokens.beaconTeal,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              minimumSize: const Size(48, 32),
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppTokens.radiusSm,
-                                ),
-                              ),
-                            ),
-                            icon: const Icon(Icons.check_rounded, size: 15),
-                            label: const Text(
-                              'Accept & Join',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            onPressed: () async {
-                              final inv = pendingInvites.first;
-                              await groupService.respondToInvite(inv, true);
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: AppTokens.beaconTeal,
-                                    content: Text(
-                                      'Accepted & joined "${inv.groupName}"!',
-                                    ),
-                                  ),
-                                );
-                                _scrollToBottom();
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+  /// Empty Groups Card
+  Widget _buildEmptyGroupsCard(
+    ThemeProvider theme,
+    GroupService groupService,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        border: Border.all(color: theme.border),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppTokens.beaconTeal.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
             ),
-          ],
-
-          // 3. Interactive Group Selector Chips
-          if (groupService.groups.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 34,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: groupService.groups.length + 1,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemBuilder: (context, idx) {
-                  if (idx == 0) {
-                    final isAllSelected = groupService.selectedGroupId == null;
-                    return ChoiceChip(
-                      selected: isAllSelected,
-                      visualDensity: VisualDensity.compact,
-                      selectedColor: AppTokens.beaconTeal.withValues(alpha: 0.22),
-                      backgroundColor: theme.surface,
-                      side: BorderSide(
-                        color: isAllSelected
-                            ? AppTokens.beaconTeal
-                            : theme.border,
-                      ),
-                      label: Text(
-                        'All Groups (${groupService.groups.length})',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isAllSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          color: theme.text,
-                        ),
-                      ),
-                      onSelected: (_) => groupService.selectGroup(null),
-                    );
-                  }
-
-                  final grp = groupService.groups[idx - 1];
-                  final isSelected = groupService.selectedGroupId == grp.id;
-                  return ChoiceChip(
-                    selected: isSelected,
-                    visualDensity: VisualDensity.compact,
-                    selectedColor: AppTokens.signalYellow.withValues(alpha: 0.28),
-                    backgroundColor: theme.surface,
-                    side: BorderSide(
-                      color: isSelected ? AppTokens.signalYellow : theme.border,
-                      width: isSelected ? 1.5 : 1.0,
-                    ),
-                    avatar: Icon(
-                      Icons.groups_rounded,
-                      size: 15,
-                      color: isSelected
-                          ? (theme.isLightMode
-                                ? AppTokens.lightPrimaryInk
-                                : AppTokens.signalYellow)
-                          : AppTokens.beaconTeal,
-                    ),
-                    label: Text(
-                      '${grp.name} (${grp.memberCount})',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.w500,
-                        color: theme.text,
-                      ),
-                    ),
-                    onSelected: (_) {
-                      groupService.selectGroup(grp.id);
-                      _scrollToBottom();
-                    },
+            child: const Icon(
+              Icons.groups_rounded,
+              size: 32,
+              color: AppTokens.beaconTeal,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'No Mesh Groups Yet',
+            style: TextStyle(
+              color: theme.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 17,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Create an offline mesh group to coordinate privately with your rescue squad, field team, or family. Or join using a shared group code.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: theme.textMuted,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTokens.signalYellow,
+                  foregroundColor: AppTokens.nightNavy,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text(
+                  'Create Group',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                onPressed: () async {
+                  final created = await Navigator.pushNamed(
+                    context,
+                    '/create-group',
                   );
+                  if (created is ChatGroup && mounted) {
+                    groupService.selectGroup(created.id);
+                    _scrollToBottom();
+                  }
                 },
               ),
-            ),
-          ],
-
-          // 4. Active Group Info & Member Management Bar
-          if (selectedGroup != null) ...[
-            const SizedBox(height: 6),
-            InkWell(
-              onTap: () =>
-                  _showGroupMembersSheet(theme, groupService, selectedGroup),
-              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.text,
+                  side: BorderSide(color: theme.border),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: theme.surface,
-                  borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                  border: Border.all(color: theme.border),
+                icon: const Icon(
+                  Icons.tag_rounded,
+                  size: 18,
+                  color: AppTokens.beaconTeal,
                 ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.verified_user_outlined,
-                      size: 16,
-                      color: AppTokens.beaconTeal,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Active: ${selectedGroup.name} • ${selectedGroup.memberCount} member(s)',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: theme.text,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const Text(
-                      'Members & Requests',
-                      style: TextStyle(
-                        color: AppTokens.beaconTeal,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 16,
-                      color: AppTokens.beaconTeal,
-                    ),
-                  ],
-                ),
+                label: const Text('Join by Code'),
+                onPressed: () => _showJoinByCodeDialog(theme, groupService),
               ),
-            ),
-          ],
+            ],
+          ),
         ],
       ),
     );
@@ -2007,6 +2396,12 @@ class _ChatScreenState extends State<ChatScreen> {
     final bubbleBg = isLight ? theme.surfaceSunken : theme.surface;
     final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
 
+    final isGroup = msg.conversationId.startsWith('CONV_GRP-') ||
+        chatService.activeFilter == 'Group';
+    final senderColor = isGroup
+        ? _getSenderColor(msg.senderId, isLight)
+        : infoColor;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -2014,11 +2409,13 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: theme.surfaceSunken,
+            backgroundColor: isGroup
+                ? senderColor.withValues(alpha: 0.18)
+                : theme.surfaceSunken,
             child: Text(
               initial,
               style: TextStyle(
-                color: infoColor,
+                color: senderColor,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
@@ -2048,7 +2445,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: Text(
                           msg.senderName,
                           style: TextStyle(
-                            color: theme.text,
+                            color: isGroup ? senderColor : theme.text,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),

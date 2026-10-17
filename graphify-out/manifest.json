@@ -468,9 +468,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/chat/chat_screen.dart": {
-    "mtime": 1792253465.598546,
-    "seen": 1792253525.2123165,
-    "ast_hash": "8f9094539f81262d546c23a488e74a6b",
+    "mtime": 1792255943.7590308,
+    "seen": 1792256185.091639,
+    "ast_hash": "59a22136013d149657f3f4791f51be9f",
     "semantic_hash": ""
   },
   "mobile/lib/screens/chat/my_messages_screen.dart": {
@@ -1212,9 +1212,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/incidents.ts": {
-    "mtime": 1792253964.061939,
-    "seen": 1792255042.978976,
-    "ast_hash": "849a3234cc5a4f11ae1a19f8ffcc891b",
+    "mtime": 1792255395.8549047,
+    "seen": 1792255531.627268,
+    "ast_hash": "e6279816a095dcfa11e4880a18e88ade",
     "semantic_hash": ""
   },
   "frontend/src/api/map.ts": {
@@ -1410,9 +1410,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentAIExplanation.tsx": {
-    "mtime": 1791017765.7618296,
-    "seen": 1791018120.5658996,
-    "ast_hash": "2d574f50e507b2e12958c24435c08253",
+    "mtime": 1792255331.8849325,
+    "seen": 1792255531.627268,
+    "ast_hash": "26e501775d3e128df11725fe6132493c",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentDescriptionCard.tsx": {
@@ -3339,6 +3339,12 @@
     "mtime": 1792253532.2035398,
     "seen": 1792253618.9523501,
     "ast_hash": "9fb0ad8ae35e9df4330d36bc57a4c679",
+    "semantic_hash": ""
+  },
+  "mobile/test/whatsapp_group_chat_test.dart": {
+    "mtime": 1792256076.1412947,
+    "seen": 1792256185.091639,
+    "ast_hash": "89247f6c8041947c60a46726e76cbe05",
     "semantic_hash": ""
   }
 }
