@@ -30,9 +30,13 @@ import 'services/user_auth_service.dart';
 import 'screens/chat/create_group_screen.dart';
 import 'screens/chat/pending_invites_screen.dart';
 
+import 'screens/tools/sos_screen.dart';
+import 'services/location/location_service.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DeviceIdentityService.instance.initialize();
+  unawaited(LocationService.instance.initialize());
   runApp(
     MultiProvider(
       providers: [
@@ -81,6 +85,7 @@ class RakshaNetApp extends StatelessWidget {
         '/live-map': (_) => const LiveMapScreen(),
         '/ai-assistant': (_) => const AiAssistantScreen(),
         '/settings': (_) => const SettingsScreen(),
+        '/sos': (_) => const SosScreen(),
         '/create-group': (_) => const CreateGroupScreen(),
         '/pending-invites': (_) => const PendingInvitesScreen(),
       },

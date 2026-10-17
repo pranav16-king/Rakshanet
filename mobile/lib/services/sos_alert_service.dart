@@ -5,7 +5,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/message_envelope.dart';
+import '../utils/haversine_distance.dart';
 import 'database_service.dart';
+import 'location/location_service.dart';
 import 'map/offline_map_service.dart';
 import 'mesh_engine.dart';
 
@@ -82,6 +84,20 @@ class EmergencyAlertEvent {
       LatLng(lat!, lng!),
     );
     return OfflineMapService.formatDistance(distMeters);
+  }
+
+  /// Calculates robust WGS84 geodesic distance with combined accuracy bounds and freshness
+  GeospatialDistanceResult calculateGeospatialDistance(DeviceLocationFix? userFix) {
+    return HaversineDistance.calculateDistanceNullable(
+      lat1: userFix?.latitude,
+      lng1: userFix?.longitude,
+      accuracy1: userFix?.horizontalAccuracyMeters ?? 20.0,
+      timestamp1: userFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch,
+      lat2: lat,
+      lng2: lng,
+      accuracy2: 15.0,
+      timestamp2: timestamp.millisecondsSinceEpoch,
+    );
   }
 }
 

@@ -13,7 +13,9 @@ import '../../providers/telemetry_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
 import '../../services/group_service.dart';
+import '../../services/location/location_service.dart';
 import '../../theme/app_tokens.dart';
+import '../../utils/haversine_distance.dart';
 import 'my_messages_screen.dart';
 
 /// Screen 5: Community Chat & Mesh Groups (Offline Mesh Chat)
@@ -163,12 +165,13 @@ class _ChatScreenState extends State<ChatScreen> {
     await telemetry.refreshTelemetry();
     if (!mounted) return;
 
-    final lat = telemetry.latitude;
-    final lng = telemetry.longitude;
+    final localFix = LocationService.instance.currentFix;
+    final lat = telemetry.latitude ?? localFix?.latitude;
+    final lng = telemetry.longitude ?? localFix?.longitude;
 
     if (lat != null && lng != null) {
-      final accuracyText =
-          telemetry.hasGpsFix ? 'GPS Fix (±10m)' : 'Network / Mesh Fix (±25m)';
+      final acc = localFix?.horizontalAccuracyMeters ?? (telemetry.hasGpsFix ? 10.0 : 25.0);
+      final accuracyText = '${localFix?.source ?? (telemetry.hasGpsFix ? "GPS" : "Network")} (±${acc.round()}m)';
       final locationTitle =
           '${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E';
       final locationPreview = LocationPreview(
@@ -2115,6 +2118,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
 
+    // Calculate dynamic GeospatialDistanceResult relative to local device position
+    final localFix = LocationService.instance.currentFix;
+    final geoResult = HaversineDistance.calculateDistanceNullable(
+      lat1: localFix?.latitude,
+      lng1: localFix?.longitude,
+      accuracy1: localFix?.horizontalAccuracyMeters ?? 20.0,
+      timestamp1: localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch,
+      lat2: location.latitude,
+      lng2: location.longitude,
+      accuracy2: 15.0,
+      timestamp2: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    final distanceLabel = geoResult.isCoordinatesAvailable
+        ? 'Distance: ${geoResult.summaryLabel}'
+        : (location.distance.isNotEmpty
+            ? location.distance
+            : (geoResult.fallbackPrompt ?? 'Coordinates unavailable'));
+
     return InkWell(
       onTap: () {
         Clipboard.setData(ClipboardData(text: location.title));
@@ -2149,13 +2171,39 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Shared location',
-                    style: TextStyle(
-                      color: infoColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'Shared location',
+                        style: TextStyle(
+                          color: infoColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (geoResult.isCoordinatesAvailable) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: geoResult.freshnessStatus == GeospatialFreshness.live
+                                ? AppTokens.beaconTeal.withValues(alpha: 0.2)
+                                : AppTokens.warningAmber.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            geoResult.freshnessStatus,
+                            style: TextStyle(
+                              color: geoResult.freshnessStatus == GeospatialFreshness.live
+                                  ? AppTokens.beaconTeal
+                                  : AppTokens.warningAmber,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   Text(
                     location.title,
@@ -2166,7 +2214,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                   Text(
-                    location.distance,
+                    distanceLabel,
                     style: TextStyle(color: theme.textMuted, fontSize: 12),
                   ),
                 ],

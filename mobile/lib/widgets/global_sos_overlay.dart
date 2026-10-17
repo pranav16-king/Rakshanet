@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 
 import '../providers/telemetry_provider.dart';
 import '../screens/tools/live_map_screen.dart';
+import '../services/location/location_service.dart';
 import '../services/sos_alert_service.dart';
 import '../theme/app_tokens.dart';
+import '../utils/haversine_distance.dart';
 
 /// Global SOS Emergency Overlay
 ///
@@ -179,14 +181,26 @@ class _EmergencyBannerOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Read current user GPS for real distance calculation
+    // Read current user GPS from LocationService & TelemetryProvider for real distance calculation
     final telemetry = Provider.of<TelemetryProvider?>(context, listen: true);
-    final userLat = telemetry?.latitude;
-    final userLng = telemetry?.longitude;
-    final distanceText = alert.formatDistanceFrom(userLat, userLng);
+    final localFix = LocationService.instance.currentFix;
+    final userLat = telemetry?.latitude ?? localFix?.latitude;
+    final userLng = telemetry?.longitude ?? localFix?.longitude;
+    final userAcc = localFix?.horizontalAccuracyMeters ?? 20.0;
+    final userTs = localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch;
+
+    final geoResult = HaversineDistance.calculateDistanceNullable(
+      lat1: userLat,
+      lng1: userLng,
+      accuracy1: userAcc,
+      timestamp1: userTs,
+      lat2: alert.lat,
+      lng2: alert.lng,
+      accuracy2: 15.0,
+      timestamp2: alert.timestamp.millisecondsSinceEpoch,
+    );
 
     final isSirenMuted = SosAlertService.instance.isMuted;
-    final isSirenPlaying = SosAlertService.instance.isSirenPlaying;
 
     return Material(
       color: Colors.transparent,
@@ -504,17 +518,28 @@ class _EmergencyBannerOverlay extends StatelessWidget {
                                               fontFamily: 'monospace',
                                             ),
                                           ),
-                                          if (userLat != null &&
-                                              userLng != null &&
-                                              alert.lat != null &&
-                                              alert.lng != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 2),
+                                            child: Text(
+                                              'Distance: ${geoResult.summaryLabel}',
+                                              style: TextStyle(
+                                                color: geoResult.isCoordinatesAvailable
+                                                    ? AppTokens.signalYellow
+                                                    : AppTokens.darkTextMuted,
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          if (!geoResult.isCoordinatesAvailable &&
+                                              geoResult.fallbackPrompt != null)
                                             Padding(
                                               padding: const EdgeInsets.only(top: 2),
                                               child: Text(
-                                                'Estimated Distance: $distanceText from your position',
+                                                geoResult.fallbackPrompt!,
                                                 style: const TextStyle(
-                                                  color: AppTokens.darkTextMuted,
-                                                  fontSize: 11,
+                                                  color: Color(0xFFFFB4AB),
+                                                  fontSize: 10.5,
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
