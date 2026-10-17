@@ -15,7 +15,7 @@ class MessageEnvelope {
   final String senderName;
   final String conversationId;
   final int timestamp; // Milliseconds since epoch
-  final int ttl; // Default 5
+  final int ttl; // Default 10 (configurable max hop limit)
   final int hops; // Default 0
   final String type; // 'TEXT', 'LOCATION', 'SOS', 'REPORT', 'RELAY_ACK', 'DELIVERY_ACK'
   final String payload;
@@ -25,13 +25,15 @@ class MessageEnvelope {
   final Map<String, dynamic>? metadata;
   final String? checksum;
 
+  static int defaultMaxHops = 10;
+
   const MessageEnvelope({
     required this.uuid,
     required this.senderId,
     required this.senderName,
     required this.conversationId,
     required this.timestamp,
-    this.ttl = 5,
+    this.ttl = 10,
     this.hops = 0,
     this.type = 'TEXT',
     required this.payload,
@@ -79,7 +81,7 @@ class MessageEnvelope {
       timestamp:
           (json['ts'] ?? json['timestamp'] ?? DateTime.now().millisecondsSinceEpoch)
               as int,
-      ttl: (json['ttl'] as num?)?.toInt() ?? 5,
+      ttl: (json['ttl'] as num?)?.toInt() ?? 10,
       hops: (json['hops'] as num?)?.toInt() ?? 0,
       type: (json['type'] ?? 'TEXT') as String,
       payload: (json['payload'] ?? json['content'] ?? '') as String,

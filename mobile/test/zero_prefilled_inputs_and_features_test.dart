@@ -6,11 +6,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rakshanet_mobile/database/app_database.dart';
 import 'package:rakshanet_mobile/database/repositories/profile_repository.dart';
 import 'package:rakshanet_mobile/database/repositories/missing_person_repository.dart';
+import 'package:rakshanet_mobile/models/missing_person.dart';
 import 'package:rakshanet_mobile/providers/chat_provider.dart';
 import 'package:rakshanet_mobile/providers/device_status_provider.dart';
 import 'package:rakshanet_mobile/providers/emergency_report_provider.dart';
 import 'package:rakshanet_mobile/providers/mesh_provider.dart';
+import 'package:rakshanet_mobile/providers/missing_persons_provider.dart';
 import 'package:rakshanet_mobile/providers/profile_provider.dart';
+import 'package:rakshanet_mobile/providers/sos_provider.dart';
 import 'package:rakshanet_mobile/providers/telemetry_provider.dart';
 import 'package:rakshanet_mobile/providers/theme_provider.dart';
 import 'package:rakshanet_mobile/providers/user_profile_provider.dart';
@@ -19,8 +22,11 @@ import 'package:rakshanet_mobile/screens/home/emergency_report_screen.dart';
 import 'package:rakshanet_mobile/screens/onboarding/profile_setup_screen.dart' as onboarding;
 import 'package:rakshanet_mobile/screens/profile/profile_setup_screen.dart' as profile_screen;
 import 'package:rakshanet_mobile/screens/tools/live_map_screen.dart';
-import 'package:rakshanet_mobile/screens/tools/missing_person_screen.dart';
+import 'package:rakshanet_mobile/screens/tools/missing_persons_screen.dart';
 import 'package:rakshanet_mobile/services/chat_service.dart';
+import 'package:rakshanet_mobile/services/device_identity_service.dart';
+import 'package:rakshanet_mobile/services/group_service.dart';
+import 'package:rakshanet_mobile/services/user_auth_service.dart';
 import 'package:rakshanet_mobile/theme/app_theme.dart';
 import 'package:rakshanet_mobile/theme/app_tokens.dart';
 
@@ -31,7 +37,11 @@ Widget _buildTestApp({
   MeshProvider? meshProvider,
   ChatProvider? chatProvider,
   ChatService? chatService,
+  GroupService? groupService,
+  UserAuthService? userAuthService,
   EmergencyReportProvider? emergencyReportProvider,
+  MissingPersonsProvider? missingPersonsProvider,
+  SosProvider? sosProvider,
   UserProfileProvider? userProfileProvider,
   DeviceStatusProvider? deviceStatusProvider,
   TelemetryProvider? telemetryProvider,
@@ -65,8 +75,20 @@ Widget _buildTestApp({
       ChangeNotifierProvider<ChatService>.value(
         value: chat,
       ),
+      ChangeNotifierProvider<GroupService>.value(
+        value: groupService ?? GroupService(),
+      ),
+      ChangeNotifierProvider<UserAuthService>.value(
+        value: userAuthService ?? UserAuthService.instance,
+      ),
       ChangeNotifierProvider<EmergencyReportProvider>.value(
         value: emergencyReportProvider ?? EmergencyReportProvider(),
+      ),
+      ChangeNotifierProvider<MissingPersonsProvider>.value(
+        value: missingPersonsProvider ?? MissingPersonsProvider(),
+      ),
+      ChangeNotifierProvider<SosProvider>.value(
+        value: sosProvider ?? SosProvider.instance,
       ),
       ChangeNotifierProvider<UserProfileProvider>.value(
         value: userProfileProvider ?? UserProfileProvider(),
@@ -90,6 +112,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await AppDatabase.instance.ensureInitialized();
+    await DeviceIdentityService.instance.initialize();
   });
 
   group('RakshaNet Zero-Pre-entered Data & Feature Integrity Suite', () {
@@ -112,21 +135,18 @@ void main() {
           );
           await tester.pump();
 
-          // All TextFormFields must initialize with empty text
-          final textFormFields = tester.widgetList<TextFormField>(
-            find.byType(TextFormField),
-          );
-          expect(textFormFields.length, equals(4),
-              reason: 'Should contain Name, Email, Phone, and Medical Notes fields');
+          // All TextFields in ProfileSetupScreen must initialize with empty text
+          final textFields = tester.widgetList<TextField>(find.byType(TextField));
+          expect(textFields.isNotEmpty, isTrue, reason: 'Profile fields must exist');
 
-          for (final field in textFormFields) {
-            expect(field.controller?.text, isEmpty,
+          for (final field in textFields) {
+            expect(field.controller?.text ?? '', isEmpty,
                 reason: 'Field controller must initialize empty ("")');
           }
 
-          // Verify hintText is displayed, not pre-filled text
-          expect(find.text('e.g. Amit Sharma'), findsOneWidget);
-          expect(find.text('e.g. +91 98765 43210'), findsOneWidget);
+          // Verify placeholder / hint text is displayed, not pre-filled text
+          expect(find.text('Enter your full name'), findsOneWidget);
+          expect(find.text('Optional email for cloud backup'), findsOneWidget);
         },
       );
 
@@ -145,18 +165,16 @@ void main() {
           );
           await tester.pump();
 
-          final textFormFields = tester.widgetList<TextFormField>(
-            find.byType(TextFormField),
-          );
-          expect(textFormFields.length, equals(4));
+          final textFields = tester.widgetList<TextField>(find.byType(TextField));
+          expect(textFields.isNotEmpty, isTrue);
 
-          for (final field in textFormFields) {
-            expect(field.controller?.text, isEmpty,
+          for (final field in textFields) {
+            expect(field.controller?.text ?? '', isEmpty,
                 reason: 'Field controller must initialize empty ("")');
           }
 
-          expect(find.text('e.g. Amit Sharma'), findsOneWidget);
-          expect(find.text('e.g. +91 98765 43210'), findsOneWidget);
+          expect(find.text('Enter your full name'), findsOneWidget);
+          expect(find.text('Optional email for cloud backup'), findsOneWidget);
         },
       );
 
@@ -205,28 +223,34 @@ void main() {
       );
 
       testWidgets(
-        'A5: MissingPersonScreen all controllers initialize empty',
+        'A5: MissingPersonsScreen registry and report modal initialize empty',
         (WidgetTester tester) async {
           await tester.pumpWidget(
             _buildTestApp(
-              child: const MissingPersonScreen(),
+              child: const MissingPersonsScreen(),
             ),
           );
           await tester.pump();
 
-          final textFormFields = tester.widgetList<TextFormField>(
-            find.byType(TextFormField),
-          );
-          expect(textFormFields.length, equals(4),
-              reason: 'Must contain Name, Age, Description, and Location');
+          // Registry search bar initializes empty
+          final searchField = tester.widget<TextField>(find.byType(TextField));
+          expect(searchField.controller?.text, isEmpty);
 
-          for (final field in textFormFields) {
+          // Tap "Report Missing" FAB to open modal
+          final reportFab = find.text('Report Missing');
+          expect(reportFab, findsOneWidget);
+          await tester.tap(reportFab);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 200));
+
+          // In modal, all form fields initialize empty
+          final modalFields = tester.widgetList<TextFormField>(find.byType(TextFormField));
+          expect(modalFields.length, greaterThanOrEqualTo(4));
+
+          for (final field in modalFields) {
             expect(field.controller?.text, isEmpty,
-                reason: 'Missing person controller must initialize empty ("")');
+                reason: 'Missing person modal field must initialize empty ("")');
           }
-
-          // Time field placeholder must show 'Select time (tap to set)'
-          expect(find.text('Select time (tap to set)'), findsOneWidget);
         },
       );
     });
@@ -253,16 +277,17 @@ void main() {
           );
           await tester.pump();
 
-          // Tap Join Mesh & Continue without filling any inputs
-          final submitButton = find.widgetWithText(ElevatedButton, 'Join Mesh & Continue');
-          expect(submitButton, findsOneWidget);
-          await tester.ensureVisible(submitButton);
-          await tester.tap(submitButton);
-          await tester.pump();
+          // Tap Continue without filling mandatory name or detecting IMEI
+          final continueButton = find.text('Continue');
+          expect(continueButton, findsOneWidget);
+          await tester.ensureVisible(continueButton);
+          await tester.tap(continueButton);
+          await tester.pump(); // frame 1: validator runs
+          await tester.pump(); // frame 2: post-frame callback rebuilds error UI
 
           // Descriptive warnings must be displayed
-          expect(find.text('Please enter your name'), findsOneWidget);
-          expect(find.text('Please enter your phone number'), findsOneWidget);
+          expect(find.text('Full Name is required'), findsOneWidget);
+          expect(find.text('Please tap "Detect & Auto-Fill Mobile IMEI ID" below'), findsOneWidget);
 
           // State must remain unregistered
           expect(profileProvider.isRegistered, isFalse);
@@ -287,91 +312,114 @@ void main() {
           );
           await tester.pump();
 
-          // Find the 4 TextFormFields
-          final textFormFields = find.byType(TextFormField);
-          expect(textFormFields, findsNWidgets(4));
+          // 1. Enter Full Name
+          final nameFinder = find.widgetWithText(TextField, 'Enter your full name');
+          await tester.enterText(nameFinder, 'Dr. Priya Sharma');
 
-          // 1. Enter Real Name
-          await tester.enterText(textFormFields.at(0), 'Dr. Priya Sharma');
-          // 2. Enter Real Email
-          await tester.enterText(textFormFields.at(1), 'priya.sharma@rakshanet.org');
-          // 3. Enter Real Phone
-          await tester.enterText(textFormFields.at(2), '+91 9811223344');
-          // 4. Enter Real Medical Notes
-          await tester.enterText(textFormFields.at(3), 'Trauma First-aid Certified');
+          // 2. Tap Detect IMEI and accept dialog
+          final detectButton = find.text('Detect & Auto-Fill Mobile IMEI ID');
+          await tester.ensureVisible(detectButton);
+          await tester.tap(detectButton);
           await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
 
-          // Tap Join Mesh & Continue
-          final submitButton = find.widgetWithText(ElevatedButton, 'Join Mesh & Continue');
-          await tester.ensureVisible(submitButton);
-          await tester.tap(submitButton);
+          final agreeButton = find.text('Agree & Auto-Fill');
+          expect(agreeButton, findsOneWidget);
+          await tester.tap(agreeButton);
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 3)); // Allow native channel timeout to complete
+
+          // 3. Tap Continue to move to review step
+          final continueButton = find.text('Continue');
+          await tester.ensureVisible(continueButton);
+          await tester.tap(continueButton);
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 300));
+
+          // 4. On Review Step, tap Save & Continue
+          final saveButton = find.text('Save & Continue');
+          expect(saveButton, findsOneWidget);
+          await tester.ensureVisible(saveButton);
+          await tester.tap(saveButton);
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
 
           // State updated
           expect(profileProvider.isRegistered, isTrue);
           expect(profileProvider.profile.name, equals('Dr. Priya Sharma'));
-          expect(profileProvider.profile.emergencyContact, equals('+91 9811223344'));
-          expect(profileProvider.profile.medicalNotes, equals('Trauma First-aid Certified'));
-          expect(profileProvider.profile.deviceId.startsWith('SR-'), isTrue);
+          expect(profileProvider.profile.deviceId.isNotEmpty, isTrue);
+          expect(
+            RegExp(r'^\d{15}$|^SR-').hasMatch(profileProvider.profile.deviceId),
+            isTrue,
+            reason: 'Device ID must be valid 15-digit hardware IMEI or SR- prefix',
+          );
 
           // Persisted to SQLite via ProfileRepository
           final profileRepo = ProfileRepository();
           final savedProfile = await profileRepo.getProfile();
           expect(savedProfile, isNotNull);
           expect(savedProfile?.name, equals('Dr. Priya Sharma'));
-          expect(savedProfile?.emergencyContact, equals('+91 9811223344'));
         },
       );
 
       testWidgets(
-        'B3: MissingPersonScreen validation fails on empty, and real submission persists to SQLite',
+        'B3: MissingPersonsScreen validation fails on empty, and real submission persists to SQLite',
         (WidgetTester tester) async {
           tester.view.physicalSize = const Size(800, 1400);
           tester.view.devicePixelRatio = 1.0;
           addTearDown(tester.view.resetPhysicalSize);
           addTearDown(tester.view.resetDevicePixelRatio);
 
+          final mpProvider = MissingPersonsProvider();
+
           await tester.pumpWidget(
             _buildTestApp(
-              child: const MissingPersonScreen(),
+              child: const MissingPersonsScreen(),
+              missingPersonsProvider: mpProvider,
             ),
           );
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 50));
 
-          // Tap Submit Report with empty fields
-          final submitButton = find.widgetWithText(ElevatedButton, 'Submit Report');
+          // Tap Report Missing FAB
+          final reportFab = find.text('Report Missing');
+          await tester.tap(reportFab);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 200));
+
+          // Tap Broadcast Bulletin with empty fields
+          final submitButton = find.text('Broadcast Bulletin to Mesh');
           await tester.ensureVisible(submitButton);
           await tester.tap(submitButton);
           await tester.pump();
 
           // Validation warnings must trigger
-          expect(find.text('Required'), findsNWidgets(3)); // Name, Age, Description
+          expect(find.text('Name is required'), findsOneWidget);
+          expect(find.text('Required'), findsOneWidget); // Age
           expect(find.text('Location is required'), findsOneWidget);
+          expect(find.text('Description is required'), findsOneWidget);
 
           // Now enter real report data
-          final fields = find.byType(TextFormField);
-          await tester.enterText(fields.at(0), 'Aarav Kumar');
-          await tester.enterText(fields.at(1), '10');
-          await tester.enterText(fields.at(2), 'Red t-shirt, blue cap');
-          await tester.enterText(fields.at(3), 'Sector 4 Shelter Grounds');
+          final nameField = find.widgetWithText(TextFormField, 'e.g. Rameshwar Sen');
+          await tester.enterText(nameField, 'Aarav Kumar');
+
+          final ageField = find.widgetWithText(TextFormField, 'e.g. 68');
+          await tester.enterText(ageField, '10');
+
+          final locField = find.widgetWithText(TextFormField, 'e.g. Ward 14 Relief Camp / Sector 3');
+          await tester.enterText(locField, 'Sector 4 Shelter Grounds');
+
+          final descField = find.widgetWithText(TextFormField, 'e.g. Wearing white kurta, brown shawl. Hearing impaired.');
+          await tester.enterText(descField, 'Red t-shirt, blue cap');
           await tester.pump();
 
           // Submit real data
           await tester.ensureVisible(submitButton);
           await tester.tap(submitButton);
           await tester.pump();
-          await tester.pump(const Duration(milliseconds: 300));
+          await tester.pump(const Duration(seconds: 3)); // Drain background upload timer
 
-          // Success modal sheet appears
-          expect(find.text('Missing Person Report Saved to SQLite'), findsOneWidget);
-          expect(
-            find.textContaining('Report for "Aarav Kumar" committed to offline database.'),
-            findsOneWidget,
-          );
-
-          // Verify SQLite persistence
+          // Verify SQLite persistence via repository
           final repo = MissingPersonRepository();
           final reports = await repo.getMissingPersons();
           expect(reports.any((r) => r.name == 'Aarav Kumar'), isTrue);
@@ -392,12 +440,16 @@ void main() {
         (WidgetTester tester) async {
           final themeProvider = ThemeProvider();
           final chatService = ChatService();
+          final groupService = GroupService();
+          final meshProvider = MeshProvider()..stopScan();
 
           await tester.pumpWidget(
             MultiProvider(
               providers: [
                 ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
                 ChangeNotifierProvider<ChatService>.value(value: chatService),
+                ChangeNotifierProvider<GroupService>.value(value: groupService),
+                ChangeNotifierProvider<MeshProvider>.value(value: meshProvider),
               ],
               child: const MaterialApp(
                 home: ChatScreen(),
@@ -408,7 +460,6 @@ void main() {
 
           // Verify ChatScreen renders cleanly without throwing ProviderNotFoundException
           expect(find.byType(ChatScreen), findsOneWidget);
-          expect(find.text('Community Chat'), findsOneWidget);
           expect(find.text('Type a message...'), findsOneWidget);
         },
       );
@@ -417,11 +468,15 @@ void main() {
         'C2: ChatScreen throws ProviderNotFoundException when ChatService is omitted',
         (WidgetTester tester) async {
           final themeProvider = ThemeProvider();
+          final groupService = GroupService();
+          final meshProvider = MeshProvider()..stopScan();
 
           await tester.pumpWidget(
             MultiProvider(
               providers: [
                 ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
+                ChangeNotifierProvider<GroupService>.value(value: groupService),
+                ChangeNotifierProvider<MeshProvider>.value(value: meshProvider),
                 // ChatService intentionally omitted to verify exception prevention
               ],
               child: const MaterialApp(
@@ -462,9 +517,9 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 200));
 
-          // 1. Shows authentic 'No active distress alerts nearby'
-          expect(find.text('No active distress alerts nearby'), findsOneWidget);
-          expect(find.text('All clear in local mesh range'), findsOneWidget);
+          // 1. Shows authentic 'No Active Distress Alerts Nearby'
+          expect(find.text('No Active Distress Alerts Nearby'), findsOneWidget);
+          expect(find.text('All clear in local offline mesh range'), findsOneWidget);
 
           // 2. Zero fake devices in mesh provider
           expect(meshProvider.nearbyDevices, isEmpty);

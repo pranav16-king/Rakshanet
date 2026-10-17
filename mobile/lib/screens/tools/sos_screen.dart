@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import '../../providers/sos_provider.dart';
 
 import '../../providers/theme_provider.dart';
 import '../../services/location/location_service.dart';
@@ -161,7 +161,17 @@ class _SosScreenState extends State<SosScreen>
             child: Column(
               children: [
                 const SizedBox(height: 12),
-                const BeaconSosButton(),
+                BeaconSosButton(
+                  onTriggered: () {
+                    final fix = localFix;
+                    SosProvider.instance.triggerLocalSos(
+                      category: 'GENERAL_EMERGENCY',
+                      latitude: fix?.latitude,
+                      longitude: fix?.longitude,
+                      notes: 'Emergency SOS beacon triggered from SOS Screen',
+                    );
+                  },
+                ),
                 const SizedBox(height: 10),
                 Text(
                   'Press and hold for 1.5s to broadcast Distress Beacon',

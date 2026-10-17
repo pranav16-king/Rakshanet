@@ -9,6 +9,7 @@ class AppTokens {
   static const Color sosRed = Color(0xFFD92D20);
   static const Color beaconTeal = Color(0xFF0E8A94);
   static const Color nightNavy = Color(0xFF0B1220);
+  static const Color warningAmber = Color(0xFFF59E0B);
 
   // Light Theme Colors
   static const Color lightBg = Color(0xFFFFFCEB);

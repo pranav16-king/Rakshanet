@@ -461,11 +461,11 @@ class _EmergencyBannerOverlay extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 5),
                                           Text(
-                                            isSirenMuted || !isSirenPlaying
+                                            isSirenMuted
                                                 ? 'Muted'
                                                 : 'Siren On',
                                             style: TextStyle(
-                                              color: isSirenMuted || !isSirenPlaying
+                                              color: isSirenMuted
                                                   ? Colors.white70
                                                   : Colors.white,
                                               fontSize: 11,

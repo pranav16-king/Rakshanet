@@ -68,7 +68,7 @@ class OfflineMapService {
       }
     } catch (_) {}
 
-    final dir = Directory('${appDir.path}/offline_map_tiles_free_v3');
+    final dir = Directory('${appDir.path}/offline_tiles');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -361,7 +361,7 @@ class OfflineFallbackTileProvider extends TileProvider {
     this.forceOfflineGrid = false,
   }) : super(headers: <String, String>{
           'User-Agent':
-              'org.rakshanet.rakshanet_mobile/1.0.0 (Emergency Rescue; support@rakshanet.org)',
+              'RakshaNet-Disaster-Mesh/1.0 (Emergency Rescue; contact: ops@rakshanet.org)',
         });
 
   @override
