@@ -9,6 +9,9 @@ class AppConfig {
     defaultValue: 'http://10.130.184.61:8000',
   );
 
+  /// Base URL alias for media and API endpoints
+  static String get backendBaseUrl => backendUrl;
+
   /// Health status endpoint
   static const String healthUrl = '$backendUrl/api/v1/health';
 

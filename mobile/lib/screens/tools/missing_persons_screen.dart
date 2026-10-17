@@ -1,9 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
+import '../../config/app_config.dart';
 import '../../models/missing_person.dart';
 import '../../providers/missing_persons_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_tokens.dart';
+import 'match_found_person_dialog.dart';
 
 /// Missing Persons Registry Screen
 /// Fully compliant with RakshaNet Hi-Vis Emergency Beacon Design System.
@@ -81,7 +88,7 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
     );
   }
 
-  void _openSightingModal(BuildContext context, MissingPerson person) {
+  void _openSightingModal(BuildContext context, MissingPerson person, {String? prefilledPhotoPath}) {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
     final provider = Provider.of<MissingPersonsProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
@@ -96,13 +103,15 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
       builder: (ctx) => _ReportSightingModal(
         person: person,
         theme: theme,
-        onSubmit: (location, lat, lng, notes) async {
+        initialPhotoPath: prefilledPhotoPath,
+        onSubmit: (location, lat, lng, notes, photoPath) async {
           await provider.recordSighting(
             personId: person.id,
             location: location,
             lat: lat,
             lng: lng,
             notes: notes,
+            photoPath: photoPath,
           );
           if (mounted) {
             messenger.showSnackBar(
@@ -116,6 +125,187 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
             );
           }
         },
+      ),
+    );
+  }
+
+  void _showLocationDialog(BuildContext context, MissingPerson person) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        ),
+        title: Row(
+          children: const [
+            Icon(Icons.location_on_rounded, color: AppTokens.signalYellow, size: 22),
+            SizedBox(width: 8),
+            Text('Last Seen Location', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              person.name,
+              style: TextStyle(color: theme.text, fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              person.lastSeenLocation,
+              style: TextStyle(color: theme.textMuted, fontSize: 13.5),
+            ),
+            if (person.lat != null && person.lng != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.surfaceSunken,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                  border: Border.all(color: theme.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.gps_fixed_rounded, size: 16, color: AppTokens.beaconTeal),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'GPS: ${person.lat!.toStringAsFixed(5)}, ${person.lng!.toStringAsFixed(5)}',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _callContact(BuildContext context, String phone, String name) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusLg)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF10B981), size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Emergency Family Contact',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        Text(
+                          'Contact for $name',
+                          style: TextStyle(color: theme.textMuted, fontSize: 12.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: theme.surfaceSunken,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                  border: Border.all(color: theme.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.call, color: AppTokens.signalYellow, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        phone,
+                        style: TextStyle(
+                          color: theme.text,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy_rounded, size: 20),
+                      tooltip: 'Copy Number',
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: phone));
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Phone number copied to clipboard')),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                    ),
+                  ),
+                  icon: const Icon(Icons.call, size: 18),
+                  label: Text('Dial $phone', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: phone));
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: const Color(0xFF10B981),
+                        content: Text('Ready to dial $phone (Copied to dialer)'),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -193,6 +383,11 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
                     ),
                   ),
                   IconButton(
+                    icon: const Icon(Icons.face_retouching_natural_rounded, color: AppTokens.lightOnPrimary),
+                    onPressed: () => MatchFoundPersonDialog.show(context),
+                    tooltip: 'Scan / Match Found Person',
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.refresh_rounded, color: AppTokens.lightOnPrimary),
                     onPressed: () => mpProvider.loadReports(),
                     tooltip: 'Sync Reports',
@@ -203,16 +398,36 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppTokens.signalYellow,
-        foregroundColor: AppTokens.nightNavy,
-        elevation: 4,
-        icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
-        label: const Text(
-          'Report Missing',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        onPressed: () => _openReportModal(context),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'fab_scan_match_found',
+            backgroundColor: AppTokens.beaconTeal,
+            foregroundColor: Colors.white,
+            elevation: 4,
+            icon: const Icon(Icons.face_retouching_natural_rounded, size: 20),
+            label: const Text(
+              'Scan / Match Found Person',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            onPressed: () => MatchFoundPersonDialog.show(context),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton.extended(
+            heroTag: 'fab_report_missing',
+            backgroundColor: AppTokens.signalYellow,
+            foregroundColor: AppTokens.nightNavy,
+            elevation: 4,
+            icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+            label: const Text(
+              'Report Missing',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            onPressed: () => _openReportModal(context),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -443,8 +658,23 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
 
   Widget _buildPersonCard(MissingPerson person, ThemeProvider theme) {
     final isFound = person.isFound;
-    final statusColor = isFound ? const Color(0xFF10B981) : const Color(0xFFF59E0B);
-    final statusText = isFound ? 'FOUND / REUNITED' : 'MISSING';
+    final statusUpper = person.status.toUpperCase();
+    final Color statusColor;
+    final String statusText;
+    if (statusUpper == 'FOUND') {
+      statusColor = const Color(0xFF10B981); // Emerald
+      statusText = 'FOUND';
+    } else if (statusUpper == 'SEARCHING') {
+      statusColor = const Color(0xFF06B6D4); // Cyan #06B6D4
+      statusText = 'SEARCHING';
+    } else {
+      statusColor = const Color(0xFFF59E0B); // Amber / Gold #F59E0B
+      statusText = 'MISSING';
+    }
+
+    final sightingPhotos = person.sightings.where((s) =>
+        (s.photoUrl != null && s.photoUrl!.trim().isNotEmpty) ||
+        (s.photoPath != null && s.photoPath!.trim().isNotEmpty)).toList();
 
     return GestureDetector(
       onTap: () => _openPersonDetailsModal(context, person),
@@ -468,30 +698,16 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row: Avatar, Name, Age/Gender, Status Badge
+            // Header Row: Photo Thumbnail (60x60, rounded corners 8dp, border), Name, Age & Gender Badge, Status Badge
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar with initial or photo icon
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: isFound
-                        ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                        : const Color(0xFF3A506B),
-                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                  ),
-                  child: Center(
-                    child: Text(
-                      person.name.isNotEmpty ? person.name.substring(0, 1).toUpperCase() : '?',
-                      style: TextStyle(
-                        color: isFound ? const Color(0xFF10B981) : Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                _PersonPhotoThumbnail(
+                  photoUrl: person.photoUrl,
+                  photoPath: person.photoPath,
+                  name: person.name,
+                  size: 60,
+                  borderRadius: 8,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -517,6 +733,7 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
                             decoration: BoxDecoration(
                               color: statusColor.withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                              border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                             ),
                             child: Text(
                               statusText,
@@ -530,10 +747,23 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${person.age} yrs • ${person.gender} • Reported ${_formatTimeAgo(person.reportedAt)}',
-                        style: TextStyle(color: theme.textMuted, fontSize: 12.5),
+                      const SizedBox(height: 5),
+                      // Age & Gender Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: theme.surfaceSunken,
+                          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                          border: Border.all(color: theme.border),
+                        ),
+                        child: Text(
+                          '${person.age} yrs • ${person.gender}',
+                          style: TextStyle(
+                            color: theme.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -542,10 +772,10 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Location
+            // Last Seen Location with pin icon and relative time
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, size: 16, color: AppTokens.signalYellow),
+                const Icon(Icons.location_on_outlined, size: 15, color: AppTokens.signalYellow),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -558,6 +788,13 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.access_time_rounded, size: 13, color: theme.textMuted),
+                const SizedBox(width: 3),
+                Text(
+                  _formatTimeAgo(person.lastSeenTime),
+                  style: TextStyle(color: theme.textMuted, fontSize: 11.5),
                 ),
               ],
             ),
@@ -572,66 +809,459 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
               ),
             ],
 
+            // Sighting count badge if sightings > 0
+            if (person.sightings.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: AppTokens.beaconTeal.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                  border: Border.all(color: AppTokens.beaconTeal.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.visibility_rounded, size: 13, color: AppTokens.beaconTeal),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${person.sightings.length} Sighting${person.sightings.length == 1 ? '' : 's'}',
+                      style: const TextStyle(
+                        color: AppTokens.beaconTeal,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Sighting photos horizontal strip if any sightings have photo attachments
+            if (sightingPhotos.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.photo_library_outlined, size: 13, color: AppTokens.signalYellow),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Sighting Photos (${sightingPhotos.length})',
+                        style: TextStyle(color: theme.textMuted, fontSize: 11.5, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    height: 52,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: sightingPhotos.length,
+                      separatorBuilder: (context, index) => const SizedBox(width: 8),
+                      itemBuilder: (ctx, idx) {
+                        final s = sightingPhotos[idx];
+                        return _PersonPhotoThumbnail(
+                          photoUrl: s.photoUrl,
+                          photoPath: s.photoPath,
+                          name: '${person.name} - Sighting ${idx + 1}',
+                          size: 52,
+                          borderRadius: 6,
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 12),
             Divider(height: 1, color: theme.border),
             const SizedBox(height: 10),
 
-            // Action Row: Sighting count badge + Report Sighting Button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Action Buttons: "Report Sighting", "View Location", "Call Contact" (if phone available)
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
-                if (person.sightings.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTokens.beaconTeal.withValues(alpha: 0.12),
+                if (!isFound)
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTokens.signalYellow,
+                      side: const BorderSide(color: AppTokens.signalYellow),
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                      ),
+                    ),
+                    icon: const Icon(Icons.add_location_alt_outlined, size: 14),
+                    label: const Text('Report Sighting', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    onPressed: () => _openSightingModal(context, person),
+                  ),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTokens.beaconTeal,
+                    side: const BorderSide(color: AppTokens.beaconTeal),
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTokens.radiusSm),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.remove_red_eye_outlined, size: 14, color: AppTokens.beaconTeal),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${person.sightings.length} Sighting${person.sightings.length == 1 ? '' : 's'}',
-                          style: const TextStyle(
-                            color: AppTokens.beaconTeal,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Text(
-                    'No sightings yet',
-                    style: TextStyle(color: theme.textMuted, fontSize: 12),
                   ),
-
-                Row(
-                  children: [
-                    if (!isFound)
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTokens.signalYellow,
-                          side: const BorderSide(color: AppTokens.signalYellow),
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                          ),
-                        ),
-                        icon: const Icon(Icons.add_location_alt_outlined, size: 15),
-                        label: const Text('Report Sighting', style: TextStyle(fontSize: 12)),
-                        onPressed: () => _openSightingModal(context, person),
-                      ),
-                  ],
+                  icon: const Icon(Icons.place_outlined, size: 14),
+                  label: const Text('View Location', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  onPressed: () => _showLocationDialog(context, person),
                 ),
+                if (person.contactPhone != null && person.contactPhone!.trim().isNotEmpty)
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF10B981),
+                      side: const BorderSide(color: Color(0xFF10B981)),
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                      ),
+                    ),
+                    icon: const Icon(Icons.phone_in_talk_rounded, size: 14),
+                    label: const Text('Call Contact', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    onPressed: () => _callContact(context, person.contactPhone!, person.name),
+                  ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Full-screen interactive viewer dialog for photo attachments
+void _showPhotoViewer(BuildContext context, ImageProvider imageProvider, String name) {
+  showDialog<void>(
+    context: context,
+    barrierColor: Colors.black87,
+    builder: (ctx) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1E293B),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.person_pin_rounded, color: AppTokens.signalYellow, size: 22),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: Container(
+                constraints: const BoxConstraints(maxHeight: 520),
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                  child: InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: Center(
+                      child: Image(
+                        image: imageProvider,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.broken_image_rounded, color: Colors.white54, size: 48),
+                              SizedBox(height: 8),
+                              Text(
+                                'Unable to display photo in full screen',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+/// Dedicated thumbnail widget for missing person cards and sighting attachments
+class _PersonPhotoThumbnail extends StatefulWidget {
+  final String? photoUrl;
+  final String? photoPath;
+  final String name;
+  final double size;
+  final double borderRadius;
+
+  const _PersonPhotoThumbnail({
+    this.photoUrl,
+    this.photoPath,
+    required this.name,
+    this.size = 64.0,
+    this.borderRadius = 8.0,
+  });
+
+  @override
+  State<_PersonPhotoThumbnail> createState() => _PersonPhotoThumbnailState();
+}
+
+class _PersonPhotoThumbnailState extends State<_PersonPhotoThumbnail> {
+  bool _loadFailed = false;
+
+  @override
+  void didUpdateWidget(covariant _PersonPhotoThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.photoUrl != widget.photoUrl ||
+        oldWidget.photoPath != widget.photoPath) {
+      _loadFailed = false;
+    }
+  }
+
+  Widget _buildFallbackInitial() {
+    final initial = widget.name.trim().isNotEmpty
+        ? widget.name.trim().substring(0, 1).toUpperCase()
+        : '?';
+
+    return Container(
+      width: widget.size,
+      height: widget.size,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        border: Border.all(
+          color: AppTokens.signalYellow.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Text(
+            initial,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: widget.size * 0.42,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Positioned(
+            right: 2,
+            bottom: 2,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: AppTokens.signalYellow,
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Icon(
+                Icons.camera_alt_rounded,
+                size: widget.size * 0.22,
+                color: AppTokens.nightNavy,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loadFailed) {
+      return _buildFallbackInitial();
+    }
+
+    // 1. If photoPath is provided and file exists
+    if (widget.photoPath != null && widget.photoPath!.trim().isNotEmpty) {
+      try {
+        final cleanPath = widget.photoPath!.trim().startsWith('file://')
+            ? widget.photoPath!.trim().replaceFirst('file://', '')
+            : widget.photoPath!.trim();
+        final file = File(cleanPath);
+        if (file.existsSync()) {
+          final imageProvider = FileImage(file);
+          return GestureDetector(
+            onTap: () => _showPhotoViewer(context, imageProvider, widget.name),
+            child: _buildFrame(
+              child: Image.file(
+                file,
+                width: widget.size,
+                height: widget.size,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _handleError(),
+              ),
+            ),
+          );
+        }
+      } catch (_) {}
+    }
+
+    // 2. If photoUrl is provided
+    if (widget.photoUrl != null && widget.photoUrl!.trim().isNotEmpty) {
+      final raw = widget.photoUrl!.trim();
+
+      // Check base64 data (data:image/...;base64,... or raw base64)
+      if (raw.startsWith('data:image')) {
+        final commaIdx = raw.indexOf(',');
+        if (commaIdx != -1) {
+          try {
+            final bytes = base64Decode(raw.substring(commaIdx + 1).trim());
+            final imageProvider = MemoryImage(bytes);
+            return GestureDetector(
+              onTap: () => _showPhotoViewer(context, imageProvider, widget.name),
+              child: _buildFrame(
+                child: Image.memory(
+                  bytes,
+                  width: widget.size,
+                  height: widget.size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => _handleError(),
+                ),
+              ),
+            );
+          } catch (_) {}
+        }
+      } else if (!raw.startsWith('http://') && !raw.startsWith('https://') && !raw.startsWith('/')) {
+        if (raw.length > 40 && !raw.contains(' ')) {
+          try {
+            final bytes = base64Decode(raw);
+            final imageProvider = MemoryImage(bytes);
+            return GestureDetector(
+              onTap: () => _showPhotoViewer(context, imageProvider, widget.name),
+              child: _buildFrame(
+                child: Image.memory(
+                  bytes,
+                  width: widget.size,
+                  height: widget.size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => _handleError(),
+                ),
+              ),
+            );
+          } catch (_) {}
+        }
+      }
+
+      // Check HTTP/HTTPS URL or relative path
+      String resolvedUrl = raw;
+      if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
+        if (resolvedUrl.contains('localhost:8000') || resolvedUrl.contains('127.0.0.1:8000')) {
+          final base = AppConfig.backendBaseUrl.replaceAll(RegExp(r'/+$'), '');
+          resolvedUrl = resolvedUrl
+              .replaceFirst('http://localhost:8000', base)
+              .replaceFirst('http://127.0.0.1:8000', base);
+        }
+      } else {
+        final base = AppConfig.backendBaseUrl.replaceAll(RegExp(r'/+$'), '');
+        final rel = resolvedUrl.startsWith('/') ? resolvedUrl : '/$resolvedUrl';
+        resolvedUrl = '$base$rel';
+      }
+
+      final imageProvider = NetworkImage(resolvedUrl);
+      return GestureDetector(
+        onTap: () => _showPhotoViewer(context, imageProvider, widget.name),
+        child: _buildFrame(
+          child: Image.network(
+            resolvedUrl,
+            width: widget.size,
+            height: widget.size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _handleError(),
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: widget.size,
+                height: widget.size,
+                color: const Color(0xFF1E293B),
+                child: const Center(
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTokens.signalYellow,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // 3. Fallback high-visibility avatar
+    return _buildFallbackInitial();
+  }
+
+  Widget _handleError() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_loadFailed) {
+        setState(() => _loadFailed = true);
+      }
+    });
+    return _buildFallbackInitial();
+  }
+
+  Widget _buildFrame({required Widget child}) {
+    return Container(
+      width: widget.size,
+      height: widget.size,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        border: Border.all(
+          color: AppTokens.signalYellow.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(widget.borderRadius - 1),
+        child: child,
       ),
     );
   }
@@ -935,11 +1565,13 @@ class _ReportMissingPersonModalState extends State<_ReportMissingPersonModal> {
 class _ReportSightingModal extends StatefulWidget {
   final MissingPerson person;
   final ThemeProvider theme;
-  final Function(String location, double? lat, double? lng, String? notes) onSubmit;
+  final String? initialPhotoPath;
+  final Future<void> Function(String location, double? lat, double? lng, String? notes, String? photoPath) onSubmit;
 
   const _ReportSightingModal({
     required this.person,
     required this.theme,
+    this.initialPhotoPath,
     required this.onSubmit,
   });
 
@@ -1101,6 +1733,7 @@ class _ReportSightingModalState extends State<_ReportSightingModal> {
                             _lat,
                             _lng,
                             _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+                            widget.initialPhotoPath,
                           );
                           if (mounted) nav.pop();
                         },
@@ -1163,43 +1796,58 @@ class _PersonDetailsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Top Header: Name & Status
+            // Top Header: Photo, Name & Status
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _PersonPhotoThumbnail(
+                  photoUrl: person.photoUrl,
+                  photoPath: person.photoPath,
+                  name: person.name,
+                  size: 68,
+                  borderRadius: 10,
+                ),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        person.name,
-                        style: TextStyle(
-                          color: theme.text,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              person.name,
+                              style: TextStyle(
+                                color: theme.text,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                            ),
+                            child: Text(
+                              isFound ? 'FOUND / REUNITED' : 'ACTIVE MISSING',
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
                         '${person.age} years • ${person.gender}',
-                        style: TextStyle(color: theme.textMuted, fontSize: 14),
+                        style: TextStyle(color: theme.textMuted, fontSize: 13.5),
                       ),
                     ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-                  ),
-                  child: Text(
-                    isFound ? 'FOUND / REUNITED' : 'ACTIVE MISSING',
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
                   ),
                 ),
               ],
@@ -1324,6 +1972,9 @@ class _PersonDetailsSheet extends StatelessWidget {
   }
 
   Widget _buildSightingItem(MissingPersonSighting s, ThemeProvider theme) {
+    final hasPhoto = (s.photoUrl != null && s.photoUrl!.trim().isNotEmpty) ||
+        (s.photoPath != null && s.photoPath!.trim().isNotEmpty);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
@@ -1357,6 +2008,16 @@ class _PersonDetailsSheet extends StatelessWidget {
           if (s.notes != null && s.notes!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(s.notes!, style: TextStyle(color: theme.textMuted, fontSize: 12.5)),
+          ],
+          if (hasPhoto) ...[
+            const SizedBox(height: 8),
+            _PersonPhotoThumbnail(
+              photoUrl: s.photoUrl,
+              photoPath: s.photoPath,
+              name: 'Sighting by ${s.reportedBy}',
+              size: 52,
+              borderRadius: 6,
+            ),
           ],
           const SizedBox(height: 4),
           Text(

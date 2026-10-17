@@ -49,6 +49,7 @@ class AppDatabase {
     'delivery_receipts': [],
     'offline_map_regions': [],
     'location_history': [],
+    'mesh_photo_queries': [],
   };
 
   AppDatabase._internal();
@@ -350,6 +351,22 @@ class AppDatabase {
         )
       ''');
     } catch (_) {}
+
+    // Version 7: Offline DTN mesh photo queries
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS mesh_photo_queries (
+          id TEXT PRIMARY KEY,
+          device_id TEXT NOT NULL,
+          photo_path TEXT NOT NULL,
+          latitude REAL,
+          longitude REAL,
+          timestamp INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          payload_json TEXT
+        )
+      ''');
+    } catch (_) {}
   }
 
   void _activateInMemoryFallback() {
@@ -639,6 +656,20 @@ class AppDatabase {
         source TEXT NOT NULL,
         is_live INTEGER DEFAULT 1,
         is_stale INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 18. Mesh Photo Queries (Offline Visual Recognition DTN Queue)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS mesh_photo_queries (
+        id TEXT PRIMARY KEY,
+        device_id TEXT NOT NULL,
+        photo_path TEXT NOT NULL,
+        latitude REAL,
+        longitude REAL,
+        timestamp INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        payload_json TEXT
       )
     ''');
   }
@@ -1574,6 +1605,29 @@ class AppDatabase {
       'offline_map_regions',
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  // =========================================================================
+  // Mesh Photo Queries (Offline DTN Visual Recognition Search)
+  // =========================================================================
+
+  /// Persist an offline visual photo search query to SQLite
+  Future<void> saveMeshPhotoQuery(Map<String, dynamic> queryMap) async {
+    await insert(
+      'mesh_photo_queries',
+      queryMap,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Retrieve all pending photo queries waiting for DTN mesh or cloud upload
+  Future<List<Map<String, dynamic>>> getPendingMeshPhotoQueries() async {
+    return await query(
+      'mesh_photo_queries',
+      where: 'status = ?',
+      whereArgs: const ['QUEUED'],
+      orderBy: 'timestamp DESC',
     );
   }
 }

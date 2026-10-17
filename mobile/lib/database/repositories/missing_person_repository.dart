@@ -37,4 +37,14 @@ class MissingPersonRepository {
     final list = await _db.getMissingPersons(status: 'MISSING');
     return list.length;
   }
+
+  /// Buffer a photo search query into mesh_photo_queries table
+  Future<void> savePhotoQuery(Map<String, dynamic> queryMap) async {
+    await _db.saveMeshPhotoQuery(queryMap);
+  }
+
+  /// Retrieve pending mesh photo queries
+  Future<List<Map<String, dynamic>>> getPendingPhotoQueries() async {
+    return _db.getPendingMeshPhotoQueries();
+  }
 }

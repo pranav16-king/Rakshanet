@@ -8,6 +8,8 @@ class MissingPersonSighting {
   final String? notes;
   final double? lat;
   final double? lng;
+  final String? photoUrl;
+  final String? photoPath;
 
   const MissingPersonSighting({
     required this.reportedBy,
@@ -16,6 +18,8 @@ class MissingPersonSighting {
     this.notes,
     this.lat,
     this.lng,
+    this.photoUrl,
+    this.photoPath,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +30,8 @@ class MissingPersonSighting {
       'notes': notes,
       'lat': lat,
       'lng': lng,
+      'photo_url': photoUrl,
+      'photo_path': photoPath,
     };
   }
 
@@ -46,6 +52,8 @@ class MissingPersonSighting {
       notes: map['notes']?.toString(),
       lat: map['lat'] is num ? (map['lat'] as num).toDouble() : double.tryParse(map['lat']?.toString() ?? ''),
       lng: map['lng'] is num ? (map['lng'] as num).toDouble() : double.tryParse(map['lng']?.toString() ?? ''),
+      photoUrl: map['photo_url']?.toString() ?? map['photoUrl']?.toString(),
+      photoPath: map['photo_path']?.toString() ?? map['photoPath']?.toString(),
     );
   }
 
