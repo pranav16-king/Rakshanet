@@ -586,9 +586,10 @@ class BleTransport implements MeshTransport {
 
   void _onEndpointLost(String? endpointId) {
     if (endpointId == null) return;
-    _peers.remove(endpointId);
-    _endpointNames.remove(endpointId);
     _pendingConnections.remove(endpointId);
+    if (!_peers.containsKey(endpointId)) {
+      _endpointNames.remove(endpointId);
+    }
   }
 
   void _onBytesReceived(String endpointId, Uint8List rawBytes) {

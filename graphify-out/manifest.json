@@ -528,9 +528,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/shell/main_shell.dart": {
-    "mtime": 1791292934.519354,
-    "seen": 1791293018.8755026,
-    "ast_hash": "d30bf3a68fe8e2856641fa22a31ed30f",
+    "mtime": 1791303027.9175098,
+    "seen": 1791305314.7162669,
+    "ast_hash": "85f3e02219f821333108a882807e5091",
     "semantic_hash": ""
   },
   "mobile/lib/screens/splash_screen.dart": {
@@ -576,9 +576,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/live_map_screen.dart": {
-    "mtime": 1791297542.2703278,
-    "seen": 1791300395.1630156,
-    "ast_hash": "724e550d3f8cae753dcbf6d23a3c2cc6",
+    "mtime": 1791301736.8900602,
+    "seen": 1791305314.7162669,
+    "ast_hash": "42f9b1d387cb72ae320832143569b91f",
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/missing_person_screen.dart": {
@@ -588,9 +588,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/safety_tools_screen.dart": {
-    "mtime": 1791291436.1603184,
-    "seen": 1791291500.1897824,
-    "ast_hash": "fedbafeb025d9017fee4c019bf6f5526",
+    "mtime": 1791303015.1638677,
+    "seen": 1791305314.7162669,
+    "ast_hash": "e2c936e7c1282fa78447d640f43326de",
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/shelters_screen.dart": {
@@ -1110,9 +1110,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/bluetooth_radio_service.dart": {
-    "mtime": 1791028075.577673,
-    "seen": 1791028148.4486716,
-    "ast_hash": "15c8b59e0c2799d33ce13eea92ed9f97",
+    "mtime": 1791306830.4988763,
+    "seen": 1791306952.9252613,
+    "ast_hash": "8063efe2131ccfebc62972755f1d35a2",
     "semantic_hash": ""
   },
   "test_bluetooth_mesh.js": {
@@ -1362,9 +1362,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/communication-gaps/CommunicationGapsMap.tsx": {
-    "mtime": 1791017715.7269413,
-    "seen": 1791018120.5658996,
-    "ast_hash": "fe1c53443ac2dc7b69b61df9c9aa15d2",
+    "mtime": 1791301089.2474246,
+    "seen": 1791305314.7162669,
+    "ast_hash": "eed040e1100469906f9de2fd2c26ae1d",
     "semantic_hash": ""
   },
   "frontend/src/components/communication-gaps/DecayChartMini.tsx": {
@@ -1440,9 +1440,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentLeafletMap.tsx": {
-    "mtime": 1791017698.2944043,
-    "seen": 1791018120.5658996,
-    "ast_hash": "21b14191cea154e455337c5bbd9fe37f",
+    "mtime": 1791301107.7886028,
+    "seen": 1791305314.7162669,
+    "ast_hash": "c10405007879b0e359ba9b300d946f3e",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentMessagesTab.tsx": {
@@ -1560,9 +1560,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/map/MapCanvas.tsx": {
-    "mtime": 1791017825.2648585,
-    "seen": 1791018120.5689185,
-    "ast_hash": "8f1854cfa3a4cb5ff5dd6d46aae64171",
+    "mtime": 1791301095.6900134,
+    "seen": 1791305314.7162669,
+    "ast_hash": "2ba4fcfbf196c6daba2bb92bea858d20",
     "semantic_hash": ""
   },
   "frontend/src/components/map/MapControlBar.tsx": {
@@ -1614,9 +1614,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/map/tileLayers.tsx": {
-    "mtime": 1791017767.212635,
-    "seen": 1791018120.5689185,
-    "ast_hash": "7f32b3b69cd218dcce529ffa9fab940b",
+    "mtime": 1791301117.9956617,
+    "seen": 1791305314.7162669,
+    "ast_hash": "0272aa7dec7085df6008c87a3b7dd295",
     "semantic_hash": ""
   },
   "frontend/src/components/map/vectorCanvas.ts": {
@@ -2328,9 +2328,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/transport/ble_transport.dart": {
-    "mtime": 1791027950.0474093,
-    "seen": 1791028023.8635626,
-    "ast_hash": "b421506b0106610fe4d48ec95d4c1e47",
+    "mtime": 1791306676.014801,
+    "seen": 1791306952.9252613,
+    "ast_hash": "a5bfb7d1bbe753e70284f54e6a4f32c4",
     "semantic_hash": ""
   },
   "mobile/lib/services/transport/mesh_transport.dart": {
@@ -2346,9 +2346,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/transport/wifi_direct_transport.dart": {
-    "mtime": 1791027977.342914,
-    "seen": 1791028023.8635626,
-    "ast_hash": "e6ab0746e38238657372d93abb1a1728",
+    "mtime": 1791306732.8201804,
+    "seen": 1791306952.9252613,
+    "ast_hash": "8bb1dafb0c225c7d9d4834e27d553309",
     "semantic_hash": ""
   },
   "mobile/test/crypto_service_test.dart": {
@@ -2454,15 +2454,15 @@
     "semantic_hash": ""
   },
   "mobile/lib/widgets/safety_tools_components.dart": {
-    "mtime": 1791291441.0150442,
-    "seen": 1791291500.1903243,
-    "ast_hash": "ae632352b6d7e268bcc26e4bc0888f78",
+    "mtime": 1791303142.5340338,
+    "seen": 1791305314.7162669,
+    "ast_hash": "716d2a6bae256fbbcc3a21abd677690b",
     "semantic_hash": ""
   },
   "mobile/lib/widgets/signal_rescue_bottom_nav.dart": {
-    "mtime": 1791293936.1430948,
-    "seen": 1791294561.5003319,
-    "ast_hash": "ec7a1128c0cb93249f7c746df421282d",
+    "mtime": 1791303111.0595112,
+    "seen": 1791305314.7162669,
+    "ast_hash": "3a0ae45bae4e4cf3b424390099549a94",
     "semantic_hash": ""
   },
   "backend/train_offline_ai_model.py": {
@@ -2490,15 +2490,57 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/map/offline_map_service.dart": {
-    "mtime": 1791297353.2881372,
-    "seen": 1791300395.1630156,
-    "ast_hash": "9d15f2ec208b83c3c5a9a233a57d85b3",
+    "mtime": 1791301479.1151845,
+    "seen": 1791305314.7162669,
+    "ast_hash": "c14bdfa3796f724c68b8ea7f04e2c857",
     "semantic_hash": ""
   },
   "mobile/test/offline_map_service_test.dart": {
     "mtime": 1791300334.205179,
     "seen": 1791300395.1630156,
     "ast_hash": "db8f776e00ecfd19d1e1cd44e5ab0f52",
+    "semantic_hash": ""
+  },
+  "generate_slide_5.py": {
+    "mtime": 1791304999.452978,
+    "seen": 1791305314.7162669,
+    "ast_hash": "1422d0287d59ea844b44efd51816d9b0",
+    "semantic_hash": ""
+  },
+  "RakshaNet_CODE_APEX_Presentation.pdf": {
+    "mtime": 1791306437.8820572,
+    "seen": 1791306952.9266362,
+    "ast_hash": "7beb81f2da19d60a15dbc27aaaf13ffe",
+    "semantic_hash": ""
+  },
+  "slide_page_5_ui_ux.png": {
+    "mtime": 1791306437.3864844,
+    "seen": 1791306952.9266362,
+    "ast_hash": "787b5940a69b30acf4155f3ee3eca981",
+    "semantic_hash": ""
+  },
+  "recreate_slide_5.py": {
+    "mtime": 1791306412.4503443,
+    "seen": 1791306952.9266362,
+    "ast_hash": "90ac68c2510c0c2f884c9205e2119686",
+    "semantic_hash": ""
+  },
+  "Slide_5_Key_Features_UIUX.jpg": {
+    "mtime": 1791306437.1277225,
+    "seen": 1791306952.9266362,
+    "ast_hash": "1fb30ddc8c4b9d779dd3771615dbae6b",
+    "semantic_hash": ""
+  },
+  "slide5_clean_base.png": {
+    "mtime": 1791306259.640015,
+    "seen": 1791306952.9266362,
+    "ast_hash": "f8d14cfa171953dc896294f841b74a70",
+    "semantic_hash": ""
+  },
+  "slide5_clean_base_150.png": {
+    "mtime": 1791306288.2694683,
+    "seen": 1791306952.9266362,
+    "ast_hash": "57b21a645ac68c352868947996751de5",
     "semantic_hash": ""
   }
 }

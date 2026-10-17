@@ -498,7 +498,9 @@ class WifiDirectTransport implements MeshTransport {
 
   void _onEndpointLost(String? endpointId) {
     if (endpointId == null) return;
-    _peers.remove(endpointId);
+    if (!_peers.containsKey(endpointId)) {
+      _peers.remove(endpointId);
+    }
   }
 
   void _onBytesReceived(String endpointId, Uint8List rawBytes) {

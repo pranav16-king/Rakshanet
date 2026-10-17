@@ -265,8 +265,31 @@ class BluetoothRadioService extends ChangeNotifier {
       if (localEndpointName.compareTo(endpointName) < 0) {
         _discoveredEndpointNames[endpointId] = endpointName;
         _logStatus('Found $endpointId ($endpointName), waiting for peer to initiate handshake...');
+        
+        // Fallback: If remote peer doesn't initiate within 4 seconds, initiate ourselves
+        Timer(const Duration(seconds: 4), () {
+          if (!_connectedPeers.containsKey(endpointId) &&
+              !_acceptedConnections.contains(endpointId) &&
+              !_pendingConnections.contains(endpointId)) {
+            _logStatus('Fallback timer expired for $endpointId. Initiating auto-handshake...');
+            _initiateConnection(endpointId, endpointName, localEndpointName);
+          }
+        });
         return;
       }
+    }
+
+    await _initiateConnection(endpointId, endpointName, localEndpointName);
+  }
+
+  Future<void> _initiateConnection(
+    String endpointId,
+    String endpointName,
+    String localEndpointName,
+  ) async {
+    if (_connectedPeers.containsKey(endpointId) ||
+        _pendingConnections.contains(endpointId)) {
+      return;
     }
 
     _logStatus(
@@ -367,6 +390,18 @@ class BluetoothRadioService extends ChangeNotifier {
       _connectedPeers[endpointId] = peer;
       _peerUpdateController.add(peerList);
       notifyListeners();
+
+      // Immediately exchange HELLO frames to guarantee symmetric two-way identity confirmation
+      Timer(const Duration(milliseconds: 300), () {
+        try {
+          final helloFrame = jsonEncode({
+            'frame': 'RAKSHANET_HELLO_V1',
+            'deviceId': DatabaseService.myDeviceId,
+            'displayName': DatabaseService.myDisplayName,
+          });
+          sendBytesToEndpoint(endpointId, Uint8List.fromList(utf8.encode(helloFrame)));
+        } catch (_) {}
+      });
     } else {
       _logStatus(
         'Connection rejected or failed with $endpointId (status: $status)',
@@ -382,7 +417,7 @@ class BluetoothRadioService extends ChangeNotifier {
 
   /// Peer disconnected or walked out of RF range
   void _handleDisconnected(String endpointId) {
-    _logStatus('Peer disconnected: $endpointId');
+    _logStatus('Peer physically disconnected: $endpointId');
     _connectedPeers.remove(endpointId);
     _discoveredEndpointNames.remove(endpointId);
     _pendingConnections.remove(endpointId);
@@ -391,15 +426,18 @@ class BluetoothRadioService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Endpoint moved out of discovery range
+  /// Endpoint moved out of discovery range (scanner no longer sees unassociated beacon)
+  /// CRITICAL FIX: An endpoint that is ALREADY CONNECTED in _connectedPeers must NEVER be removed!
+  /// Google Nearby Connections stops advertising once connected, which triggers onEndpointLost on the discoverer.
+  /// The connection is still active and healthy until _handleDisconnected fires!
   void _handleEndpointLost(String? endpointId) {
     if (endpointId == null) return;
-    _logStatus('Endpoint lost: $endpointId');
-    _connectedPeers.remove(endpointId);
+    _logStatus('Endpoint lost from discovery scanning: $endpointId');
     _pendingConnections.remove(endpointId);
-    _acceptedConnections.remove(endpointId);
-    _peerUpdateController.add(peerList);
-    notifyListeners();
+    if (!_connectedPeers.containsKey(endpointId)) {
+      _discoveredEndpointNames.remove(endpointId);
+      _acceptedConnections.remove(endpointId);
+    }
   }
 
   /// Raw byte payload received over the physical radio
@@ -409,6 +447,34 @@ class BluetoothRadioService extends ChangeNotifier {
       _logStatus(
         'Received RF packet (${rawBytes.length} bytes) from $endpointId',
       );
+
+      // Check for internal HELLO frame to dynamically synchronize peer identity
+      try {
+        final decoded = jsonDecode(utf8.decode(rawBytes));
+        if (decoded is Map && decoded['frame'] == 'RAKSHANET_HELLO_V1') {
+          final newDeviceId = decoded['deviceId']?.toString();
+          final newDisplayName = decoded['displayName']?.toString();
+          if (newDeviceId != null) {
+            final existing = _connectedPeers[endpointId];
+            final updatedPeer = MeshDevice(
+              id: endpointId,
+              deviceId: newDeviceId,
+              displayName: newDisplayName ?? existing?.displayName ?? 'Nearby RakshaNet user',
+              connectionType: ConnectionType.ble,
+              signalStrength: -65,
+              proximityBand: ProximityBand.near,
+              hopCount: 1,
+              batteryLevel: 80,
+              lastSeen: DateTime.now(),
+              isConnected: true,
+            );
+            _connectedPeers[endpointId] = updatedPeer;
+            _peerUpdateController.add(peerList);
+            notifyListeners();
+          }
+          return;
+        }
+      } catch (_) {}
 
       // Update peer last-seen timestamp
       if (_connectedPeers.containsKey(endpointId)) {
