@@ -48,3 +48,21 @@ export interface CreateSightingPayload {
   lat?: number;
   lng?: number;
 }
+
+export interface VisualMatch {
+  person: MissingPerson;
+  similarity_score: number;
+  confidence_score: number;
+  vector_distance?: number;
+  matched_features?: string[];
+  notes?: string;
+}
+
+export interface VisualSearchResult {
+  success: boolean;
+  query_photo_preview?: string;
+  matches: VisualMatch[];
+  total_candidates_scanned?: number;
+  engine?: string;
+  search_latency_ms?: number;
+}

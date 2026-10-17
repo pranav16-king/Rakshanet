@@ -3,6 +3,7 @@ import type {
   MissingPerson,
   CreateMissingPersonPayload,
   CreateSightingPayload,
+  VisualSearchResult,
 } from '../types/missingPerson';
 
 export async function getMissingPersons(
@@ -59,3 +60,22 @@ export async function addMissingPersonSighting(
   );
   return response.data;
 }
+
+export async function searchMissingPersonByPhoto(
+  file: File
+): Promise<VisualSearchResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await apiClient.post<VisualSearchResult>(
+    '/api/v1/missing-persons/search-by-photo',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+  return response.data;
+}
+
