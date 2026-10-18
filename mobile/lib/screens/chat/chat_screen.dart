@@ -888,6 +888,8 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
+        top: true,
+        bottom: false,
         child: Column(
           children: [
             // Top App Bar
@@ -2355,17 +2357,28 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: isGroup
-                ? senderColor.withValues(alpha: 0.18)
-                : theme.surfaceSunken,
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isGroup
+                  ? senderColor.withValues(alpha: 0.2)
+                  : theme.surface,
+              border: Border.all(
+                color: isGroup
+                    ? senderColor.withValues(alpha: 0.5)
+                    : theme.borderStrong,
+                width: 1,
+              ),
+            ),
+            alignment: Alignment.center,
             child: Text(
               initial,
               style: TextStyle(
                 color: senderColor,
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
           ),
@@ -2907,13 +2920,13 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Emergency Shortcuts Bar ("Need medical help", "We are safe here", "Road blocked", etc.)
   Widget _buildEmergencyShortcutsBar(ThemeProvider theme) {
     return Container(
-      height: 42,
-      margin: const EdgeInsets.only(top: 2, bottom: 6),
+      height: 34,
+      margin: const EdgeInsets.only(top: 2, bottom: 4),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 14),
         scrollDirection: Axis.horizontal,
         itemCount: _emergencyShortcuts.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
         itemBuilder: (context, index) {
           final item = _emergencyShortcuts[index];
           return Material(
@@ -2925,32 +2938,25 @@ class _ChatScreenState extends State<ChatScreen> {
               },
               borderRadius: BorderRadius.circular(AppTokens.radiusPill),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: theme.surface,
                   borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                   border: Border.all(
-                    color: item.color.withValues(alpha: 0.4),
+                    color: item.color.withValues(alpha: 0.35),
                     width: 1,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(item.icon, size: 15, color: item.color),
-                    const SizedBox(width: 6),
+                    Icon(item.icon, size: 14, color: item.color),
+                    const SizedBox(width: 5),
                     Text(
                       item.label,
                       style: TextStyle(
                         color: theme.text,
-                        fontSize: 12.5,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -2977,7 +2983,7 @@ class _ChatScreenState extends State<ChatScreen> {
         : (NavConstants.navBarHeight +
             NavConstants.navBarPadding.bottom +
             safeBottom +
-            14.0);
+            2.0);
 
     return Container(
       padding: EdgeInsets.fromLTRB(14, 8, 14, bottomDockPadding),
@@ -3205,10 +3211,10 @@ class _ChatScreenState extends State<ChatScreen> {
         : (NavConstants.navBarHeight +
             NavConstants.navBarPadding.bottom +
             safeBottom +
-            14.0);
+            2.0);
 
     return Container(
-      padding: EdgeInsets.fromLTRB(12, 8, 12, bottomDockPadding),
+      padding: EdgeInsets.fromLTRB(10, 6, 10, bottomDockPadding),
       decoration: BoxDecoration(
         color: barBg,
         border: Border(top: BorderSide(color: theme.border, width: 1)),
@@ -3219,15 +3225,15 @@ class _ChatScreenState extends State<ChatScreen> {
           // Sleek pill container
           Expanded(
             child: Container(
-              constraints: const BoxConstraints(minHeight: 48, maxHeight: 120),
+              constraints: const BoxConstraints(minHeight: 44, maxHeight: 110),
               decoration: BoxDecoration(
                 color: theme.surface,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: theme.borderStrong, width: 1.2),
+                border: Border.all(color: theme.borderStrong, width: 1),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Attachment action button (+ with quick popup)
                   IconButton(
@@ -3244,32 +3250,34 @@ class _ChatScreenState extends State<ChatScreen> {
                         size: 20,
                       ),
                     ),
+                    constraints: const BoxConstraints(minWidth: 34, minHeight: 36),
+                    padding: EdgeInsets.zero,
                     tooltip: 'Add attachment (Camera, Gallery, Location, Voice)',
                     onPressed: () => _showAttachmentMenu(context, theme),
                   ),
 
-                  // Multi-line text field (minLines: 1, maxLines: 4)
+                  // Multi-line text field (single line when empty without wrapping)
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: TextField(
                         controller: _textController,
                         focusNode: _focusNode,
-                        style: TextStyle(color: theme.text, fontSize: 15),
+                        style: TextStyle(color: theme.text, fontSize: 14.5),
                         minLines: 1,
                         maxLines: 4,
                         textInputAction: TextInputAction.newline,
                         decoration: InputDecoration(
                           hintText: hintText,
                           hintStyle: TextStyle(
-                            color: theme.textMuted.withValues(alpha: 0.7),
-                            fontSize: 14.5,
+                            color: theme.textMuted.withValues(alpha: 0.65),
+                            fontSize: 13.5,
                           ),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 10,
+                            horizontal: 2,
+                            vertical: 8,
                           ),
                         ),
                       ),
@@ -3281,8 +3289,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     icon: Icon(
                       Icons.camera_alt_outlined,
                       color: theme.textMuted,
-                      size: 21,
+                      size: 20,
                     ),
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
+                    padding: EdgeInsets.zero,
                     tooltip: 'Take photo',
                     onPressed: () => _pickImageFromSource(ImageSource.camera),
                   ),
@@ -3292,11 +3302,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     icon: Icon(
                       Icons.mic_none_rounded,
                       color: theme.textMuted,
-                      size: 21,
+                      size: 20,
                     ),
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
+                    padding: EdgeInsets.zero,
                     tooltip: 'Record offline voice note',
                     onPressed: _startVoiceRecording,
                   ),
+                  const SizedBox(width: 2),
                 ],
               ),
             ),
@@ -3310,7 +3323,7 @@ class _ChatScreenState extends State<ChatScreen> {
               color: AppTokens.signalYellow,
               shape: const CircleBorder(),
               elevation: 2,
-              shadowColor: AppTokens.signalYellow.withValues(alpha: 0.4),
+              shadowColor: AppTokens.signalYellow.withValues(alpha: 0.35),
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: () {
@@ -3318,13 +3331,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   _handleSendMessage();
                 },
                 child: Container(
-                  width: 48,
-                  height: 48,
+                  width: 44,
+                  height: 44,
                   alignment: Alignment.center,
                   child: const Icon(
                     Icons.send_rounded,
                     color: AppTokens.nightNavy,
-                    size: 22,
+                    size: 20,
                   ),
                 ),
               ),

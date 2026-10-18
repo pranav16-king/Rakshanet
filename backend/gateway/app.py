@@ -1083,6 +1083,7 @@ def update_settings(settings_data: Dict[str, Any]):
 # OPPORTUNISTIC TELEMETRY INGESTION (DTN MESH)
 # =============================================================================
 
+@app.post("/api/v1/packets", response_model=SyncBatchResponse)
 @app.post("/api/v1/telemetry/sync", response_model=SyncBatchResponse)
 async def sync_telemetry_batch(batch: SyncBatchRequest):
     """
