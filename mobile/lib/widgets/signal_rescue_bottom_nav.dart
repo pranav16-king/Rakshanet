@@ -16,7 +16,7 @@ class NavConstants {
   static const double navBarRadius = 26.0;
   static const double sosButtonSize = 62.0;
   static const double sosButtonSizeCompact = 58.0;
-  static const EdgeInsets navBarPadding = EdgeInsets.fromLTRB(14, 0, 14, 10);
+  static const EdgeInsets navBarPadding = EdgeInsets.fromLTRB(14, 8, 14, 10);
   static const Duration navAnimationDuration = Duration(milliseconds: 180);
 
   // Palette Tokens (Section 20)
@@ -624,7 +624,7 @@ class SignalRescueBottomNav extends StatelessWidget {
 
               // Elevated Protruding Central SOS Button
               Positioned(
-                top: -18,
+                top: -8,
                 child: FloatingSOSButton(
                   isActive: currentIndex == 2,
                   size: sosSize,

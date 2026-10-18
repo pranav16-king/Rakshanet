@@ -17,7 +17,6 @@ import '../../services/location/location_service.dart';
 import '../../theme/app_tokens.dart';
 import '../../utils/haversine_distance.dart';
 import '../../widgets/chat_image_viewer.dart';
-import '../../widgets/signal_rescue_bottom_nav.dart';
 import 'my_messages_screen.dart';
 
 /// Screen 5: Community Chat & Mesh Groups (Offline Mesh Chat)
@@ -932,9 +931,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     ? _buildEmptyState(theme, chatService, groupService)
                     : ListView.builder(
                         controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                         itemCount: messages.length,
                         itemBuilder: (context, index) {
                           final msg = messages[index];
@@ -1323,10 +1325,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Container(
       height: 44,
-      margin: const EdgeInsets.only(top: 8),
+      margin: const EdgeInsets.only(top: 6, bottom: 2),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: theme.border.withValues(alpha: 0.5),
+            width: 1,
+          ),
+        ),
+      ),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
         itemCount: tabs.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
@@ -2557,6 +2568,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   Text(
                     location.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: theme.text,
                       fontSize: 14,
@@ -2565,6 +2578,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   Text(
                     distanceLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: theme.textMuted, fontSize: 12),
                   ),
                 ],
@@ -2663,6 +2678,7 @@ class _ChatScreenState extends State<ChatScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
         child: Container(
+          constraints: const BoxConstraints(maxWidth: 260, maxHeight: 200),
           decoration: BoxDecoration(
             color: theme.surfaceSunken,
             borderRadius: BorderRadius.circular(AppTokens.radiusMd),
@@ -2685,10 +2701,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Image.file(
                     file,
                     fit: BoxFit.cover,
-                    width: 250,
-                    height: 175,
+                    width: 260,
+                    height: 180,
                     errorBuilder: (_, _, _) => Container(
-                      width: 250,
+                      width: 260,
                       height: 120,
                       color: theme.surfaceSunken,
                       padding: const EdgeInsets.all(12),
@@ -2975,18 +2991,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final mins = (_voiceSeconds ~/ 60).toString().padLeft(2, '0');
     final secs = (_voiceSeconds % 60).toString().padLeft(2, '0');
 
-    final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
-    final safeBottom = MediaQuery.of(context).padding.bottom;
-    final isKeyboardOpen = viewInsetsBottom > 0;
-    final bottomDockPadding = isKeyboardOpen
-        ? 8.0
-        : (NavConstants.navBarHeight +
-            NavConstants.navBarPadding.bottom +
-            safeBottom +
-            2.0);
-
     return Container(
-      padding: EdgeInsets.fromLTRB(14, 8, 14, bottomDockPadding),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
       decoration: BoxDecoration(
         color: theme.surface,
         border: Border(top: BorderSide(color: theme.border, width: 1)),
@@ -3201,20 +3207,10 @@ class _ChatScreenState extends State<ChatScreen> {
         chatService.activeFilter == 'Group' ? groupService.selectedGroup : null;
     final hintText = activeGroup != null
         ? 'Message ${activeGroup.name}...'
-        : 'Type an emergency message...';
-
-    final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
-    final safeBottom = MediaQuery.of(context).padding.bottom;
-    final isKeyboardOpen = viewInsetsBottom > 0;
-    final bottomDockPadding = isKeyboardOpen
-        ? 8.0
-        : (NavConstants.navBarHeight +
-            NavConstants.navBarPadding.bottom +
-            safeBottom +
-            2.0);
+        : 'Type a message...';
 
     return Container(
-      padding: EdgeInsets.fromLTRB(10, 6, 10, bottomDockPadding),
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
       decoration: BoxDecoration(
         color: barBg,
         border: Border(top: BorderSide(color: theme.border, width: 1)),
@@ -3270,8 +3266,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         decoration: InputDecoration(
                           hintText: hintText,
                           hintStyle: TextStyle(
-                            color: theme.textMuted.withValues(alpha: 0.65),
-                            fontSize: 13.5,
+                            color: theme.textMuted.withValues(alpha: 0.7),
+                            fontSize: 13,
                           ),
                           border: InputBorder.none,
                           isDense: true,
@@ -3296,51 +3292,57 @@ class _ChatScreenState extends State<ChatScreen> {
                     tooltip: 'Take photo',
                     onPressed: () => _pickImageFromSource(ImageSource.camera),
                   ),
-
-                  // Quick Voice Mic icon inside pill for instant voice note
-                  IconButton(
-                    icon: Icon(
-                      Icons.mic_none_rounded,
-                      color: theme.textMuted,
-                      size: 20,
-                    ),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
-                    padding: EdgeInsets.zero,
-                    tooltip: 'Record offline voice note',
-                    onPressed: _startVoiceRecording,
-                  ),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 4),
                 ],
               ),
             ),
           ),
           const SizedBox(width: 8),
 
-          // Prominent Yellow Send FAB with tactile haptics
+          // Dynamic Morphing Mic / Yellow Send button
           Padding(
             padding: const EdgeInsets.only(bottom: 1),
-            child: Material(
-              color: AppTokens.signalYellow,
-              shape: const CircleBorder(),
-              elevation: 2,
-              shadowColor: AppTokens.signalYellow.withValues(alpha: 0.35),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _handleSendMessage();
-                },
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.send_rounded,
-                    color: AppTokens.nightNavy,
-                    size: 20,
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _textController,
+              builder: (context, value, _) {
+                final hasText = value.text.trim().isNotEmpty;
+                return Material(
+                  color: hasText ? AppTokens.signalYellow : theme.surface,
+                  shape: const CircleBorder(),
+                  elevation: hasText ? 2 : 0,
+                  shadowColor: hasText
+                      ? AppTokens.signalYellow.withValues(alpha: 0.35)
+                      : Colors.transparent,
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () {
+                      if (hasText) {
+                        HapticFeedback.mediumImpact();
+                        _handleSendMessage();
+                      } else {
+                        HapticFeedback.lightImpact();
+                        _startVoiceRecording();
+                      }
+                    },
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: hasText
+                            ? null
+                            : Border.all(color: theme.borderStrong, width: 1),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        hasText ? Icons.send_rounded : Icons.mic_rounded,
+                        color: hasText ? AppTokens.nightNavy : AppTokens.signalYellow,
+                        size: 20,
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ],

@@ -54,7 +54,7 @@ class _MainShellState extends State<MainShell> {
 
     return Scaffold(
       backgroundColor: theme.bg,
-      extendBody: true,
+      extendBody: false,
       body: IndexedStack(
         index: _currentIndex,
         children: [
