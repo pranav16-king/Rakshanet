@@ -504,13 +504,23 @@ class MissingPersonsProvider extends ChangeNotifier {
     try {
       final baseUrl = _getGatewayBaseUrl();
       final uri = Uri.parse('$baseUrl/api/v1/missing-persons');
+      final map = report.toMap();
+
+      if (report.photoPath != null && report.photoPath!.isNotEmpty) {
+        final f = File(report.photoPath!);
+        if (f.existsSync()) {
+          final bytes = await f.readAsBytes();
+          map['photo_base64'] = base64Encode(bytes);
+        }
+      }
+
       await http
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(report.toMap()),
+            body: jsonEncode(map),
           )
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 8));
     } catch (e) {
       debugPrint('[MissingPersonsProvider] Cloud post queued offline: $e');
     }
@@ -556,13 +566,23 @@ class MissingPersonsProvider extends ChangeNotifier {
     try {
       final baseUrl = _getGatewayBaseUrl();
       final uri = Uri.parse('$baseUrl/api/v1/missing-persons/$personId/sightings');
+      final map = sighting.toMap();
+
+      if (sighting.photoPath != null && sighting.photoPath!.isNotEmpty) {
+        final f = File(sighting.photoPath!);
+        if (f.existsSync()) {
+          final bytes = await f.readAsBytes();
+          map['photo_base64'] = base64Encode(bytes);
+        }
+      }
+
       await http
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(sighting.toMap()),
+            body: jsonEncode(map),
           )
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 8));
     } catch (e) {
       debugPrint('[MissingPersonsProvider] Cloud sighting queued offline: $e');
     }

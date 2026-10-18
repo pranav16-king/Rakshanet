@@ -13,6 +13,7 @@ import {
   Compass,
   X,
   Camera,
+  Upload,
   UploadCloud,
   Sparkles,
   Check,
@@ -1384,15 +1385,72 @@ const ReportMissingModal: React.FC<ReportMissingModalProps> = ({ onClose, onSucc
 
             <div>
               <label className="block text-xs font-semibold text-[#475569] dark:text-[#CBD5E1] mb-1">
-                Photo URL / Base64 / Relative Path
+                Person Photograph (Optional, for AI Biometrics)
               </label>
-              <input
-                type="text"
-                placeholder="https://... or /uploads/..."
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-[#F8FAFC] dark:bg-[#0B1220] border border-[#CBD5E1] dark:border-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] focus:ring-2 focus:ring-[#FFD21F] focus:outline-none"
-              />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    id="missing-person-photo-file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (typeof reader.result === 'string') {
+                            setPhotoUrl(reader.result);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="missing-person-photo-file"
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-[#0F172A] text-white hover:bg-[#1E293B] border border-transparent transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-[#FFD21F]" />
+                    Upload Photo File
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Or paste photo URL / base64..."
+                    value={photoUrl.startsWith('data:') ? 'Image file attached (' + Math.round(photoUrl.length / 1024) + ' KB)' : photoUrl}
+                    onChange={(e) => setPhotoUrl(e.target.value)}
+                    className="flex-1 px-3 py-2 text-xs rounded-lg bg-[#F8FAFC] dark:bg-[#0B1220] border border-[#CBD5E1] dark:border-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] focus:ring-2 focus:ring-[#FFD21F] focus:outline-none"
+                  />
+                  {photoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUrl('')}
+                      className="p-1.5 text-xs text-[#EF4444] hover:bg-[#FEE2E2] dark:hover:bg-[#451A1A] rounded-md transition-colors"
+                      title="Clear photo"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {photoUrl && (
+                  <div className="flex items-center gap-3 p-2 bg-[#F1F5F9] dark:bg-[#0B1220] rounded-lg border border-[#CBD5E1] dark:border-[#1E293B]">
+                    <img
+                      src={photoUrl}
+                      alt="Preview"
+                      className="w-12 h-12 rounded object-cover border border-[#94A3B8]"
+                    />
+                    <div className="text-xs">
+                      <span className="font-semibold text-[#10B981] flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Photo Ready for Qdrant Cloud Vector Indexing
+                      </span>
+                      <span className="text-[#64748B] dark:text-[#94A3B8] block text-[11px]">
+                        512-D visual feature embedding will be generated on submission.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

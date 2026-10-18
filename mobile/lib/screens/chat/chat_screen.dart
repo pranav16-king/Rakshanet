@@ -16,6 +16,8 @@ import '../../services/group_service.dart';
 import '../../services/location/location_service.dart';
 import '../../theme/app_tokens.dart';
 import '../../utils/haversine_distance.dart';
+import '../../widgets/chat_image_viewer.dart';
+import '../../widgets/signal_rescue_bottom_nav.dart';
 import 'my_messages_screen.dart';
 
 /// Screen 5: Community Chat & Mesh Groups (Offline Mesh Chat)
@@ -41,12 +43,32 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _playingVoiceMessageId;
   Timer? _voicePlaybackTimer;
 
-  final List<String> _emergencyShortcuts = [
-    'Need medical help',
-    'We are safe here',
-    'Road blocked',
-    'Need drinking water',
-    'Trapped - send help',
+  static const List<({String label, IconData icon, Color color})> _emergencyShortcuts = [
+    (
+      label: 'Need medical help',
+      icon: Icons.medical_services_rounded,
+      color: AppTokens.sosRed,
+    ),
+    (
+      label: 'We are safe here',
+      icon: Icons.verified_user_rounded,
+      color: AppTokens.beaconTeal,
+    ),
+    (
+      label: 'Road blocked',
+      icon: Icons.warning_amber_rounded,
+      color: AppTokens.warningAmber,
+    ),
+    (
+      label: 'Need drinking water',
+      icon: Icons.water_drop_rounded,
+      color: Color(0xFF0EA5E9),
+    ),
+    (
+      label: 'Trapped - send help',
+      icon: Icons.emergency_rounded,
+      color: AppTokens.sosRed,
+    ),
   ];
 
   int _previousMessageCount = 0;
@@ -77,71 +99,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _pickAndSendImage() async {
-    final theme = context.read<ThemeProvider>();
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: theme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Share Emergency Photo',
-                style: TextStyle(
-                  color: theme.text,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: AppTokens.signalYellow,
-                  child: Icon(Icons.camera_alt_rounded, color: AppTokens.nightNavy),
-                ),
-                title: Text(
-                  'Take Photo with Camera',
-                  style: TextStyle(color: theme.text, fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  'Capture hazard or situation photo',
-                  style: TextStyle(color: theme.textMuted, fontSize: 12),
-                ),
-                onTap: () => Navigator.pop(ctx, ImageSource.camera),
-              ),
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: AppTokens.beaconTeal.withValues(alpha: 0.2),
-                  child: const Icon(
-                    Icons.photo_library_rounded,
-                    color: AppTokens.beaconTeal,
-                  ),
-                ),
-                title: Text(
-                  'Choose from Gallery',
-                  style: TextStyle(color: theme.text, fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  'Select saved image from device storage',
-                  style: TextStyle(color: theme.textMuted, fontSize: 12),
-                ),
-                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (source == null || !mounted) return;
-
+  Future<void> _pickImageFromSource(ImageSource source) async {
     try {
       final image = await _imagePicker.pickImage(
         source: source,
@@ -2211,22 +2169,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   const SizedBox(height: 4),
 
-                  // Voice Note Player or Standard Message Text
-                  if (msg.messageType == 'VOICE')
-                    _buildVoiceNotePlayer(theme, msg)
-                  else
-                    Text(
-                      msg.content,
-                      style: TextStyle(
-                        color: theme.text,
-                        fontSize: 15,
-                        height: 1.35,
-                      ),
-                    ),
+                  // Voice Note Player, Photo Attachment Badge, or Message Text
+                  _buildMessageTextContent(theme, msg),
 
                   if (msg.hasImageAttachment) ...[
                     const SizedBox(height: 8),
-                    _buildImageAttachment(theme, msg.attachment!),
+                    _buildImageAttachment(theme, msg.attachment!, msg),
                   ],
 
                   // Optional Location Preview
@@ -2467,20 +2415,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  if (msg.messageType == 'VOICE')
-                    _buildVoiceNotePlayer(theme, msg)
-                  else
-                    Text(
-                      msg.content,
-                      style: TextStyle(
-                        color: theme.text,
-                        fontSize: 15,
-                        height: 1.35,
-                      ),
-                    ),
+                  // Voice Note Player, Photo Attachment Badge, or Message Text
+                  _buildMessageTextContent(theme, msg),
+
                   if (msg.hasImageAttachment) ...[
                     const SizedBox(height: 8),
-                    _buildImageAttachment(theme, msg.attachment!),
+                    _buildImageAttachment(theme, msg.attachment!, msg),
                   ],
                   if (msg.location != null) ...[
                     const SizedBox(height: 8),
@@ -2624,38 +2564,340 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  String _formatAttachmentSize(int bytes) {
+    if (bytes <= 0) return '0 B';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+  }
+
+  /// Formats message text or displays an elegant badge for photo attachments
+  Widget _buildMessageTextContent(ThemeProvider theme, ChatMessage msg) {
+    if (msg.messageType == 'VOICE') {
+      return _buildVoiceNotePlayer(theme, msg);
+    }
+
+    if (msg.content.startsWith('📷 Image:') ||
+        (msg.hasImageAttachment && msg.content.startsWith('📷'))) {
+      final sizeFormatted = msg.attachment != null
+          ? _formatAttachmentSize(msg.attachment!.byteLength)
+          : '';
+      return Container(
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppTokens.beaconTeal.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+          border: Border.all(
+            color: AppTokens.beaconTeal.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.photo_camera_rounded,
+              size: 15,
+              color: AppTokens.beaconTeal,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Photo Attachment',
+              style: TextStyle(
+                color: theme.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (sizeFormatted.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Text(
+                '• $sizeFormatted',
+                style: TextStyle(
+                  color: theme.textMuted,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return Text(
+      msg.content,
+      style: TextStyle(
+        color: theme.text,
+        fontSize: 15,
+        height: 1.35,
+      ),
+    );
+  }
+
+  /// Shared image attachment card with direct tap to full-screen viewer,
+  /// plus quick action overlays: View, Save to Downloads, and Like reaction.
   Widget _buildImageAttachment(
     ThemeProvider theme,
     MediaAttachment attachment,
+    ChatMessage msg,
   ) {
     final file = File(attachment.localPath);
     return Semantics(
       label: 'Shared image: ${attachment.fileName}',
       image: true,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-        child: Image.file(
-          file,
-          fit: BoxFit.cover,
-          width: 220,
-          height: 160,
-          errorBuilder: (_, _, _) => Container(
-            width: 220,
-            constraints: const BoxConstraints(minHeight: 56),
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        child: Container(
+          decoration: BoxDecoration(
             color: theme.surfaceSunken,
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Icon(Icons.broken_image_outlined, color: theme.textMuted),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Image unavailable on this phone',
-                    style: TextStyle(color: theme.textMuted, fontSize: 14),
+            borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+            border: Border.all(color: theme.border, width: 1),
+          ),
+          child: Stack(
+            children: [
+              // Tap image to open full screen viewer
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ChatImageViewer.show(
+                    context,
+                    message: msg,
+                    attachment: attachment,
+                  );
+                },
+                child: Hero(
+                  tag: 'chat_img_${msg.messageId}',
+                  child: Image.file(
+                    file,
+                    fit: BoxFit.cover,
+                    width: 250,
+                    height: 175,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 250,
+                      height: 120,
+                      color: theme.surfaceSunken,
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.broken_image_outlined, color: theme.textMuted),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Image unavailable on this phone',
+                              style: TextStyle(color: theme.textMuted, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              // Bottom gradient action bar with View, Save, and Like buttons
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.85),
+                      ],
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Fullscreen expand icon button ("View")
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            ChatImageViewer.show(
+                              context,
+                              message: msg,
+                              attachment: attachment,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25),
+                                width: 0.5,
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.fullscreen_rounded,
+                                  color: Colors.white,
+                                  size: 15,
+                                ),
+                                SizedBox(width: 3),
+                                Text(
+                                  'View',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Download / Save icon button (instant save)
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () async {
+                                HapticFeedback.mediumImpact();
+                                final saved = await ChatImageSaver.saveImageToDownloads(
+                                  file,
+                                  attachment.fileName,
+                                );
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: const Color(0xFF0E8A94),
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: const Duration(seconds: 3),
+                                    content: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.check_circle_rounded,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            saved != null
+                                                ? '✅ Photo saved to device Downloads'
+                                                : 'Unable to save photo to Downloads',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(14),
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.55),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.25),
+                                    width: 0.5,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.download_rounded,
+                                  color: Colors.white,
+                                  size: 15,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+
+                          // Like / Heart button with reaction count / state
+                          ValueListenableBuilder<Map<String, bool>>(
+                            valueListenable: ChatReactionStore.likedNotifier,
+                            builder: (context, likes, _) {
+                              final isLiked = likes[msg.messageId] ?? false;
+                              return Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () async {
+                                    HapticFeedback.selectionClick();
+                                    await ChatReactionStore.toggleLike(msg.messageId);
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 3.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isLiked
+                                          ? const Color(0xFFEF4444).withValues(alpha: 0.28)
+                                          : Colors.black.withValues(alpha: 0.55),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isLiked
+                                            ? const Color(0xFFEF4444)
+                                            : Colors.white.withValues(alpha: 0.25),
+                                        width: isLiked ? 1.0 : 0.5,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          isLiked
+                                              ? Icons.favorite
+                                              : Icons.favorite_border_rounded,
+                                          color: isLiked
+                                              ? const Color(0xFFEF4444)
+                                              : Colors.white,
+                                          size: 15,
+                                        ),
+                                        if (isLiked) ...[
+                                          const SizedBox(width: 3),
+                                          const Text(
+                                            '1',
+                                            style: TextStyle(
+                                              color: Color(0xFFEF4444),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2664,32 +2906,58 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /// Emergency Shortcuts Bar ("Need medical help", "We are safe here", "Road blocked", etc.)
   Widget _buildEmergencyShortcutsBar(ThemeProvider theme) {
-    final sosColor = theme.isLightMode ? AppTokens.lightSos : AppTokens.darkSos;
-
     return Container(
-      height: 40,
-      margin: const EdgeInsets.only(top: 2, bottom: 4),
+      height: 42,
+      margin: const EdgeInsets.only(top: 2, bottom: 6),
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         scrollDirection: Axis.horizontal,
         itemCount: _emergencyShortcuts.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final shortcut = _emergencyShortcuts[index];
-          return ActionChip(
-            elevation: 0,
-            backgroundColor: theme.surfaceSunken,
-            side: BorderSide(color: theme.border),
-            avatar: Icon(Icons.emergency_outlined, size: 14, color: sosColor),
-            label: Text(
-              shortcut,
-              style: TextStyle(
-                color: theme.text,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+          final item = _emergencyShortcuts[index];
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                _handleSendMessage(overrideText: item.label);
+              },
+              borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: theme.surface,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                  border: Border.all(
+                    color: item.color.withValues(alpha: 0.4),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(item.icon, size: 15, color: item.color),
+                    const SizedBox(width: 6),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        color: theme.text,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            onPressed: () => _handleSendMessage(overrideText: shortcut),
           );
         },
       ),
@@ -2701,8 +2969,18 @@ class _ChatScreenState extends State<ChatScreen> {
     final mins = (_voiceSeconds ~/ 60).toString().padLeft(2, '0');
     final secs = (_voiceSeconds % 60).toString().padLeft(2, '0');
 
+    final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
+    final safeBottom = MediaQuery.of(context).padding.bottom;
+    final isKeyboardOpen = viewInsetsBottom > 0;
+    final bottomDockPadding = isKeyboardOpen
+        ? 8.0
+        : (NavConstants.navBarHeight +
+            NavConstants.navBarPadding.bottom +
+            safeBottom +
+            14.0);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: EdgeInsets.fromLTRB(14, 8, 14, bottomDockPadding),
       decoration: BoxDecoration(
         color: theme.surface,
         border: Border(top: BorderSide(color: theme.border, width: 1)),
@@ -2760,7 +3038,147 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  /// Bottom Input Bar with mic icon, text field, and send arrow button
+  /// Popup sheet for choosing attachment type: Camera, Gallery, Location, Voice
+  void _showAttachmentMenu(BuildContext context, ThemeProvider theme) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Attach & Share Offline',
+                style: TextStyle(
+                  color: theme.text,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildAttachmentOption(
+                    theme: theme,
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Camera',
+                    bgColor: AppTokens.signalYellow,
+                    iconColor: AppTokens.nightNavy,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImageFromSource(ImageSource.camera);
+                    },
+                  ),
+                  _buildAttachmentOption(
+                    theme: theme,
+                    icon: Icons.photo_library_rounded,
+                    label: 'Gallery',
+                    bgColor: AppTokens.beaconTeal,
+                    iconColor: Colors.white,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImageFromSource(ImageSource.gallery);
+                    },
+                  ),
+                  _buildAttachmentOption(
+                    theme: theme,
+                    icon: Icons.my_location_rounded,
+                    label: 'Location',
+                    bgColor: const Color(0xFF10B981),
+                    iconColor: Colors.white,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _shareCurrentLocation();
+                    },
+                  ),
+                  _buildAttachmentOption(
+                    theme: theme,
+                    icon: Icons.mic_rounded,
+                    label: 'Voice Note',
+                    bgColor: AppTokens.sosRed,
+                    iconColor: Colors.white,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _startVoiceRecording();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttachmentOption({
+    required ThemeProvider theme,
+    required IconData icon,
+    required String label,
+    required Color bgColor,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: bgColor.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: iconColor, size: 26),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: theme.text,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Modern Messenger Bottom Input Bar with clear dock clearance above floating nav dock
   Widget _buildInputBar(
     ThemeProvider theme,
     ChatService chatService,
@@ -2777,90 +3195,104 @@ class _ChatScreenState extends State<ChatScreen> {
         chatService.activeFilter == 'Group' ? groupService.selectedGroup : null;
     final hintText = activeGroup != null
         ? 'Message ${activeGroup.name}...'
-        : 'Type a message...';
+        : 'Type an emergency message...';
+
+    final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
+    final safeBottom = MediaQuery.of(context).padding.bottom;
+    final isKeyboardOpen = viewInsetsBottom > 0;
+    final bottomDockPadding = isKeyboardOpen
+        ? 8.0
+        : (NavConstants.navBarHeight +
+            NavConstants.navBarPadding.bottom +
+            safeBottom +
+            14.0);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.fromLTRB(12, 8, 12, bottomDockPadding),
       decoration: BoxDecoration(
         color: barBg,
         border: Border(top: BorderSide(color: theme.border, width: 1)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Expanded input pill
+          // Sleek pill container
           Expanded(
             child: Container(
-              height: 50,
+              constraints: const BoxConstraints(minHeight: 48, maxHeight: 120),
               decoration: BoxDecoration(
                 color: theme.surface,
-                borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-                border: Border.all(color: theme.border, width: 1),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: theme.borderStrong, width: 1.2),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Image attachment
+                  // Attachment action button (+ with quick popup)
                   IconButton(
-                    icon: Icon(
-                      Icons.image_outlined,
-                      color: theme.textMuted,
-                      size: 22,
+                    icon: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppTokens.signalYellow.withValues(alpha: 0.18),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        color: AppTokens.signalYellow,
+                        size: 20,
+                      ),
                     ),
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 40,
-                    ),
-                    tooltip: 'Send image offline',
-                    onPressed: _pickAndSendImage,
+                    tooltip: 'Add attachment (Camera, Gallery, Location, Voice)',
+                    onPressed: () => _showAttachmentMenu(context, theme),
                   ),
 
-                  // Location sharing
-                  IconButton(
-                    icon: Icon(
-                      Icons.my_location_outlined,
-                      color: theme.textMuted,
-                      size: 20,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 40,
-                    ),
-                    tooltip: 'Share emergency location',
-                    onPressed: _shareCurrentLocation,
-                  ),
-
-                  // Text input
+                  // Multi-line text field (minLines: 1, maxLines: 4)
                   Expanded(
-                    child: TextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      style: TextStyle(color: theme.text, fontSize: 15),
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _handleSendMessage(),
-                      decoration: InputDecoration(
-                        hintText: hintText,
-                        hintStyle: TextStyle(
-                          color: theme.textMuted,
-                          fontSize: 14,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: TextField(
+                        controller: _textController,
+                        focusNode: _focusNode,
+                        style: TextStyle(color: theme.text, fontSize: 15),
+                        minLines: 1,
+                        maxLines: 4,
+                        textInputAction: TextInputAction.newline,
+                        decoration: InputDecoration(
+                          hintText: hintText,
+                          hintStyle: TextStyle(
+                            color: theme.textMuted.withValues(alpha: 0.7),
+                            fontSize: 14.5,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 10,
+                          ),
                         ),
                       ),
                     ),
                   ),
 
-                  // Microphone Button (starts interactive voice note recording)
+                  // Quick Camera icon inside pill for instant emergency photo capture
+                  IconButton(
+                    icon: Icon(
+                      Icons.camera_alt_outlined,
+                      color: theme.textMuted,
+                      size: 21,
+                    ),
+                    tooltip: 'Take photo',
+                    onPressed: () => _pickImageFromSource(ImageSource.camera),
+                  ),
+
+                  // Quick Voice Mic icon inside pill for instant voice note
                   IconButton(
                     icon: Icon(
                       Icons.mic_none_rounded,
                       color: theme.textMuted,
-                      size: 22,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 40,
-                      minHeight: 40,
+                      size: 21,
                     ),
                     tooltip: 'Record offline voice note',
                     onPressed: _startVoiceRecording,
@@ -2871,21 +3303,29 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(width: 8),
 
-          // Send Button (50dp circular safety yellow button)
-          Material(
-            color: AppTokens.signalYellow,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () => _handleSendMessage(),
-              child: Container(
-                width: 50,
-                height: 50,
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.send_rounded,
-                  color: AppTokens.nightNavy,
-                  size: 22,
+          // Prominent Yellow Send FAB with tactile haptics
+          Padding(
+            padding: const EdgeInsets.only(bottom: 1),
+            child: Material(
+              color: AppTokens.signalYellow,
+              shape: const CircleBorder(),
+              elevation: 2,
+              shadowColor: AppTokens.signalYellow.withValues(alpha: 0.4),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _handleSendMessage();
+                },
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.send_rounded,
+                    color: AppTokens.nightNavy,
+                    size: 22,
+                  ),
                 ),
               ),
             ),

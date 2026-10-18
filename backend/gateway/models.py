@@ -125,6 +125,8 @@ class SightingCreate(BaseModel):
     notes: Optional[str] = None
     lat: Optional[float] = None
     lng: Optional[float] = None
+    photo_url: Optional[str] = None
+    photo_base64: Optional[str] = None
 
 
 class MissingPersonCreate(BaseModel):

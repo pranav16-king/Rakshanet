@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/app_config.dart';
@@ -1298,10 +1299,12 @@ class _ReportMissingPersonModalState extends State<_ReportMissingPersonModal> {
   final TextEditingController _locationCtrl = TextEditingController();
   final TextEditingController _descCtrl = TextEditingController();
   final TextEditingController _phoneCtrl = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
   String _gender = 'Male';
   double? _lat;
   double? _lng;
+  String? _photoPath;
   bool _isSaving = false;
 
   @override
@@ -1320,6 +1323,200 @@ class _ReportMissingPersonModalState extends State<_ReportMissingPersonModal> {
       _lng = 80.2707;
       _locationCtrl.text = 'Near Sector 3 Bridge (GPS: 13.0827, 80.2707)';
     });
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
+      );
+      if (picked != null && mounted) {
+        setState(() {
+          _photoPath = picked.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTokens.sosRed,
+            content: Text('Failed to select photo: $e'),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildPhotoUploadCard(ThemeProvider theme) {
+    if (_photoPath != null && File(_photoPath!).existsSync()) {
+      return Container(
+        height: 160,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.file(
+              File(_photoPath!),
+              fit: BoxFit.cover,
+            ),
+            // Top action bar
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.65),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                  tooltip: 'Remove photo',
+                  onPressed: () => setState(() => _photoPath = null),
+                ),
+              ),
+            ),
+            // Bottom info badge
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                color: Colors.black.withValues(alpha: 0.75),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 16),
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text(
+                        'Photo attached for Qdrant Biometrics & Mesh',
+                        style: TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => _pickPhoto(ImageSource.camera),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          'Retake',
+                          style: TextStyle(color: AppTokens.signalYellow, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: theme.surfaceSunken,
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        border: Border.all(color: theme.border, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTokens.signalYellow.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                ),
+                child: const Icon(
+                  Icons.add_a_photo_outlined,
+                  color: AppTokens.signalYellow,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Upload Person Photograph',
+                      style: TextStyle(
+                        color: theme.text,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Optional • Enables AI visual recognition & Qdrant vector search',
+                      style: TextStyle(
+                        color: theme.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTokens.signalYellow,
+                    foregroundColor: AppTokens.nightNavy,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                    ),
+                  ),
+                  icon: const Icon(Icons.camera_alt_rounded, size: 17),
+                  label: const Text(
+                    'Camera',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  onPressed: () => _pickPhoto(ImageSource.camera),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.text,
+                    side: BorderSide(color: theme.borderStrong),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                    ),
+                  ),
+                  icon: const Icon(Icons.photo_library_rounded, size: 17),
+                  label: const Text(
+                    'Gallery',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  onPressed: () => _pickPhoto(ImageSource.gallery),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -1358,6 +1555,11 @@ class _ReportMissingPersonModalState extends State<_ReportMissingPersonModal> {
                   ),
                 ],
               ),
+              const SizedBox(height: 14),
+
+              // Photograph Upload
+              _buildFieldLabel('Person Photograph (Recommended for AI Biometrics)', theme),
+              _buildPhotoUploadCard(theme),
               const SizedBox(height: 14),
 
               // Full Name
@@ -1505,7 +1707,7 @@ class _ReportMissingPersonModalState extends State<_ReportMissingPersonModal> {
                             _lng,
                             _descCtrl.text.trim(),
                             _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-                            null,
+                            _photoPath,
                           );
                           if (mounted) nav.pop();
                         },
@@ -1583,10 +1785,18 @@ class _ReportSightingModalState extends State<_ReportSightingModal> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _locationCtrl = TextEditingController();
   final TextEditingController _notesCtrl = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
   double? _lat;
   double? _lng;
+  String? _sightingPhotoPath;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sightingPhotoPath = widget.initialPhotoPath;
+  }
 
   @override
   void dispose() {
@@ -1601,6 +1811,164 @@ class _ReportSightingModalState extends State<_ReportSightingModal> {
       _lng = 80.2720;
       _locationCtrl.text = 'Sector 3 Shelter gate (GPS: 13.0840, 80.2720)';
     });
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
+      );
+      if (picked != null && mounted) {
+        setState(() {
+          _sightingPhotoPath = picked.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTokens.sosRed,
+            content: Text('Failed to select sighting photo: $e'),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildPhotoCard(ThemeProvider theme) {
+    if (_sightingPhotoPath != null && File(_sightingPhotoPath!).existsSync()) {
+      return Container(
+        height: 150,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.file(
+              File(_sightingPhotoPath!),
+              fit: BoxFit.cover,
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.65),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                  tooltip: 'Remove photo',
+                  onPressed: () => setState(() => _sightingPhotoPath = null),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                color: Colors.black.withValues(alpha: 0.75),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 16),
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text(
+                        'Sighting photo attached',
+                        style: TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => _pickPhoto(ImageSource.camera),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          'Retake',
+                          style: TextStyle(color: AppTokens.signalYellow, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.surfaceSunken,
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        border: Border.all(color: theme.border, width: 1.2),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+            ),
+            child: const Icon(
+              Icons.camera_alt_outlined,
+              color: Color(0xFF10B981),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Attach Field Photo of Sighting',
+              style: TextStyle(
+                color: theme.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+              ),
+            ),
+            icon: const Icon(Icons.camera_alt_rounded, size: 15),
+            label: const Text('Camera', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            onPressed: () => _pickPhoto(ImageSource.camera),
+          ),
+          const SizedBox(width: 6),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: theme.text,
+              side: BorderSide(color: theme.borderStrong),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+              ),
+            ),
+            child: const Text('Gallery', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+            onPressed: () => _pickPhoto(ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -1647,6 +2015,13 @@ class _ReportSightingModalState extends State<_ReportSightingModal> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: 14),
+
+              // Sighting Photo
+              Text('Sighting Photo (Optional)',
+                  style: TextStyle(color: theme.textMuted, fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              _buildPhotoCard(theme),
               const SizedBox(height: 14),
 
               // Location
@@ -1733,7 +2108,7 @@ class _ReportSightingModalState extends State<_ReportSightingModal> {
                             _lat,
                             _lng,
                             _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-                            widget.initialPhotoPath,
+                            _sightingPhotoPath,
                           );
                           if (mounted) nav.pop();
                         },
