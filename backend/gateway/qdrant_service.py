@@ -17,10 +17,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import cv2
+import httpx
 import numpy as np
 from dotenv import load_dotenv
 from PIL import Image
-from qdrant_client import QdrantClient, models
 
 # Load environment configuration
 backend_env = Path(__file__).parent.parent / ".env"
@@ -199,8 +199,64 @@ def extract_image_features(image_bytes: bytes) -> List[float]:
     return embedding.tolist()
 
 
+class CollectionConfig:
+    def __init__(self, data: dict):
+        params = data.get("params", {})
+        vectors = params.get("vectors", {})
+        if isinstance(vectors, dict):
+            size = vectors.get("size", 512)
+            distance = vectors.get("distance", "Cosine")
+        else:
+            size = 512
+            distance = "Cosine"
+        self.params = type("Params", (), {
+            "vectors": type("Vectors", (), {
+                "size": size,
+                "distance": distance,
+            })()
+        })()
+
+
+class CollectionInfo:
+    def __init__(self, data: dict):
+        result = data.get("result", {})
+        self.status = result.get("status", "ok")
+        self.points_count = result.get("points_count", 0)
+        self.config = CollectionConfig(result.get("config", {}))
+
+
+class QdrantHttpClient:
+    def __init__(self, base_url: str, api_key: str, timeout: float = 30.0):
+        self.http = httpx.Client(
+            base_url=base_url,
+            headers={"api-key": api_key, "Content-Type": "application/json"},
+            timeout=timeout,
+        )
+
+    def collection_exists(self, collection_name: str) -> bool:
+        res = self.http.get(f"/collections/{collection_name}")
+        return res.is_success and bool(res.json().get("result"))
+
+    def get_collection(self, collection_name: str) -> CollectionInfo:
+        res = self.http.get(f"/collections/{collection_name}")
+        res.raise_for_status()
+        return CollectionInfo(res.json())
+
+    def get(self, *args, **kwargs):
+        return self.http.get(*args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        return self.http.post(*args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        return self.http.put(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self.http.delete(*args, **kwargs)
+
+
 class QdrantService:
-    """Production client for Qdrant Cloud Vector Database visual search."""
+    """Production client for Qdrant Cloud Vector Database visual search (REST API)."""
 
     def __init__(
         self,
@@ -209,14 +265,14 @@ class QdrantService:
         collection_name: str = COLLECTION_NAME,
         vector_size: int = VECTOR_SIZE,
     ):
-        self.url = url or os.getenv("QDRANT_URL", DEFAULT_QDRANT_URL)
+        self.url = (url or os.getenv("QDRANT_URL", DEFAULT_QDRANT_URL)).rstrip("/")
         self.api_key = api_key or os.getenv("QDRANT_API_KEY", DEFAULT_QDRANT_API_KEY)
         self.collection_name = collection_name
         self.vector_size = vector_size
 
         logger.info(f"Connecting to Qdrant Vector Cloud: {self.url} (collection='{self.collection_name}')")
-        self.client = QdrantClient(
-            url=self.url,
+        self.client = QdrantHttpClient(
+            base_url=self.url,
             api_key=self.api_key,
             timeout=30.0,
         )
@@ -225,15 +281,17 @@ class QdrantService:
     def _ensure_collection(self) -> None:
         """Verify that the vector collection exists; create it with COSINE metric if missing."""
         try:
-            if not self.client.collection_exists(self.collection_name):
+            res = self.client.get(f"/collections/{self.collection_name}")
+            if res.status_code == 404 or (res.is_success and not res.json().get("result")):
                 logger.info(f"Creating Qdrant collection '{self.collection_name}' (dim={self.vector_size}, metric=COSINE)...")
-                self.client.create_collection(
-                    collection_name=self.collection_name,
-                    vectors_config=models.VectorParams(
-                        size=self.vector_size,
-                        distance=models.Distance.COSINE,
-                    ),
-                )
+                create_payload = {
+                    "vectors": {
+                        "size": self.vector_size,
+                        "distance": "Cosine",
+                    }
+                }
+                create_res = self.client.put(f"/collections/{self.collection_name}", json=create_payload)
+                create_res.raise_for_status()
                 logger.info(f"Collection '{self.collection_name}' successfully provisioned.")
             else:
                 logger.info(f"Collection '{self.collection_name}' is verified and operational.")
@@ -266,17 +324,19 @@ class QdrantService:
             payload["person_id"] = str(person_id)
             payload["indexed_at"] = int(time.time() * 1000)
 
-            point = models.PointStruct(
-                id=point_id,
-                vector=vector,
-                payload=payload,
-            )
+            body = {
+                "points": [
+                    {
+                        "id": point_id,
+                        "vector": vector,
+                        "payload": payload,
+                    }
+                ]
+            }
 
-            response = self.client.upsert(
-                collection_name=self.collection_name,
-                points=[point],
-            )
-            logger.info(f"Indexed photo vector for person '{person_id}' (point_id='{point_id}'): {response.status}")
+            res = self.client.put(f"/collections/{self.collection_name}/points?wait=true", json=body)
+            res.raise_for_status()
+            logger.info(f"Indexed photo vector for person '{person_id}' (point_id='{point_id}'): {res.status_code}")
             return True
         except Exception as e:
             logger.error(f"Error upserting photo for person '{person_id}': {e}", exc_info=True)
@@ -302,24 +362,27 @@ class QdrantService:
         try:
             query_vector = extract_image_features(image_bytes)
 
-            query_response = self.client.query_points(
-                collection_name=self.collection_name,
-                query=query_vector,
-                limit=top_k,
-                score_threshold=score_threshold,
-                with_payload=True,
-            )
+            body = {
+                "vector": query_vector,
+                "limit": top_k,
+                "score_threshold": score_threshold,
+                "with_payload": True,
+            }
+
+            res = self.client.post(f"/collections/{self.collection_name}/points/search", json=body)
+            res.raise_for_status()
+            data = res.json().get("result", [])
 
             results: List[Dict[str, Any]] = []
-            for pt in query_response.points:
-                payload = dict(pt.payload or {})
-                person_id = payload.get("person_id") or str(pt.id)
-                score = round(float(pt.score), 4)
+            for pt in data:
+                payload = dict(pt.get("payload") or {})
+                person_id = payload.get("person_id") or str(pt.get("id"))
+                score = round(float(pt.get("score", 0.0)), 4)
 
                 results.append({
                     "person_id": person_id,
                     "score": score,
-                    "point_id": str(pt.id),
+                    "point_id": str(pt.get("id")),
                     "name": payload.get("name"),
                     "age": payload.get("age"),
                     "gender": payload.get("gender"),
@@ -339,10 +402,9 @@ class QdrantService:
         """Remove a person's photo vector from the index."""
         try:
             point_id = to_point_uuid(person_id)
-            self.client.delete(
-                collection_name=self.collection_name,
-                points_selector=models.PointIdsList(points=[point_id]),
-            )
+            body = {"points": [point_id]}
+            res = self.client.post(f"/collections/{self.collection_name}/points/delete?wait=true", json=body)
+            res.raise_for_status()
             logger.info(f"Deleted vector for person '{person_id}' (point_id='{point_id}')")
             return True
         except Exception as e:
@@ -352,8 +414,10 @@ class QdrantService:
     def count_indexed_photos(self) -> int:
         """Return the total number of indexed vectors in the collection."""
         try:
-            info = self.client.get_collection(self.collection_name)
-            return info.points_count or 0
+            res = self.client.get(f"/collections/{self.collection_name}")
+            if res.is_success:
+                return res.json().get("result", {}).get("points_count", 0)
+            return 0
         except Exception as e:
             logger.error(f"Failed to get collection count: {e}")
             return 0
