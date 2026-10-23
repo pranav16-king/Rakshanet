@@ -216,7 +216,7 @@ class OfflineStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.secondarySurface,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -229,8 +229,8 @@ class OfflineStatusCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(
               color: AppColors.success.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -241,7 +241,7 @@ class OfflineStatusCard extends StatelessWidget {
             child: const Icon(
               Icons.verified_user_outlined,
               color: AppColors.success,
-              size: 20,
+              size: 16,
             ),
           ),
           const SizedBox(width: 10),
@@ -257,7 +257,7 @@ class OfflineStatusCard extends StatelessWidget {
                       'Offline Ready',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 13.5,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -269,31 +269,14 @@ class OfflineStatusCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 const Text(
-                  'Your emergency information is stored securely on this device.',
+                  'No cloud connection required',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 11.5,
-                    height: 1.3,
+                    fontSize: 11,
+                    height: 1.25,
                   ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: const [
-                    Icon(
-                      Icons.cloud_off_outlined,
-                      size: 11,
-                      color: AppColors.cyan,
-                    ),
-                    SizedBox(width: 4),
-                    Text(
-                      'No cloud connection required',
-                      style: TextStyle(
-                        color: AppColors.cyan,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),

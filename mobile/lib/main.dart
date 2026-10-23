@@ -16,6 +16,7 @@ import 'providers/telemetry_provider.dart';
 import 'services/chat_service.dart';
 import 'services/device_identity_service.dart';
 import 'widgets/global_sos_overlay.dart';
+import 'screens/onboarding/emergency_mesh_intro_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/profile/profile_setup_screen.dart';
 import 'screens/shell/main_shell.dart';
@@ -82,6 +83,7 @@ class RakshaNetApp extends StatelessWidget {
       routes: {
         '/splash': (_) => const SplashScreen(),
         '/profile-setup': (_) => const ProfileSetupScreen(),
+        '/emergency-mesh-intro': (_) => const EmergencyMeshIntroScreen(),
         '/main': (_) => const MainShell(),
         '/profile': (_) => const ProfileScreen(),
         '/shelters': (_) => const SheltersScreen(),

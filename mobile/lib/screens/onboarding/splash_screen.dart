@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 
 import '../../database/app_database.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../services/user_auth_service.dart';
 import '../../theme/app_tokens.dart';
+import '../profile/profile_setup_screen.dart';
 import '../shell/main_shell.dart';
 
 enum StartupPhase {
@@ -149,8 +151,9 @@ class _SplashScreenState extends State<SplashScreen>
       _statusMessage = 'Loading emergency services';
       _progressValue = 0.90;
     });
+    bool offlineLoginAvailable = false;
     try {
-      await UserAuthService.instance
+      offlineLoginAvailable = await UserAuthService.instance
           .checkOfflineLoginAvailable()
           .timeout(const Duration(milliseconds: 400), onTimeout: () => false);
     } catch (e) {
@@ -168,20 +171,39 @@ class _SplashScreenState extends State<SplashScreen>
     await _safeDelay(const Duration(milliseconds: 380));
     if (!mounted) return;
 
-    // Phase 6: HOME
-    _transitionToHome();
+    // Phase 6: HOME / ONBOARDING ROUTE
+    _transitionToNextScreen(offlineLoginAvailable);
   }
 
-  void _transitionToHome() {
+  void _transitionToNextScreen(bool offlineLoginAvailable) {
     if (!mounted || _isNavigating) return;
     setState(() => _isNavigating = true);
 
     // Non-blocking opportunistic sync in background
     UserAuthService.instance.syncNow();
 
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    final userProfileProvider =
+        Provider.of<UserProfileProvider>(context, listen: false);
+
+    final bool isRegistered = offlineLoginAvailable ||
+        (profileProvider.isRegistered &&
+            profileProvider.profile.id.trim().isNotEmpty &&
+            profileProvider.profile.id != 'unregistered' &&
+            profileProvider.profile.name.trim().isNotEmpty) ||
+        (userProfileProvider.isRegistered &&
+            userProfileProvider.profile?.id.trim().isNotEmpty == true &&
+            userProfileProvider.profile?.id != 'unregistered' &&
+            userProfileProvider.profile?.name.trim().isNotEmpty == true);
+
+    final Widget targetScreen = isRegistered
+        ? const MainShell()
+        : const ProfileSetupScreen();
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, _, _) => const MainShell(),
+        pageBuilder: (_, _, _) => targetScreen,
         transitionsBuilder: (_, animation, _, child) => FadeTransition(
           opacity: CurvedAnimation(
             parent: animation,

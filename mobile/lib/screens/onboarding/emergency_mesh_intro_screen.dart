@@ -135,6 +135,14 @@ class _EmergencyMeshIntroScreenState extends State<EmergencyMeshIntroScreen>
     );
   }
 
+  void _handleBack() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      _navigateToMainShell();
+    }
+  }
+
   MeshScreenStatus _resolveStatus({
     required MeshProvider mesh,
     required bool isInitializing,
@@ -336,7 +344,7 @@ class _EmergencyMeshIntroScreenState extends State<EmergencyMeshIntroScreen>
             button: true,
             label: 'Back to safety hub',
             child: InkWell(
-              onTap: _navigateToMainShell,
+              onTap: _handleBack,
               borderRadius: BorderRadius.circular(AppRadius.sm),
               child: Container(
                 width: 44,

@@ -12,6 +12,7 @@ import 'package:rakshanet_mobile/providers/device_status_provider.dart';
 import 'package:rakshanet_mobile/providers/emergency_report_provider.dart';
 import 'package:rakshanet_mobile/providers/missing_persons_provider.dart';
 import 'package:rakshanet_mobile/providers/sos_provider.dart';
+import 'package:rakshanet_mobile/services/call_session_controller.dart';
 import 'package:rakshanet_mobile/services/chat_service.dart';
 import 'package:rakshanet_mobile/services/group_service.dart';
 import 'package:rakshanet_mobile/services/user_auth_service.dart';
@@ -36,6 +37,7 @@ void main() {
           ChangeNotifierProvider<ChatService>.value(value: chatService),
           ChangeNotifierProvider(create: (_) => GroupService()),
           ChangeNotifierProvider(create: (_) => UserAuthService.instance),
+          ChangeNotifierProvider(create: (_) => CallSessionController()),
           ChangeNotifierProvider(create: (_) => DeviceStatusProvider()),
           ChangeNotifierProvider(create: (_) => EmergencyReportProvider()),
           ChangeNotifierProvider(create: (_) => MissingPersonsProvider()),

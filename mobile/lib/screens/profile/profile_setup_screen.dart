@@ -515,7 +515,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         AppSpacing.md,
         AppSpacing.xs,
         AppSpacing.md,
-        AppSpacing.xxl + 40,
+        AppSpacing.xxl + 80,
       ),
       child: Form(
         key: _formKey,
@@ -527,25 +527,25 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               'Emergency Profile Setup',
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.2,
               ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             const Text(
               'Only your Full Name and verified Mobile IMEI Unique ID are required. All other fields are optional.',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 12.5,
-                height: 1.35,
+                fontSize: 12,
+                height: 1.3,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
             // Offline Status Card
             const OfflineStatusCard(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             // =========================================================
             // SECTION 1: MANDATORY IDENTITY (NAME + MOBILE IMEI UNIQUE ID)
@@ -576,7 +576,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
                   // 2. MANDATORY: Mobile IMEI ID (Read-Only, No Manual Entry, Auto-Fill via Button after Privacy Confirmation)
                   AppTextField(
@@ -597,7 +597,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
                   // Dedicated Detect & Auto-Fill Mobile IMEI Button
                   SizedBox(
