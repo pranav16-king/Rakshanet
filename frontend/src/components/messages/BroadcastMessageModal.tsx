@@ -16,7 +16,7 @@ export const BroadcastMessageModal: React.FC<BroadcastMessageModalProps> = ({
   const [recipient, setRecipient] = useState<BroadcastMessagePayload['recipientGroup']>('all');
   const [text, setText] = useState('');
   const [priority, setPriority] = useState<BroadcastMessagePayload['priority']>('NORMAL');
-  const [location, setLocation] = useState('Uttarakhand Sector HQ');
+  const [location, setLocation] = useState('Sector 4B Riverside Colony');
   const [isSending, setIsSending] = useState(false);
 
   if (!isOpen) return null;

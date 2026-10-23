@@ -29,13 +29,13 @@ export const IncidentTimelineTab: React.FC<IncidentTimelineTabProps> = ({ timeli
   return (
     <div
       className={`p-6 rounded-xl border transition-colors shadow-sm ${
-        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
       }`}
     >
       <div className="mb-6">
         <h3
           className={`font-display font-bold text-lg ${
-            isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+            isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
           }`}
         >
           Incident Lifecycle & Telemetry Timeline
@@ -59,13 +59,13 @@ export const IncidentTimelineTab: React.FC<IncidentTimelineTabProps> = ({ timeli
 
             <div
               className={`p-4 rounded-xl border transition-colors ${
-                isDark ? 'bg-[#0E1627] border-[#26344F]' : 'bg-[#FFF5C2]/40 border-[#E6DCA8]'
+                isDark ? 'bg-[#0E1627] border-[#26344F]' : 'bg-[#F1F5F9]/40 border-[#E2E8F0]'
               }`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`font-bold text-xs ${isDark ? 'text-white' : 'text-[#16202D]'}`}
+                    className={`font-bold text-xs ${isDark ? 'text-white' : 'text-[#0F172A]'}`}
                   >
                     {item.title}
                   </span>

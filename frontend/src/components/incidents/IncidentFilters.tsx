@@ -41,13 +41,13 @@ export const IncidentFilters: React.FC<IncidentFiltersProps> = ({ filters, onCha
   const selectClasses = `px-3 py-2 text-xs font-semibold rounded-lg border outline-none transition-colors cursor-pointer ${
     isDark
       ? 'bg-[#162036] border-[#26344F] text-[#EEF2F8] focus:border-[#FFD21F]'
-      : 'bg-[#FFFFFF] border-[#E6DCA8] text-[#16202D] focus:border-[#FFC400]'
+      : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#0F172A] focus:border-[#FFC400]'
   }`;
 
   return (
     <div
       className={`p-4 rounded-xl border mb-6 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between transition-colors shadow-sm ${
-        isDark ? 'bg-[#111A2C] border-[#26344F]' : 'bg-[#FFFFFF] border-[#E6DCA8]'
+        isDark ? 'bg-[#111A2C] border-[#26344F]' : 'bg-[#FFFFFF] border-[#E2E8F0]'
       }`}
     >
       {/* Search Input */}
@@ -55,7 +55,7 @@ export const IncidentFilters: React.FC<IncidentFiltersProps> = ({ filters, onCha
         <Search
           size={16}
           className={`absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none ${
-            isDark ? 'text-[#9FADC2]' : 'text-[#566070]'
+            isDark ? 'text-[#9FADC2]' : 'text-[#64748B]'
           }`}
         />
         <input
@@ -66,7 +66,7 @@ export const IncidentFilters: React.FC<IncidentFiltersProps> = ({ filters, onCha
           className={`w-full pl-10 pr-4 py-2 text-xs rounded-lg border outline-none transition-colors ${
             isDark
               ? 'bg-[#0E1627] border-[#26344F] text-[#EEF2F8] placeholder-[#5F6E86] focus:border-[#FFD21F]'
-              : 'bg-[#F6F0D4] border-[#E6DCA8] text-[#16202D] placeholder-[#9AA1AB] focus:border-[#FFC400]'
+              : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] focus:border-[#FFC400]'
           }`}
         />
       </div>
@@ -128,7 +128,7 @@ export const IncidentFilters: React.FC<IncidentFiltersProps> = ({ filters, onCha
           className={`p-2 rounded-lg border transition-colors flex items-center justify-center ${
             isDark
               ? 'bg-[#162036] border-[#26344F] text-[#9FADC2] hover:text-[#EEF2F8] hover:bg-[#1f2d4d]'
-              : 'bg-[#F6F0D4] border-[#E6DCA8] text-[#566070] hover:text-[#16202D] hover:bg-[#ebdca8]'
+              : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2E8F0]'
           }`}
           aria-label="Reset filters"
         >

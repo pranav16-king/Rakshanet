@@ -5,7 +5,7 @@ import { CommandHeader } from './CommandHeader';
 
 export const CommandLayout: React.FC = () => {
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#FFFCEB] dark:bg-[#0B1220] text-[#16202D] dark:text-[#EEF2F8] transition-colors">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] dark:bg-[#0B1220] text-[#0F172A] dark:text-[#EEF2F8] transition-colors">
       {/* Zone 1: Left Navigation Sidebar */}
       <CommandSidebar />
 

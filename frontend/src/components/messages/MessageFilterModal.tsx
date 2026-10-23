@@ -115,10 +115,13 @@ export const MessageFilterModal: React.FC<MessageFilterModalProps> = ({
               onChange={(e) => setLocation(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#FFC400]"
             >
-              <option value="all">All Regions</option>
-              <option value="Uttarakhand">Uttarakhand</option>
-              <option value="Himachal Pradesh">Himachal Pradesh</option>
-              <option value="Delhi">Delhi</option>
+              <option value="all">All Sectors</option>
+              <option value="Sector 4B Riverside Colony">Sector 4B Riverside Colony (Ward 14)</option>
+              <option value="South Market Commercial Plaza">South Market Commercial Plaza</option>
+              <option value="NH-48 Mountain Pass km 74">NH-48 Mountain Pass km 74</option>
+              <option value="Kovalam Coast Sector 1">Kovalam Coast Sector 1</option>
+              <option value="Industrial Park Gate 3">Industrial Park Gate 3</option>
+              <option value="Guindy Metro Relief Shelter">Guindy Metro Relief Shelter</option>
             </select>
           </div>
 

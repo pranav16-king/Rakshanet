@@ -45,7 +45,7 @@ export const StatusDot: React.FC<StatusDotProps> = ({
       glow: 'shadow-[0_0_8px_rgba(60,198,208,0.6)]',
     },
     gray: {
-      bg: 'bg-[#566070] dark:bg-[#9FADC2]',
+      bg: 'bg-[#64748B] dark:bg-[#9FADC2]',
       ping: 'bg-[#9FADC2]',
       glow: 'shadow-none',
     },
@@ -66,7 +66,7 @@ export const StatusDot: React.FC<StatusDotProps> = ({
         />
       </span>
       {label && (
-        <span className="text-xs font-medium text-[#566070] dark:text-[#9FADC2]">
+        <span className="text-xs font-medium text-[#64748B] dark:text-[#9FADC2]">
           {label}
         </span>
       )}

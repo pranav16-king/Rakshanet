@@ -14,13 +14,13 @@ export const IncidentDescriptionCard: React.FC<IncidentDescriptionCardProps> = (
   return (
     <div
       className={`p-5 rounded-xl border transition-colors shadow-sm ${
-        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
       }`}
     >
       <div className="flex items-center justify-between mb-2">
         <h3
           className={`font-display font-bold text-base tracking-tight ${
-            isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+            isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
           }`}
         >
           Description
@@ -42,7 +42,7 @@ export const IncidentDescriptionCard: React.FC<IncidentDescriptionCardProps> = (
       {expanded && (
         <div
           className={`mt-4 pt-3 border-t text-xs space-y-2 font-mono ${
-            isDark ? 'border-[#26344F] text-[#9FADC2]' : 'border-[#E6DCA8] text-[#566070]'
+            isDark ? 'border-[#26344F] text-[#9FADC2]' : 'border-[#E2E8F0] text-[#64748B]'
           }`}
         >
           <div className="font-bold text-[#FFC400] text-[11px] uppercase tracking-wider">
@@ -73,7 +73,7 @@ export const IncidentDescriptionCard: React.FC<IncidentDescriptionCardProps> = (
           className={`text-xs font-semibold flex items-center gap-1 transition-colors ${
             isDark
               ? 'text-[#3CC6D0] hover:text-white'
-              : 'text-[#0E8A94] hover:text-[#16202D]'
+              : 'text-[#0E8A94] hover:text-[#0F172A]'
           }`}
         >
           <span>{expanded ? 'Hide sub-reports' : 'View all reports'}</span>

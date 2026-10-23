@@ -27,15 +27,15 @@ export const IncidentPagination: React.FC<IncidentPaginationProps> = ({
   return (
     <div
       className={`px-4 py-3.5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs transition-colors ${
-        isDark ? 'border-[#26344F] text-[#9FADC2]' : 'border-[#E6DCA8] text-[#566070]'
+        isDark ? 'border-[#26344F] text-[#9FADC2]' : 'border-[#E2E8F0] text-[#64748B]'
       }`}
     >
       {/* Total count and page size selector */}
       <div className="flex items-center gap-3">
         <span>
-          Showing <strong className={isDark ? 'text-white' : 'text-[#16202D]'}>{startItem}</strong> to{' '}
-          <strong className={isDark ? 'text-white' : 'text-[#16202D]'}>{endItem}</strong> of{' '}
-          <strong className={isDark ? 'text-white' : 'text-[#16202D]'}>{totalCount}</strong> incidents
+          Showing <strong className={isDark ? 'text-white' : 'text-[#0F172A]'}>{startItem}</strong> to{' '}
+          <strong className={isDark ? 'text-white' : 'text-[#0F172A]'}>{endItem}</strong> of{' '}
+          <strong className={isDark ? 'text-white' : 'text-[#0F172A]'}>{totalCount}</strong> incidents
         </span>
         <div className="flex items-center gap-1.5 pl-2 border-l border-inherit">
           <span>Rows:</span>
@@ -46,7 +46,7 @@ export const IncidentPagination: React.FC<IncidentPaginationProps> = ({
             className={`px-2 py-1 rounded border font-semibold outline-none cursor-pointer ${
               isDark
                 ? 'bg-[#162036] border-[#26344F] text-[#EEF2F8]'
-                : 'bg-white border-[#E6DCA8] text-[#16202D]'
+                : 'bg-white border-[#E2E8F0] text-[#0F172A]'
             }`}
           >
             <option value={5}>5</option>
@@ -69,7 +69,7 @@ export const IncidentPagination: React.FC<IncidentPaginationProps> = ({
               ? 'opacity-40 cursor-not-allowed border-transparent'
               : isDark
               ? 'bg-[#162036] border-[#26344F] text-[#EEF2F8] hover:bg-[#1f2d4d]'
-              : 'bg-white border-[#E6DCA8] text-[#16202D] hover:bg-[#FFF5C2]'
+              : 'bg-white border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9]'
           }`}
         >
           <ChevronLeft size={16} />
@@ -89,7 +89,7 @@ export const IncidentPagination: React.FC<IncidentPaginationProps> = ({
               ? 'opacity-40 cursor-not-allowed border-transparent'
               : isDark
               ? 'bg-[#162036] border-[#26344F] text-[#EEF2F8] hover:bg-[#1f2d4d]'
-              : 'bg-white border-[#E6DCA8] text-[#16202D] hover:bg-[#FFF5C2]'
+              : 'bg-white border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9]'
           }`}
         >
           <ChevronRight size={16} />

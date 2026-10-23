@@ -68,7 +68,7 @@ const GATEWAY_FLOW_DEFAULTS = {
 } as const;
 
 // RakshaNet pale hi-vis light paper tint per design.md Section 8
-const LIGHT_PAPER = "#FFFCEB";
+const LIGHT_PAPER = "#F8FAFC";
 const DARK_NAVY = "#0B1220";
 
 function clamp(value: number, minimum: number, maximum: number) {
@@ -313,7 +313,7 @@ const GATEWAY_FLOW_DEFINITION: EffectDefinition = {
       next = next
         .replace(
           "bg-[#0B1220]",
-          "bg-[#FFFCEB]",
+          "bg-[#F8FAFC]",
         )
         .replace(
           "ctx.strokeStyle = 'rgba(255, 210, 31, 0.35)';",
@@ -331,7 +331,7 @@ const GATEWAY_FLOW_DEFINITION: EffectDefinition = {
       next = next
         .replace(/bg-\[#0B1220\]/g, "bg-transparent")
         .replace(/bg-black/g, "bg-transparent")
-        .replace(/bg-\[#FFFCEB\]/g, "bg-transparent");
+        .replace(/bg-\[#F8FAFC\]/g, "bg-transparent");
     }
     return next;
   },

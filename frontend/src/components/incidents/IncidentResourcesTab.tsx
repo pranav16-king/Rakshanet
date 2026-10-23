@@ -19,14 +19,14 @@ export const IncidentResourcesTab: React.FC<IncidentResourcesTabProps> = ({
   return (
     <div
       className={`p-6 rounded-xl border transition-colors shadow-sm space-y-6 ${
-        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
       }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3
             className={`font-display font-bold text-lg ${
-              isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+              isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
             }`}
           >
             Tactical Resources & Mutual Aid Dispatch
@@ -93,7 +93,7 @@ export const IncidentResourcesTab: React.FC<IncidentResourcesTabProps> = ({
             <div
               key={res.id}
               className={`p-4 rounded-xl border flex items-center justify-between ${
-                isDark ? 'bg-[#0E1627] border-[#26344F]' : 'bg-[#FFF5C2]/40 border-[#E6DCA8]'
+                isDark ? 'bg-[#0E1627] border-[#26344F]' : 'bg-[#F1F5F9]/40 border-[#E2E8F0]'
               }`}
             >
               <div>

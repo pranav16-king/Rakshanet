@@ -54,7 +54,7 @@ export const ResourcesNeededCard: React.FC<ResourcesNeededCardProps> = ({
         case 'shelter':
           return 'bg-[#F0EBFF]/80 border-[#7A4DD8]/30';
         default:
-          return 'bg-[#FFFFFF] border-[#E6DCA8]';
+          return 'bg-[#FFFFFF] border-[#E2E8F0]';
       }
     }
   };
@@ -62,13 +62,13 @@ export const ResourcesNeededCard: React.FC<ResourcesNeededCardProps> = ({
   return (
     <div
       className={`p-5 rounded-xl border transition-colors shadow-sm ${
-        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
       }`}
     >
       <div className="flex items-center justify-between mb-4">
         <h3
           className={`font-display font-bold text-base tracking-tight ${
-            isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+            isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
           }`}
         >
           Resources Needed
@@ -91,7 +91,7 @@ export const ResourcesNeededCard: React.FC<ResourcesNeededCardProps> = ({
             <div className="min-w-0 flex-1">
               <div
                 className={`text-xs font-semibold truncate ${
-                  isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+                  isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
                 }`}
               >
                 {res.title}
@@ -110,7 +110,7 @@ export const ResourcesNeededCard: React.FC<ResourcesNeededCardProps> = ({
             type="button"
             onClick={onManageResources}
             className={`text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-              isDark ? 'text-[#FFD21F] hover:text-white' : 'text-[#8A5A00] hover:text-[#16202D]'
+              isDark ? 'text-[#FFD21F] hover:text-white' : 'text-[#8A5A00] hover:text-[#0F172A]'
             }`}
           >
             <Plus size={14} />

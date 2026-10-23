@@ -19,7 +19,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({ childr
           ? 'bg-black text-[#EEF2F8]'
           : isDark
           ? 'bg-[#0B1220] text-[#EEF2F8]'
-          : 'bg-[#FFFCEB] text-[#16202D]'
+          : 'bg-[#F8FAFC] text-[#0F172A]'
       }`}
     >
       {/* Navigation Sidebar */}

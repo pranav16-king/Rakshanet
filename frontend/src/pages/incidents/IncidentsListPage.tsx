@@ -123,7 +123,7 @@ export const IncidentsListPage: React.FC = () => {
         <div>
           <h1
             className={`font-display font-bold text-2xl tracking-tight ${
-              isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+              isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
             }`}
           >
             Incident Command & Triage
@@ -141,7 +141,7 @@ export const IncidentsListPage: React.FC = () => {
             className={`p-2.5 rounded-lg border transition-all flex items-center gap-2 text-xs font-semibold ${
               isDark
                 ? 'bg-[#162036] border-[#26344F] text-[#EEF2F8] hover:bg-[#1f2d4d]'
-                : 'bg-white border-[#E6DCA8] text-[#16202D] hover:bg-[#FFF5C2]'
+                : 'bg-white border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9]'
             }`}
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -154,7 +154,7 @@ export const IncidentsListPage: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div
           className={`p-4 rounded-xl border transition-colors ${
-            isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+            isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
@@ -182,7 +182,7 @@ export const IncidentsListPage: React.FC = () => {
 
         <div
           className={`p-4 rounded-xl border transition-colors ${
-            isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+            isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
@@ -195,7 +195,7 @@ export const IncidentsListPage: React.FC = () => {
 
         <div
           className={`p-4 rounded-xl border transition-colors ${
-            isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+            isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
@@ -217,7 +217,7 @@ export const IncidentsListPage: React.FC = () => {
       {/* Main Table Card */}
       <div
         className={`rounded-xl border shadow-sm transition-colors overflow-hidden ${
-          isDark ? 'bg-[#111A2C] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+          isDark ? 'bg-[#111A2C] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
         }`}
       >
         <IncidentTable

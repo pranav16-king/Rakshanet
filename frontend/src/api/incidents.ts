@@ -20,25 +20,25 @@ import type {
 export const INC_PRIMARY: Incident = {
   id: 'INC-2025-001',
   incident_id: 'INC-2025-001',
-  title: 'Flood in River Area',
+  title: 'Severe Flash Flooding & Trapped Residents - Ward 14',
   type: 'Flood',
   severity: 'CRITICAL',
   status: 'Active',
   affectedPeople: 142,
   devicesCount: 28,
-  location: 'Uttarakhand, India',
+  location: 'Sector 4B Riverside Colony (Ward 14 Flash Flood Zone)',
   coordinates: {
-    lat: 30.1458,
-    lng: 78.2982,
+    lat: 13.0425,
+    lng: 80.2285,
   },
   affectedAreaKm2: 12.0,
   clusterRadiusMeters: 1950,
   polygonCoords: [
-    [30.155, 78.285],
-    [30.162, 78.305],
-    [30.148, 78.322],
-    [30.132, 78.312],
-    [30.138, 78.289],
+    [13.0515, 80.2215],
+    [13.0585, 80.235],
+    [13.0445, 80.242],
+    [13.0315, 80.231],
+    [13.0375, 80.219],
   ],
   reportedBy: 'Multiple users',
   firstReported: '12 min ago',
@@ -146,21 +146,21 @@ const SEED_INCIDENTS: Incident[] = [
   {
     id: 'INC-2025-002',
     incident_id: 'INC-2025-002',
-    title: 'Landslide on NH-7 Highway Pass',
+    title: 'Hillside Highway Landslide & Road Blockage',
     type: 'Landslide',
     severity: 'HIGH',
     status: 'Active',
     affectedPeople: 45,
     devicesCount: 9,
-    location: 'Himachal Pradesh, India',
-    coordinates: { lat: 31.1048, lng: 77.1734 },
+    location: 'NH-48 Mountain Pass km 74 (Landslide Corridor)',
+    coordinates: { lat: 12.932, lng: 80.125 },
     affectedAreaKm2: 4.5,
     clusterRadiusMeters: 850,
     polygonCoords: [
-      [31.11, 77.168],
-      [31.115, 77.178],
-      [31.102, 77.182],
-      [31.098, 77.17],
+      [12.937, 80.12],
+      [12.942, 80.13],
+      [12.929, 80.134],
+      [12.925, 80.122],
     ],
     reportedBy: 'Bus Driver & 8 passengers',
     firstReported: '26 min ago',
@@ -170,7 +170,7 @@ const SEED_INCIDENTS: Incident[] = [
     assignedTeam: 'SDRF High-Clearance 4WD 02',
     assignedUnitId: 'SDRF-4WD-02',
     description:
-      'Major debris avalanche blocking both lanes of NH-7. Three vehicles trapped under loose rocks. Ground shifting continues.',
+      'Major debris avalanche blocking both lanes of NH-48. Three vehicles trapped under loose rocks. Ground shifting continues.',
     subReportsCount: 9,
     resourcesNeeded: [
       {
@@ -244,16 +244,22 @@ const SEED_INCIDENTS: Incident[] = [
   {
     id: 'INC-2025-003',
     incident_id: 'INC-2025-003',
-    title: 'Building Collapse in Sector 9',
+    title: 'Structural Collapse at South Market Complex',
     type: 'Building Collapse',
     severity: 'HIGH',
     status: 'Investigating',
     affectedPeople: 68,
     devicesCount: 14,
-    location: 'Delhi NCR, India',
-    coordinates: { lat: 28.6139, lng: 77.209 },
+    location: 'South Market Commercial Plaza (Earthquake Collapse Zone)',
+    coordinates: { lat: 12.985, lng: 80.21 },
     affectedAreaKm2: 1.8,
     clusterRadiusMeters: 320,
+    polygonCoords: [
+      [12.988, 80.207],
+      [12.989, 80.213],
+      [12.982, 80.214],
+      [12.981, 80.208],
+    ],
     reportedBy: 'Local residents & ward councillor',
     firstReported: '1 hour ago',
     firstReportedTimestamp: Date.now() - 60 * 60 * 1000,
@@ -262,7 +268,7 @@ const SEED_INCIDENTS: Incident[] = [
     assignedTeam: null,
     assignedUnitId: null,
     description:
-      '4-story residential complex partial collapse after basement excavation failure. Multiple residents trapped on upper floors and rubble pockets.',
+      'Commercial plaza multi-story structural collapse after tremor shockwaves. Multiple residents trapped on upper floors and rubble pockets.',
     subReportsCount: 14,
     resourcesNeeded: [
       {
@@ -334,16 +340,22 @@ const SEED_INCIDENTS: Incident[] = [
   {
     id: 'INC-2025-004',
     incident_id: 'INC-2025-004',
-    title: 'Cyclone Alert - Coastal Fishing Village',
+    title: 'Coastal Storm Surge & Fishing Hamlet Evacuation',
     type: 'Cyclone',
     severity: 'MEDIUM',
     status: 'Active',
     affectedPeople: 310,
     devicesCount: 52,
-    location: 'Odisha Coast, India',
-    coordinates: { lat: 19.8135, lng: 85.8312 },
+    location: 'Kovalam Coast Sector 1 (Storm Surge Evacuation)',
+    coordinates: { lat: 12.79, lng: 80.25 },
     affectedAreaKm2: 24.0,
     clusterRadiusMeters: 3800,
+    polygonCoords: [
+      [12.805, 80.24],
+      [12.81, 80.26],
+      [12.775, 80.265],
+      [12.77, 80.245],
+    ],
     reportedBy: 'Village Panchayats & Marine Police',
     firstReported: '2 hours ago',
     firstReportedTimestamp: Date.now() - 120 * 60 * 1000,
@@ -352,7 +364,7 @@ const SEED_INCIDENTS: Incident[] = [
     assignedTeam: 'Civil Defense Evacuation Fleet',
     assignedUnitId: null,
     description:
-      'Gale force winds reaching 110 km/h with 2.5m storm surge warning. Fishermen settlements along shore need preemptive relocation.',
+      'Gale force winds reaching 110 km/h with 2.5m storm surge warning. Fishermen settlements along Kovalam shore need preemptive relocation.',
     subReportsCount: 52,
     resourcesNeeded: [
       {
@@ -422,8 +434,8 @@ export const RESCUE_FLEET_AVAILABLE: RescueUnit[] = [
     name: 'NDRF Zodiac Inflatable Boat 01',
     unit_type: 'BOAT',
     agency: 'NDRF',
-    lat: 30.141,
-    lng: 78.291,
+    lat: 13.0395,
+    lng: 80.2265,
     capacity: 10,
     status: 'AVAILABLE',
     speed_kmh: 25.0,
@@ -437,8 +449,8 @@ export const RESCUE_FLEET_AVAILABLE: RescueUnit[] = [
     name: 'SDRF High-Clearance Rescue Truck 02',
     unit_type: 'HIGH_CLEARANCE_4WD',
     agency: 'SDRF',
-    lat: 30.132,
-    lng: 78.281,
+    lat: 12.986,
+    lng: 80.211,
     capacity: 6,
     status: 'AVAILABLE',
     speed_kmh: 45.0,
@@ -452,8 +464,8 @@ export const RESCUE_FLEET_AVAILABLE: RescueUnit[] = [
     name: 'Emergency Trauma Paramedic Ambulance 05',
     unit_type: 'AMBULANCE',
     agency: '108_EMS',
-    lat: 30.155,
-    lng: 78.31,
+    lat: 13.047,
+    lng: 80.2235,
     capacity: 2,
     status: 'AVAILABLE',
     speed_kmh: 50.0,
@@ -467,8 +479,8 @@ export const RESCUE_FLEET_AVAILABLE: RescueUnit[] = [
     name: 'Indian Army ALH Dhruv Air Recon 01',
     unit_type: 'HELICOPTER',
     agency: 'ARMY',
-    lat: 30.18,
-    lng: 78.35,
+    lat: 13.085,
+    lng: 80.27,
     capacity: 12,
     status: 'AVAILABLE',
     speed_kmh: 160.0,
@@ -493,8 +505,8 @@ export const incidentsApi = {
           const categoryFormatted = cat ? cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase() : 'Disaster';
           const incId = item.incident_id || item.id || 'INC-UNKNOWN';
           const autoTitle = `${categoryFormatted} Response Zone - Sector ${incId}`;
-          const lat = item.lat ?? item.centroid_lat ?? item.coordinates?.lat ?? 30.1458;
-          const lng = item.lng ?? item.centroid_lng ?? item.coordinates?.lng ?? 78.2982;
+          const lat = item.lat ?? item.centroid_lat ?? item.coordinates?.lat ?? 13.0425;
+          const lng = item.lng ?? item.centroid_lng ?? item.coordinates?.lng ?? 80.2285;
           const people = item.affectedPeople ?? item.people_count ?? item.casualty_estimate ?? item.estimated_casualties ?? 142;
           const devices = item.devicesCount ?? item.devices_count ?? item.total_devices ?? (item.associated_devices?.length || 28);
           const radiusM = item.clusterRadiusMeters ?? item.cluster_radius_meters ?? item.radius_meters ?? 600;
@@ -547,7 +559,16 @@ export const incidentsApi = {
 };
 
 export async function fetchIncidents(filters: IncidentFilterOptions): Promise<PaginatedIncidentsResponse> {
-  let filtered = [...incidentsStore];
+  let source = incidentsStore;
+  try {
+    const live = await incidentsApi.getIncidents();
+    if (live && live.length > 0) {
+      source = live;
+    }
+  } catch {
+    // fallback to incidentsStore
+  }
+  let filtered = [...source];
 
   if (filters.searchQuery?.trim()) {
     const q = filters.searchQuery.toLowerCase();
@@ -681,8 +702,8 @@ export async function fetchIncidentById(id: string): Promise<Incident | null> {
     const res = await apiClient.get<any>(`/api/v1/incidents/${id}`);
     if (res.data) {
       const d = res.data;
-      const lat = d.lat ?? d.centroid_lat ?? 30.1458;
-      const lng = d.lng ?? d.centroid_lng ?? 78.2982;
+      const lat = d.lat ?? d.centroid_lat ?? 13.0425;
+      const lng = d.lng ?? d.centroid_lng ?? 80.2285;
       const radiusM = d.cluster_radius_meters ?? d.radius_meters ?? 180;
       const people = d.people_count ?? d.casualty_estimate ?? d.estimated_casualties ?? 142;
       const devices = d.devices_count ?? d.total_devices ?? (d.associated_devices?.length || 28);
@@ -694,7 +715,7 @@ export async function fetchIncidentById(id: string): Promise<Incident | null> {
         type: d.disaster_type || d.category || 'Flood',
         severity: (d.severity || d.urgency || 'CRITICAL').toUpperCase(),
         status: d.status || 'Active',
-        location: d.affected_area || (lat ? `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E` : 'Uttarakhand, India'),
+        location: d.affected_area || (lat ? `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E` : 'Sector 4B Riverside Colony'),
         coordinates: { lat, lng },
         affectedAreaKm2: d.affected_area_km2 || +(Math.PI * Math.pow(radiusM / 1000, 2)).toFixed(1) || 12.0,
         clusterRadiusMeters: radiusM,
@@ -844,7 +865,7 @@ export function getIncidentPeople(count: number = 142): IncidentPerson[] {
       lastContact: '11 min ago',
       devicePseudonym: 'SR-3D7B',
       medicalNotes: 'Drinking water exhausted',
-      location: 'Ganga Vihar Block B',
+      location: 'Riverside Vihar Block B',
     },
     {
       id: 'P-104',

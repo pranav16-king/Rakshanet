@@ -57,7 +57,7 @@ export const IncidentTable: React.FC<IncidentTableProps> = ({
             className={`border-b text-xs font-mono font-bold tracking-wider uppercase transition-colors ${
               isDark
                 ? 'bg-[#162036]/60 border-[#26344F] text-[#9FADC2]'
-                : 'bg-[#FFF5C2]/50 border-[#E6DCA8] text-[#566070]'
+                : 'bg-[#F1F5F9]/50 border-[#E2E8F0] text-[#64748B]'
             }`}
           >
             {/* Severity Header */}
@@ -131,7 +131,7 @@ export const IncidentTable: React.FC<IncidentTableProps> = ({
               className={`group cursor-pointer transition-colors ${
                 isDark
                   ? 'hover:bg-[#162036]/70 divide-[#26344F]'
-                  : 'hover:bg-[#FFF5C2]/40 divide-[#E6DCA8]'
+                  : 'hover:bg-[#F1F5F9]/40 divide-[#E2E8F0]'
               }`}
             >
               {/* Severity Badge */}
@@ -157,7 +157,7 @@ export const IncidentTable: React.FC<IncidentTableProps> = ({
                   className={`px-2 py-0.5 rounded text-xs font-medium border ${
                     isDark
                       ? 'bg-[#162036] border-[#26344F] text-[#EEF2F8]'
-                      : 'bg-[#F6F0D4] border-[#E6DCA8] text-[#16202D]'
+                      : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#0F172A]'
                   }`}
                 >
                   {inc.type}
@@ -236,7 +236,7 @@ export const IncidentTable: React.FC<IncidentTableProps> = ({
                       className={`p-1.5 rounded-lg border transition-all text-xs font-semibold flex items-center gap-1 ${
                         isDark
                           ? 'bg-[#162036] border-[#26344F] text-[#FFD21F] hover:bg-[#FFD21F] hover:text-[#1A1400]'
-                          : 'bg-[#FFF5C2] border-[#E6DCA8] text-[#8A5A00] hover:bg-[#FFC400] hover:text-[#1A1400]'
+                          : 'bg-[#F1F5F9] border-[#E2E8F0] text-[#8A5A00] hover:bg-[#FFC400] hover:text-[#1A1400]'
                       }`}
                     >
                       <UserPlus size={14} />
@@ -250,7 +250,7 @@ export const IncidentTable: React.FC<IncidentTableProps> = ({
                     className={`p-1.5 rounded-lg border transition-all ${
                       isDark
                         ? 'bg-[#162036] border-[#26344F] text-[#EEF2F8] hover:bg-[#1f2d4d]'
-                        : 'bg-white border-[#E6DCA8] text-[#16202D] hover:bg-[#FFF5C2]'
+                        : 'bg-white border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9]'
                     }`}
                   >
                     <ChevronRight size={15} />

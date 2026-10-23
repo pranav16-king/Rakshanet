@@ -15,13 +15,13 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const variantStyles = {
     default:
-      'bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-[#16202D] dark:text-[#EEF2F8]',
+      'bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] text-slate-900 dark:text-[#EEF2F8]',
     raised:
-      'bg-[#FFF5C2] dark:bg-[#111A2C] border border-[#C9BB6E] dark:border-[#3A4C70] shadow-md',
+      'bg-slate-50 dark:bg-[#111A2C] border border-slate-200 dark:border-[#3A4C70] shadow-md',
     sunken:
-      'bg-[#F6F0D4] dark:bg-[#0E1627] border border-[#E6DCA8]/50 dark:border-[#26344F]/50',
+      'bg-slate-50 dark:bg-[#0E1627] border border-slate-200/80 dark:border-[#26344F]/50',
     alert:
-      'bg-white dark:bg-[#162036] border-l-4 border-y border-r border-[#E6DCA8] dark:border-[#26344F]',
+      'bg-white dark:bg-[#162036] border-l-4 border-y border-r border-slate-200 dark:border-[#26344F]',
   };
 
   const alertBorders = {

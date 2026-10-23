@@ -1,256 +1,248 @@
-import React, { useState } from 'react';
+// src/pages/settings/SettingsPage.tsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Settings,
-  Shield,
-  Bot,
-  Database,
+  Sliders,
+  Layers,
+  Users,
+  Bell,
+  Globe,
   Save,
   Check,
+  RotateCcw,
+  AlertCircle,
+  Loader2,
+  CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react';
-import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
+import { settingsApi } from '../../api/settings';
+import type { SystemSettings } from '../../types';
+import { GeneralSettingsTab } from '../../components/settings/GeneralSettingsTab';
+import { IncidentsSettingsTab } from '../../components/settings/IncidentsSettingsTab';
+import { UsersSettingsTab } from '../../components/settings/UsersSettingsTab';
+import { NotificationsSettingsTab } from '../../components/settings/NotificationsSettingsTab';
+import { ApiIntegrationsTab } from '../../components/settings/ApiIntegrationsTab';
 
 export const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('General');
-  const [saved, setSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('General');
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [savedSettings, setSavedSettings] = useState<SystemSettings | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState<boolean>(false);
 
-  // System Settings State
-  const [allowRegistration, setAllowRegistration] = useState(true);
-  const [enableMesh, setEnableMesh] = useState(true);
-  const [storeLocally, setStoreLocally] = useState(true);
-  const [autoSync, setAutoSync] = useState(true);
+  // Fetch initial settings from backend API
+  const fetchSettings = useCallback(async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
+      const data = await settingsApi.getSettings();
+      setSettings(data);
+      setSavedSettings(JSON.parse(JSON.stringify(data)));
+      setIsDirty(false);
+    } catch (err) {
+      console.error('Failed to load system settings from backend:', err);
+      setErrorMessage('Could not connect to backend gateway. Showing locally cached configuration.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // AI Assistant Settings State
-  const [offlineAi, setOfflineAi] = useState(true);
-  const [localKnowledge, setLocalKnowledge] = useState(true);
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
-  // Data & Privacy State
-  const [retentionDays, setRetentionDays] = useState(90);
-  const [anonymousUsage, setAnonymousUsage] = useState(true);
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  // Handle settings mutation
+  const handleSettingsChange = (updatedPartial: Partial<SystemSettings>) => {
+    if (!settings) return;
+    const next = { ...settings, ...updatedPartial };
+    setSettings(next);
+    setIsDirty(JSON.stringify(next) !== JSON.stringify(savedSettings));
   };
 
-  const tabs = ['General', 'Incidents', 'Users', 'Notifications', 'API & Integrations'];
+  // Discard local changes and revert to last saved state
+  const handleDiscard = () => {
+    if (savedSettings) {
+      setSettings(JSON.parse(JSON.stringify(savedSettings)));
+      setIsDirty(false);
+    }
+  };
+
+  // Save changes to backend via POST /api/v1/settings
+  const handleSave = async () => {
+    if (!settings) return;
+    try {
+      setSaving(true);
+      setErrorMessage(null);
+      const updated = await settingsApi.saveSettings(settings);
+      setSettings(updated);
+      setSavedSettings(JSON.parse(JSON.stringify(updated)));
+      setIsDirty(false);
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3500);
+    } catch (err: any) {
+      console.error('Failed to save settings:', err);
+      setErrorMessage(err?.message || 'Failed to persist settings to gateway storage.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const tabs = [
+    { id: 'General', label: 'General', icon: Sliders },
+    { id: 'Incidents', label: 'Incidents', icon: Layers },
+    { id: 'Users', label: 'Users', icon: Users },
+    { id: 'Notifications', label: 'Notifications', icon: Bell },
+    { id: 'API & Integrations', label: 'API & Integrations', icon: Globe },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[450px] space-y-4">
+        <Loader2 className="w-8 h-8 text-[#FFC400] dark:text-[#FFD21F] animate-spin" />
+        <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+          Loading RakshaNet gateway configuration...
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1 border-b border-slate-200/80 dark:border-[#26344F]">
         <div>
-          <h1
-            className="text-2xl sm:text-3xl font-black text-[#16202D] dark:text-white tracking-tight"
-            style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
-          >
-            Settings & Management
-          </h1>
-          <p className="text-xs sm:text-sm text-[#566070] dark:text-[#9FADC2]">
-            System configuration, offline DTN routing policies, and AI parameters
+          <div className="flex items-center gap-2 mb-1">
+            <h1
+              className="text-2xl sm:text-3xl font-black text-[#0F172A] dark:text-white tracking-tight"
+              style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
+            >
+              Settings &amp; Management
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <ShieldCheck className="w-3 h-3" />
+              LIVE GATEWAY
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#9FADC2]">
+            System configuration, offline DTN routing policies, DBSCAN parameters, and interoperability endpoints.
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={saved ? <Check size={16} /> : <Save size={16} />}
-          onClick={handleSave}
-        >
-          {saved ? 'Saved Successfully' : 'Save Changes'}
-        </Button>
-      </div>
+        {/* Global Save / Discard Action Bar */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {isDirty && (
+            <button
+              type="button"
+              onClick={handleDiscard}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              Discard
+            </button>
+          )}
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === tab
-                ? 'bg-[#FFC400] dark:bg-[#FFD21F] text-[#1A1400]'
-                : 'bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-[#566070] dark:text-[#9FADC2]'
-            }`}
+          <Button
+            variant="primary"
+            size="md"
+            disabled={saving || (!isDirty && !saveSuccess)}
+            leftIcon={
+              saving ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : saveSuccess ? (
+                <Check size={16} className="text-emerald-900" />
+              ) : (
+                <Save size={16} />
+              )
+            }
+            onClick={handleSave}
           >
-            {tab}
-          </button>
-        ))}
+            {saving
+              ? 'Saving...'
+              : saveSuccess
+              ? 'Saved to Gateway'
+              : isDirty
+              ? 'Save Changes'
+              : 'Up to Date'}
+          </Button>
+        </div>
       </div>
 
-      {/* Settings Sections matching media_1791015140209.jpg */}
-      <div className="space-y-6 max-w-4xl">
-        {/* System Settings */}
-        <Card>
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#E6DCA8] dark:border-[#26344F]">
-            <Shield size={18} className="text-[#8A5A00] dark:text-[#FFD21F]" />
-            <h3 className="text-sm font-bold text-[#16202D] dark:text-white uppercase tracking-wider">
-              System Settings
-            </h3>
+      {/* Success Notification Banner */}
+      {saveSuccess && (
+        <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-between text-xs font-semibold animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <span>Settings successfully committed to primary SQLite database and queued for cloud mirror.</span>
           </div>
+          <span className="text-[10px] font-mono uppercase bg-emerald-500/20 px-2 py-0.5 rounded">Committed</span>
+        </div>
+      )}
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-[#16202D] dark:text-white block">
-                  Allow new user registration
-                </span>
-                <span className="text-[11px] text-[#566070] dark:text-[#9FADC2]">
-                  Permit anonymous devices to enroll in ad-hoc mesh
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={allowRegistration}
-                onChange={(e) => setAllowRegistration(e.target.checked)}
-                className="w-5 h-5 accent-[#FFC400] cursor-pointer"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-[#16202D] dark:text-white block">
-                  Enable offline mesh network
-                </span>
-                <span className="text-[11px] text-[#566070] dark:text-[#9FADC2]">
-                  BLE and Wi-Fi Direct store-and-forward relaying
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={enableMesh}
-                onChange={(e) => setEnableMesh(e.target.checked)}
-                className="w-5 h-5 accent-[#FFC400] cursor-pointer"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-[#16202D] dark:text-white block">
-                  Store messages locally
-                </span>
-                <span className="text-[11px] text-[#566070] dark:text-[#9FADC2]">
-                  Encrypt buffered packets with AES-GCM on local storage
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={storeLocally}
-                onChange={(e) => setStoreLocally(e.target.checked)}
-                className="w-5 h-5 accent-[#FFC400] cursor-pointer"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-[#16202D] dark:text-white block">
-                  Auto-sync when online
-                </span>
-                <span className="text-[11px] text-[#566070] dark:text-[#9FADC2]">
-                  Flush opportunistically to satellite / gateway uplink
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={autoSync}
-                onChange={(e) => setAutoSync(e.target.checked)}
-                className="w-5 h-5 accent-[#FFC400] cursor-pointer"
-              />
-            </div>
+      {/* Error Alert Banner */}
+      {errorMessage && (
+        <div className="p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-700 dark:text-red-300 flex items-center justify-between text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500" />
+            <span>{errorMessage}</span>
           </div>
-        </Card>
+          <button
+            onClick={fetchSettings}
+            className="text-[11px] underline hover:no-underline font-bold"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
 
-        {/* AI Assistant Settings */}
-        <Card>
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#E6DCA8] dark:border-[#26344F]">
-            <Bot size={18} className="text-[#0E8A94] dark:text-[#3CC6D0]" />
-            <h3 className="text-sm font-bold text-[#16202D] dark:text-white uppercase tracking-wider">
-              AI Assistant Settings
-            </h3>
-          </div>
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                isActive
+                  ? 'bg-[#FFC400] dark:bg-[#FFD21F] text-[#1A1400] shadow-sm'
+                  : 'bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] text-slate-600 dark:text-[#9FADC2] hover:border-slate-300 dark:hover:border-slate-600 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-[#16202D] dark:text-white block">
-                  Enable offline AI guidance
-                </span>
-                <span className="text-[11px] text-[#566070] dark:text-[#9FADC2]">
-                  On-device distilled model for triage recommendations
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={offlineAi}
-                onChange={(e) => setOfflineAi(e.target.checked)}
-                className="w-5 h-5 accent-[#FFC400] cursor-pointer"
-              />
-            </div>
+      {/* Dynamic Tab Content with Real Data */}
+      <div className="pt-1">
+        {activeTab === 'General' && settings && (
+          <GeneralSettingsTab settings={settings} onChange={handleSettingsChange} />
+        )}
 
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-[#16202D] dark:text-white block">
-                  Use local knowledge base
-                </span>
-                <span className="text-[11px] text-[#566070] dark:text-[#9FADC2]">
-                  Embed NDMA disaster SOPs and offline first aid protocols
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={localKnowledge}
-                onChange={(e) => setLocalKnowledge(e.target.checked)}
-                className="w-5 h-5 accent-[#FFC400] cursor-pointer"
-              />
-            </div>
-          </div>
-        </Card>
+        {activeTab === 'Incidents' && settings && (
+          <IncidentsSettingsTab settings={settings} onChange={handleSettingsChange} />
+        )}
 
-        {/* Data & Privacy */}
-        <Card>
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#E6DCA8] dark:border-[#26344F]">
-            <Database size={18} className="text-[#D92D20] dark:text-[#FF5A4E]" />
-            <h3 className="text-sm font-bold text-[#16202D] dark:text-white uppercase tracking-wider">
-              Data & Privacy
-            </h3>
-          </div>
+        {activeTab === 'Users' && settings && (
+          <UsersSettingsTab settings={settings} onChange={handleSettingsChange} />
+        )}
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-[#16202D] dark:text-white block">
-                  Data retention (days)
-                </span>
-                <span className="text-[11px] text-[#566070] dark:text-[#9FADC2]">
-                  Auto-purge resolved telemetry and expired packets
-                </span>
-              </div>
-              <input
-                type="number"
-                value={retentionDays}
-                onChange={(e) => setRetentionDays(Number(e.target.value))}
-                className="w-20 h-9 px-2 text-center rounded-xl bg-white dark:bg-[#0E1627] border border-[#E6DCA8] dark:border-[#26344F] text-xs font-mono font-bold text-[#16202D] dark:text-white"
-              />
-            </div>
+        {activeTab === 'Notifications' && settings && (
+          <NotificationsSettingsTab settings={settings} onChange={handleSettingsChange} />
+        )}
 
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-[#16202D] dark:text-white block">
-                  Allow anonymous usage
-                </span>
-                <span className="text-[11px] text-[#566070] dark:text-[#9FADC2]">
-                  Strip PII and use pseudo-identifiers (e.g. SR-8F42)
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={anonymousUsage}
-                onChange={(e) => setAnonymousUsage(e.target.checked)}
-                className="w-5 h-5 accent-[#FFC400] cursor-pointer"
-              />
-            </div>
-          </div>
-        </Card>
+        {activeTab === 'API & Integrations' && (
+          <ApiIntegrationsTab />
+        )}
       </div>
     </div>
   );

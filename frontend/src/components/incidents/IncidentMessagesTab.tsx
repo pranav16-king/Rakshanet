@@ -17,14 +17,14 @@ export const IncidentMessagesTab: React.FC<IncidentMessagesTabProps> = ({ messag
   return (
     <div
       className={`p-6 rounded-xl border transition-colors shadow-sm ${
-        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
       }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h3
             className={`font-display font-bold text-lg ${
-              isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+              isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
             }`}
           >
             Distress & Mesh Relay Messages (320 Total)
@@ -46,7 +46,7 @@ export const IncidentMessagesTab: React.FC<IncidentMessagesTabProps> = ({ messag
                   ? 'bg-[#FFC400] text-[#1A1400] border-[#FFC400]'
                   : isDark
                   ? 'bg-[#0E1627] text-[#9FADC2] border-[#26344F]'
-                  : 'bg-[#F6F0D4] text-[#566070] border-[#E6DCA8]'
+                  : 'bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0]'
               }`}
             >
               {t}
@@ -67,7 +67,7 @@ export const IncidentMessagesTab: React.FC<IncidentMessagesTabProps> = ({ messag
                   : 'bg-[#FDE2DF]/40 border-[#D92D20]/20'
                 : isDark
                 ? 'bg-[#0E1627] border-[#26344F]'
-                : 'bg-white border-[#E6DCA8]'
+                : 'bg-white border-[#E2E8F0]'
             }`}
           >
             <div className="flex items-start gap-3">
@@ -86,7 +86,7 @@ export const IncidentMessagesTab: React.FC<IncidentMessagesTabProps> = ({ messag
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
-                    className={`text-xs font-bold ${isDark ? 'text-white' : 'text-[#16202D]'}`}
+                    className={`text-xs font-bold ${isDark ? 'text-white' : 'text-[#0F172A]'}`}
                   >
                     {msg.senderName}
                   </span>

@@ -36,7 +36,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
         width: width !== undefined ? width : undefined,
         height: height !== undefined ? height : undefined,
       }}
-      className={`bg-[#E6DCA8]/50 dark:bg-[#26344F]/80 animate-pulse ${getVariantStyles()} ${className}`}
+      className={`bg-[#E2E8F0]/50 dark:bg-[#26344F]/80 animate-pulse ${getVariantStyles()} ${className}`}
       aria-hidden="true"
     />
   ));

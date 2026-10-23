@@ -127,7 +127,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
   return (
     <div
       className={`p-6 rounded-xl border transition-colors shadow-sm ${
-        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
       }`}
     >
       {/* Header with Title and Model Version */}
@@ -139,7 +139,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
           <div>
             <h3
               className={`font-display font-bold text-base tracking-tight ${
-                isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+                isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
               }`}
             >
               AI Analysis & Deep Explainability
@@ -151,7 +151,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
         </div>
         <div
           className={`px-2.5 py-1 rounded-md text-[11px] font-mono border self-start sm:self-auto ${
-            isDark ? 'bg-[#0E1627] border-[#26344F] text-[#9FADC2]' : 'bg-[#F6F0D4] border-[#E6DCA8] text-[#566070]'
+            isDark ? 'bg-[#0E1627] border-[#26344F] text-[#9FADC2]' : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#64748B]'
           }`}
         >
           {modelVersion}
@@ -163,7 +163,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
         {/* Priority Score Card */}
         <div
           className={`p-4 rounded-xl border flex items-center justify-between ${
-            isDark ? 'bg-[#0E1627] border-[#26344F]' : 'bg-[#FFF5C2]/40 border-[#E6DCA8]'
+            isDark ? 'bg-[#0E1627] border-[#26344F]' : 'bg-[#F1F5F9]/40 border-[#E2E8F0]'
           }`}
         >
           <div>
@@ -195,7 +195,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
         {/* Confidence Meter Card */}
         <div
           className={`p-4 rounded-xl border flex flex-col justify-between ${
-            isDark ? 'bg-[#0E1627] border-[#26344F]' : 'bg-[#FFF5C2]/40 border-[#E6DCA8]'
+            isDark ? 'bg-[#0E1627] border-[#26344F]' : 'bg-[#F1F5F9]/40 border-[#E2E8F0]'
           }`}
         >
           <div className="flex items-center justify-between mb-2">
@@ -217,7 +217,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
             {/* Confidence Bar Meter */}
             <div
               className={`w-full h-2.5 rounded-full overflow-hidden ${
-                isDark ? 'bg-[#162036]' : 'bg-[#E6DCA8]'
+                isDark ? 'bg-[#162036]' : 'bg-[#E2E8F0]'
               }`}
             >
               <div
@@ -274,7 +274,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
           <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 block mb-2 font-mono">
             Direct NLP & Spatial Cluster Factors:
           </span>
-          <ul className="space-y-1.5 text-xs text-[#16202D] dark:text-[#EEF2F8]">
+          <ul className="space-y-1.5 text-xs text-[#0F172A] dark:text-[#EEF2F8]">
             {detectedSignals.map((sig, idx) => (
               <li key={idx} className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
@@ -299,13 +299,13 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
               className={`p-3.5 rounded-lg border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                 isDark
                   ? 'bg-[#0E1627] border-[#26344F] hover:border-[#3A4C70]'
-                  : 'bg-white border-[#E6DCA8] hover:border-[#C9BB6E]'
+                  : 'bg-white border-[#E2E8F0] hover:border-[#CBD5E1]'
               }`}
             >
               <div className="flex items-start gap-3">
                 <div
                   className={`p-2 rounded-md mt-0.5 shrink-0 ${
-                    isDark ? 'bg-[#162036] text-[#FFC400]' : 'bg-[#FFF5C2] text-[#8A5A00]'
+                    isDark ? 'bg-[#162036] text-[#FFC400]' : 'bg-[#F1F5F9] text-[#8A5A00]'
                   }`}
                 >
                   <Icon size={16} />
@@ -314,7 +314,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
                       className={`text-xs font-bold ${
-                        isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+                        isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
                       }`}
                     >
                       {factor.name}
@@ -329,7 +329,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
                   </div>
                   <p
                     className={`text-xs mt-1 leading-snug ${
-                      isDark ? 'text-[#9FADC2]' : 'text-[#566070]'
+                      isDark ? 'text-[#9FADC2]' : 'text-[#64748B]'
                     }`}
                   >
                     {factor.details}
@@ -359,7 +359,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
           <strong className="block mb-0.5 font-bold uppercase tracking-wide">
             Operational Recommendation:
           </strong>
-          <span className={isDark ? 'text-white' : 'text-[#16202D]'}>{synthesis}</span>
+          <span className={isDark ? 'text-white' : 'text-[#0F172A]'}>{synthesis}</span>
         </div>
       </div>
     </div>

@@ -43,14 +43,14 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-full flex bg-[#F8FAFC] dark:bg-[#0B1220] text-[#16202D] dark:text-[#EEF2F8] selection:bg-[#FFC400] selection:text-[#1A1400] overflow-hidden">
+    <div className="h-screen w-full flex bg-[#F8FAFC] dark:bg-[#0B1220] text-[#0F172A] dark:text-[#EEF2F8] selection:bg-[#FFC400] selection:text-[#1A1400] overflow-hidden">
       {/* Left Column: Sign In Form matching media_1791015140209.jpg */}
       <div className="w-full lg:w-1/2 flex flex-col justify-between px-6 py-4 sm:px-10 sm:py-5 lg:px-12 lg:py-6 h-full overflow-y-auto">
         {/* Top Header / Back Link */}
         <div className="flex items-center justify-between shrink-0">
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-1.5 text-xs font-bold text-[#566070] dark:text-[#9FADC2] hover:text-[#16202D] dark:hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs font-bold text-[#64748B] dark:text-[#9FADC2] hover:text-[#0F172A] dark:hover:text-white transition-colors cursor-pointer"
           >
             <ArrowLeft size={15} />
             <span>Back to RakshaNet</span>
@@ -66,7 +66,7 @@ export const LoginPage: React.FC = () => {
           {/* Logo & Headline */}
           <div className="flex flex-col items-center text-center mb-4">
             <Logo size="md" showSubtitle subtitle="Command Center" className="mb-2" />
-            <p className="text-xs text-[#566070] dark:text-[#9FADC2]">
+            <p className="text-xs text-[#64748B] dark:text-[#9FADC2]">
               Sign in to access the rescue command center.
             </p>
           </div>
@@ -82,7 +82,7 @@ export const LoginPage: React.FC = () => {
           )}
 
           {/* Quick Demo Access Bar */}
-          <div className="mb-3.5 p-2.5 rounded-xl bg-[#FFF5C2] dark:bg-[#162036] border border-[#C9BB6E] dark:border-[#26344F] flex items-center justify-between shadow-xs">
+          <div className="mb-3.5 p-2.5 rounded-xl bg-[#F1F5F9] dark:bg-[#162036] border border-[#CBD5E1] dark:border-[#26344F] flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#8A5A00] dark:text-[#FFD21F]">
               <ShieldAlert size={15} className="shrink-0" />
               <span className="text-[11px] sm:text-xs">Incident Commander</span>
@@ -90,7 +90,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="button"
               onClick={() => handleFillDemo('admin@rakshanet.org', 'RakshaNet@2026')}
-              className="text-[11px] font-bold text-[#16202D] dark:text-white bg-white dark:bg-[#0B1220] px-2.5 py-1 rounded-md border border-[#E6DCA8] dark:border-[#3A4C70] hover:bg-[#FFEFA6] dark:hover:bg-[#111A2C] transition-colors cursor-pointer shadow-xs active:scale-95"
+              className="text-[11px] font-bold text-[#0F172A] dark:text-white bg-white dark:bg-[#0B1220] px-2.5 py-1 rounded-md border border-[#E2E8F0] dark:border-[#3A4C70] hover:bg-[#FFEFA6] dark:hover:bg-[#111A2C] transition-colors cursor-pointer shadow-xs active:scale-95"
             >
               Fill Credentials
             </button>
@@ -100,13 +100,13 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-3">
             {/* Email Field */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#16202D] dark:text-[#EEF2F8] mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#0F172A] dark:text-[#EEF2F8] mb-1">
                 Email
               </label>
               <div className="relative">
                 <Mail
                   size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#566070] dark:text-[#9FADC2]"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#9FADC2]"
                 />
                 <input
                   type="email"
@@ -114,20 +114,20 @@ export const LoginPage: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@rakshanet.org or your email"
                   required
-                  className="w-full h-10 pl-9 pr-3 rounded-lg bg-white dark:bg-[#0E1627] border border-[#CBD5E1] dark:border-[#26344F] text-xs text-[#16202D] dark:text-[#EEF2F8] placeholder-[#94A3B8] dark:placeholder-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#FFC400] dark:focus:ring-[#FFD21F] shadow-xs transition-all"
+                  className="w-full h-10 pl-9 pr-3 rounded-lg bg-white dark:bg-[#0E1627] border border-[#CBD5E1] dark:border-[#26344F] text-xs text-[#0F172A] dark:text-[#EEF2F8] placeholder-[#94A3B8] dark:placeholder-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#FFC400] dark:focus:ring-[#FFD21F] shadow-xs transition-all"
                 />
               </div>
             </div>
 
             {/* Password Field */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#16202D] dark:text-[#EEF2F8] mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#0F172A] dark:text-[#EEF2F8] mb-1">
                 Password
               </label>
               <div className="relative">
                 <Lock
                   size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#566070] dark:text-[#9FADC2]"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#9FADC2]"
                 />
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -135,12 +135,12 @@ export const LoginPage: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
-                  className="w-full h-10 pl-9 pr-9 rounded-lg bg-white dark:bg-[#0E1627] border border-[#CBD5E1] dark:border-[#26344F] text-xs text-[#16202D] dark:text-[#EEF2F8] placeholder-[#94A3B8] dark:placeholder-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#FFC400] dark:focus:ring-[#FFD21F] shadow-xs transition-all"
+                  className="w-full h-10 pl-9 pr-9 rounded-lg bg-white dark:bg-[#0E1627] border border-[#CBD5E1] dark:border-[#26344F] text-xs text-[#0F172A] dark:text-[#EEF2F8] placeholder-[#94A3B8] dark:placeholder-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#FFC400] dark:focus:ring-[#FFD21F] shadow-xs transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#566070] dark:text-[#9FADC2] hover:text-[#16202D] dark:hover:text-white cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#9FADC2] hover:text-[#0F172A] dark:hover:text-white cursor-pointer"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -156,7 +156,7 @@ export const LoginPage: React.FC = () => {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-3.5 h-3.5 rounded border-[#CBD5E1] dark:border-[#26344F] text-[#FFC400] focus:ring-[#FFC400] dark:bg-[#0E1627]"
                 />
-                <span className="font-semibold text-[11px] text-[#16202D] dark:text-[#EEF2F8]">
+                <span className="font-semibold text-[11px] text-[#0F172A] dark:text-[#EEF2F8]">
                   Remember me
                 </span>
               </label>
@@ -184,11 +184,11 @@ export const LoginPage: React.FC = () => {
           </form>
 
           {/* Need access text */}
-          <div className="mt-4 text-center text-[11px] text-[#566070] dark:text-[#9FADC2]">
+          <div className="mt-4 text-center text-[11px] text-[#64748B] dark:text-[#9FADC2]">
             <span>Need access? </span>
             <a
               href="mailto:support@rakshanet.gov.in"
-              className="font-semibold text-[#16202D] dark:text-white hover:underline"
+              className="font-semibold text-[#0F172A] dark:text-white hover:underline"
             >
               Contact your administrator.
             </a>
@@ -196,7 +196,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Footer info */}
-        <div className="text-center text-[10px] text-[#566070] dark:text-[#9FADC2] shrink-0 pt-2">
+        <div className="text-center text-[10px] text-[#64748B] dark:text-[#9FADC2] shrink-0 pt-2">
           Authorized Emergency Response Personnel Only · Protected by DTN Cryptography
         </div>
       </div>

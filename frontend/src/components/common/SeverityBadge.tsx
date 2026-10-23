@@ -50,7 +50,7 @@ export const SeverityBadge: React.FC<SeverityBadgeProps> = ({
       case 'MEDIUM':
         return isDark
           ? 'bg-[#3A3010] text-[#FFD21F] border-[#FFD21F]/30'
-          : 'bg-[#FFF5C2] text-[#8A5A00] border-[#C9BB6E]/40';
+          : 'bg-[#F1F5F9] text-[#8A5A00] border-[#CBD5E1]/40';
       case 'LOW':
         return isDark
           ? 'bg-[#0F3322] text-[#4CD08A] border-[#4CD08A]/30'
@@ -58,7 +58,7 @@ export const SeverityBadge: React.FC<SeverityBadgeProps> = ({
       default:
         return isDark
           ? 'bg-[#162036] text-[#9FADC2] border-[#26344F]'
-          : 'bg-[#F6F0D4] text-[#566070] border-[#E6DCA8]';
+          : 'bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0]';
     }
   };
 

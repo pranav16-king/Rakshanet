@@ -13,6 +13,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { OverviewPage } from './pages/overview/OverviewPage';
 import { LiveMapPage } from './pages/map/LiveMapPage';
+import { IncidentsPage } from './pages/incidents/IncidentsPage';
 import { IncidentsListPage } from './pages/incidents/IncidentsListPage';
 import { IncidentDetailPage } from './pages/incidents/IncidentDetailPage';
 import { RescueOpsPage } from './pages/rescue-ops/RescueOpsPage';
@@ -25,6 +26,7 @@ import { AnalyticsPage } from './pages/analytics/AnalyticsPage';
 import { ReportsPage } from './pages/reports/ReportsPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { MissingPersonsPage } from './pages/missing-persons/MissingPersonsPage';
+import { MeshArchitecturePage } from './pages/architecture/MeshArchitecturePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +47,7 @@ export function App() {
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/mesh-architecture" element={<MeshArchitecturePage />} />
 
             {/* Protected Command Center Platform (Strict JWT Authentication Gate) */}
             <Route element={<ProtectedRoute />}>
@@ -53,7 +56,8 @@ export function App() {
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="overview" element={<OverviewPage />} />
                 <Route path="map" element={<LiveMapPage />} />
-                <Route path="incidents" element={<IncidentsListPage />} />
+                <Route path="incidents" element={<IncidentsPage />} />
+                <Route path="incidents/list" element={<IncidentsListPage />} />
                 <Route path="incidents/:id" element={<IncidentDetailPage />} />
                 <Route path="rescue-ops" element={<RescueOpsPage />} />
                 <Route path="communication-gaps" element={<CommunicationGapsPage />} />
@@ -65,6 +69,7 @@ export function App() {
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="mesh-architecture" element={<MeshArchitecturePage />} />
                 <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
               </Route>
             </Route>

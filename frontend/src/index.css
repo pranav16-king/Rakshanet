@@ -106,3 +106,33 @@
   background: var(--border-color);
   border-radius: 3px;
 }
+
+/* Tactical slim scrollbar for embedded card lists */
+.scrollbar-tactical {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+.dark .scrollbar-tactical {
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.scrollbar-tactical::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.scrollbar-tactical::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-tactical::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: 9999px;
+}
+.dark .scrollbar-tactical::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+.scrollbar-tactical::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+.dark .scrollbar-tactical::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+

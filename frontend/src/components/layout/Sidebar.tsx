@@ -18,8 +18,10 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { StatusDot } from '../common/StatusDot';
+import { incidentsApi } from '../../api/incidents';
 import type { WebSocketStatus } from '../../hooks/useWebSocket';
 
 interface SidebarProps {
@@ -38,7 +40,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Dashboard', path: '/app/dashboard', icon: LayoutDashboard },
   { name: 'Live Map', path: '/app/map', icon: Map },
-  { name: 'Incidents', path: '/app/incidents', icon: AlertTriangle, badge: '18' },
+  { name: 'Incidents', path: '/app/incidents', icon: AlertTriangle },
   { name: 'Rescue Ops', path: '/app/rescue-ops', icon: Shield },
   { name: 'Comms Gaps', path: '/app/communication-gaps', icon: WifiOff },
   { name: 'People', path: '/app/people', icon: Users },
@@ -57,6 +59,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   connectionStatus = 'connected',
 }) => {
   const { user, logout } = useAuthStore();
+
+  const { data: incidents } = useQuery({
+    queryKey: ['incidents'],
+    queryFn: () => incidentsApi.getIncidents(),
+    staleTime: 12000,
+  });
+
+  const activeCount = incidents?.filter(
+    (i) => (i.status || '').toUpperCase() !== 'RESOLVED'
+  )?.length ?? incidents?.length;
 
   const getStatusColor = () => {
     switch (connectionStatus) {
@@ -127,6 +139,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 scrollbar-thin">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const badgeValue =
+            item.name === 'Incidents'
+              ? activeCount
+                ? String(activeCount)
+                : undefined
+              : item.badge;
+
           return (
             <NavLink
               key={item.path}
@@ -134,8 +153,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all group ${
                   isActive
-                    ? 'bg-[#FFD21F] text-[#0B1220] shadow-md shadow-yellow-500/10 font-bold'
-                    : 'text-[#9FADC2] hover:text-white hover:bg-[#162036]'
+                    ? 'bg-amber-500/15 text-[#FFD21F] border-l-4 border-[#FFD21F] font-bold shadow-xs'
+                    : 'text-[#9FADC2] hover:text-white hover:bg-[#162036]/70'
                 }`
               }
               title={isCollapsed ? item.name : undefined}
@@ -145,21 +164,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Icon
                     size={20}
                     className={`flex-shrink-0 transition-transform group-hover:scale-105 ${
-                      isActive ? 'text-[#0B1220]' : 'text-[#9FADC2] group-hover:text-white'
+                      isActive ? 'text-[#FFD21F]' : 'text-[#9FADC2] group-hover:text-white'
                     }`}
                   />
                   {!isCollapsed && (
                     <span className="truncate flex-1 tracking-wide">{item.name}</span>
                   )}
-                  {!isCollapsed && item.badge && (
+                  {!isCollapsed && badgeValue && (
                     <span
-                      className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
+                      className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
                         isActive
-                          ? 'bg-[#0B1220] text-[#FFD21F]'
+                          ? 'bg-amber-500/25 text-[#FFD21F] border border-amber-500/40'
                           : 'bg-[#FF5A4E]/20 text-[#FF5A4E]'
                       }`}
                     >
-                      {item.badge}
+                      {badgeValue}
                     </span>
                   )}
                 </>
@@ -170,15 +189,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Backend Mesh Connection Status Indicator */}
-      <div className="px-4 py-3 mx-2 mb-2 rounded-xl bg-[#0E1627] border border-[#162036]">
-        <div className="flex items-center gap-2.5">
+      <div className="px-3.5 py-2.5 mx-2 mb-2 rounded-xl bg-[#0E1627] border border-[#162036]">
+        <div className="flex items-center gap-2.5 min-w-0">
           <StatusDot color={getStatusColor()} pulse={connectionStatus === 'connected'} size="sm" />
           {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-white tracking-wide">
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-xs font-semibold text-white tracking-wide truncate">
                 {getStatusLabel()}
               </span>
-              <span className="text-[10px] text-[#9FADC2]">
+              <span className="text-[10px] text-[#9FADC2] font-mono truncate">
                 {connectionStatus === 'connected' ? 'ws://localhost:8000' : 'Reconnecting mesh'}
               </span>
             </div>

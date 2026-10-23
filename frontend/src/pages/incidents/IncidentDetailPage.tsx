@@ -151,7 +151,7 @@ export const IncidentDetailPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[450px] space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#FFC400]" />
-        <p className="text-sm font-semibold text-[#566070] dark:text-[#9FADC2]">
+        <p className="text-sm font-semibold text-[#64748B] dark:text-[#9FADC2]">
           Loading Incident {incidentId} live telemetry from Command Center...
         </p>
       </div>
@@ -160,12 +160,12 @@ export const IncidentDetailPage: React.FC = () => {
 
   if (!incident) {
     return (
-      <div className="p-8 rounded-2xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-center space-y-4">
+      <div className="p-8 rounded-2xl bg-white dark:bg-[#162036] border border-[#E2E8F0] dark:border-[#26344F] text-center space-y-4">
         <ShieldAlert className="w-12 h-12 text-[#D92D20] mx-auto" />
-        <h2 className="text-xl font-bold text-[#16202D] dark:text-white">
+        <h2 className="text-xl font-bold text-[#0F172A] dark:text-white">
           Incident Not Found
         </h2>
-        <p className="text-sm text-[#566070] dark:text-[#9FADC2]">
+        <p className="text-sm text-[#64748B] dark:text-[#9FADC2]">
           Could not find active incident record for identifier: {incidentId}
         </p>
         <Button variant="primary" onClick={() => navigate('/app/incidents')}>
@@ -200,7 +200,7 @@ export const IncidentDetailPage: React.FC = () => {
         <div className="flex items-start sm:items-center gap-3">
           <button
             onClick={() => navigate('/app/incidents')}
-            className="p-2.5 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-[#566070] dark:text-[#9FADC2] hover:text-[#16202D] dark:hover:text-white transition-colors cursor-pointer shrink-0 mt-1 sm:mt-0"
+            className="p-2.5 rounded-xl bg-white dark:bg-[#162036] border border-[#E2E8F0] dark:border-[#26344F] text-[#64748B] dark:text-[#9FADC2] hover:text-[#0F172A] dark:hover:text-white transition-colors cursor-pointer shrink-0 mt-1 sm:mt-0"
             title="Back to Incidents"
           >
             <ArrowLeft size={18} />
@@ -219,7 +219,7 @@ export const IncidentDetailPage: React.FC = () => {
 
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               <h1
-                className="text-2xl sm:text-3xl font-black text-[#16202D] dark:text-white tracking-tight"
+                className="text-2xl sm:text-3xl font-black text-[#0F172A] dark:text-white tracking-tight"
                 style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
               >
                 {incident.title}
@@ -321,7 +321,7 @@ export const IncidentDetailPage: React.FC = () => {
       </div>
 
       {/* Meta sub-ribbon */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-[#566070] dark:text-[#9FADC2] px-4 py-2.5 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] shadow-sm">
+      <div className="flex flex-wrap items-center gap-4 text-xs text-[#64748B] dark:text-[#9FADC2] px-4 py-2.5 rounded-xl bg-white dark:bg-[#162036] border border-[#E2E8F0] dark:border-[#26344F] shadow-sm">
         <span className="flex items-center gap-1.5 font-medium">
           <MapPin size={14} className="text-[#0E8A94]" /> {locationString}
         </span>
@@ -340,7 +340,7 @@ export const IncidentDetailPage: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-[#E6DCA8] dark:border-[#26344F] pb-1 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-[#E2E8F0] dark:border-[#26344F] pb-1 overflow-x-auto">
         {tabs.map((tab) => {
           const isSelected =
             (activeTab === 'Overview' && tab === 'Overview') ||
@@ -364,7 +364,7 @@ export const IncidentDetailPage: React.FC = () => {
               className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                 isSelected
                   ? 'bg-[#FFC400] dark:bg-[#FFD21F] text-[#1A1400] shadow-sm'
-                  : 'text-[#566070] dark:text-[#9FADC2] hover:text-[#16202D] dark:hover:text-white'
+                  : 'text-[#64748B] dark:text-[#9FADC2] hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
               {tab}

@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({ breadcrumbs }) => {
           ? 'bg-black/90 backdrop-blur border-[#26344F]'
           : isDark
           ? 'bg-[#0B1220]/90 backdrop-blur border-[#26344F]'
-          : 'bg-[#FFFCEB]/90 backdrop-blur border-[#E6DCA8]'
+          : 'bg-[#F8FAFC]/90 backdrop-blur border-[#E2E8F0]'
       }`}
     >
       {/* Left side: Breadcrumbs or dynamic path */}
@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({ breadcrumbs }) => {
           className={`hidden md:flex items-center gap-3 px-3 py-1.5 rounded-full text-xs font-mono font-medium border ${
             isDark
               ? 'bg-[#162036] border-[#26344F] text-[#9FADC2]'
-              : 'bg-[#FFF5C2] border-[#E6DCA8] text-[#566070]'
+              : 'bg-[#F1F5F9] border-[#E2E8F0] text-[#64748B]'
           }`}
         >
           <div className="flex items-center gap-1.5 text-[#1E8E4E]">
@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ breadcrumbs }) => {
           className={`p-2 rounded-lg border transition-all flex items-center gap-1.5 text-xs font-bold ${
             isDark
               ? 'bg-[#162036] border-[#26344F] text-[#FFD21F] hover:bg-[#1f2d4d]'
-              : 'bg-[#FFF5C2] border-[#E6DCA8] text-[#8A5A00] hover:bg-[#ffeaa0]'
+              : 'bg-[#F1F5F9] border-[#E2E8F0] text-[#8A5A00] hover:bg-[#ffeaa0]'
           }`}
         >
           {theme === 'light' && <Sun size={16} />}
@@ -81,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ breadcrumbs }) => {
           className={`p-2 rounded-lg border relative transition-colors ${
             isDark
               ? 'bg-[#162036] border-[#26344F] text-[#EEF2F8] hover:bg-[#1f2d4d]'
-              : 'bg-[#FFFFFF] border-[#E6DCA8] text-[#16202D] hover:bg-[#FFF5C2]'
+              : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9]'
           }`}
         >
           <Bell size={18} />
@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({ breadcrumbs }) => {
           <div className="hidden lg:block text-left">
             <div
               className={`text-xs font-bold leading-tight ${
-                isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+                isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
               }`}
             >
               Admin

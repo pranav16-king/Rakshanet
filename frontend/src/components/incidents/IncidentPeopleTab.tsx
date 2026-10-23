@@ -40,14 +40,14 @@ export const IncidentPeopleTab: React.FC<IncidentPeopleTabProps> = ({ people }) 
   return (
     <div
       className={`p-6 rounded-xl border transition-colors shadow-sm ${
-        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+        isDark ? 'bg-[#162036] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
       }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h3
             className={`font-display font-bold text-lg ${
-              isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+              isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
             }`}
           >
             Affected Individuals & Families ({people.length} Estimated)
@@ -71,7 +71,7 @@ export const IncidentPeopleTab: React.FC<IncidentPeopleTabProps> = ({ people }) 
             className={`w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border outline-none ${
               isDark
                 ? 'bg-[#0E1627] border-[#26344F] text-white focus:border-[#FFD21F]'
-                : 'bg-[#F6F0D4] border-[#E6DCA8] text-black focus:border-[#FFC400]'
+                : 'bg-[#F8FAFC] border-[#E2E8F0] text-black focus:border-[#FFC400]'
             }`}
           />
         </div>
@@ -83,7 +83,7 @@ export const IncidentPeopleTab: React.FC<IncidentPeopleTabProps> = ({ people }) 
           <thead>
             <tr
               className={`border-b font-mono font-bold uppercase opacity-75 ${
-                isDark ? 'border-[#26344F] bg-[#0E1627]' : 'border-[#E6DCA8] bg-[#FFF5C2]/40'
+                isDark ? 'border-[#26344F] bg-[#0E1627]' : 'border-[#E2E8F0] bg-[#F1F5F9]/40'
               }`}
             >
               <th className="py-2.5 px-3">Name / Entity</th>
@@ -98,7 +98,7 @@ export const IncidentPeopleTab: React.FC<IncidentPeopleTabProps> = ({ people }) 
             {filtered.map((person) => (
               <tr
                 key={person.id}
-                className={isDark ? 'hover:bg-[#0E1627]/60' : 'hover:bg-[#FFF5C2]/30'}
+                className={isDark ? 'hover:bg-[#0E1627]/60' : 'hover:bg-[#F1F5F9]/30'}
               >
                 <td className="py-3 px-3 font-semibold">
                   <div>{person.name}</div>

@@ -144,10 +144,10 @@ export const IncidentsPage: React.FC = () => {
       mapInstanceRef.current = null;
     }
 
-    // Centroid of incidents or center of India
-    const defaultLat = filtered[0]?.coordinates?.lat || 22.5937;
-    const defaultLng = filtered[0]?.coordinates?.lng || 78.9629;
-    const initialZoom = filtered.length === 1 ? 14 : filtered.length > 1 ? 6 : 5;
+    // Centroid of incidents or center of active disaster theater
+    const defaultLat = filtered[0]?.coordinates?.lat || 13.0425;
+    const defaultLng = filtered[0]?.coordinates?.lng || 80.2285;
+    const initialZoom = filtered.length === 1 ? 14 : filtered.length > 1 ? 11 : 12;
 
     const map = L.map(mapContainerRef.current, {
       center: [defaultLat, defaultLng],
@@ -166,8 +166,8 @@ export const IncidentsPage: React.FC = () => {
     }).addTo(map);
 
     filtered.forEach((inc) => {
-      const lat = inc.coordinates?.lat || (inc as any).lat || 30.1458;
-      const lng = inc.coordinates?.lng || (inc as any).lng || 78.2982;
+      const lat = inc.coordinates?.lat || (inc as any).lat || 13.0425;
+      const lng = inc.coordinates?.lng || (inc as any).lng || 80.2285;
       const sev = (inc.severity || 'HIGH').toUpperCase();
       const color =
         sev === 'CRITICAL'
@@ -283,19 +283,19 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <h1
-            className="text-2xl sm:text-3xl font-black text-[#16202D] dark:text-white tracking-tight mt-1"
+            className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mt-1"
             style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
           >
             Incident Command & Mesh Clusters
           </h1>
-          <p className="text-xs sm:text-sm text-[#566070] dark:text-[#9FADC2]">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-[#9FADC2]">
             DBSCAN-correlated distress tickets, hop-by-hop mesh telemetry, and multi-channel rescue extractions
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           {/* View Switcher: Grid vs Map */}
-          <div className="flex items-center p-1 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] shadow-sm">
+          <div className="flex items-center p-1 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] shadow-xs">
             <button
               onClick={() => setViewMode('GRID')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -335,12 +335,12 @@ export const IncidentsPage: React.FC = () => {
 
       {/* KPI Summary Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] shadow-sm">
-          <div className="flex items-center justify-between text-xs text-[#64748B] dark:text-[#94A3B8]">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] shadow-xs">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-[#94A3B8]">
             <span>Active Incidents</span>
             <Activity className="w-4 h-4 text-cyan-500" />
           </div>
-          <div className="text-2xl font-black text-[#16202D] dark:text-white mt-1">
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
             {totalIncidents}
           </div>
           <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
@@ -348,7 +348,7 @@ export const IncidentsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#162036] border border-red-500/30 bg-red-500/5 shadow-sm">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#162036] border border-red-500/30 bg-red-500/5 shadow-xs">
           <div className="flex items-center justify-between text-xs text-red-600 dark:text-red-400">
             <span>Critical Triage Priority</span>
             <ShieldAlert className="w-4 h-4 text-red-500 animate-pulse" />
@@ -361,25 +361,25 @@ export const IncidentsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] shadow-sm">
-          <div className="flex items-center justify-between text-xs text-[#64748B] dark:text-[#94A3B8]">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] shadow-xs">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-[#94A3B8]">
             <span>Souls at Risk (Casualties)</span>
             <Users className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="text-2xl font-black text-[#16202D] dark:text-white mt-1">
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
             ~{totalCasualties}
           </div>
-          <div className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-semibold mt-0.5">
+          <div className="text-[11px] text-slate-500 dark:text-[#94A3B8] font-semibold mt-0.5">
             Statistical Poisson Estimate
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] shadow-sm">
-          <div className="flex items-center justify-between text-xs text-[#64748B] dark:text-[#94A3B8]">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] shadow-xs">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-[#94A3B8]">
             <span>Active Mesh Handsets</span>
             <Radio className="w-4 h-4 text-[#0891B2]" />
           </div>
-          <div className="text-2xl font-black text-[#16202D] dark:text-white mt-1">
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
             {totalHandsets}
           </div>
           <div className="text-[11px] text-cyan-600 dark:text-cyan-400 font-semibold mt-0.5">
@@ -389,18 +389,18 @@ export const IncidentsPage: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-4 rounded-2xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] shadow-sm">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-4 rounded-2xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] shadow-xs">
         <div className="relative flex-1">
           <Search
             size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#566070] dark:text-[#9FADC2]"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#9FADC2]"
           />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search incident ticket ID, title, location, disaster type..."
-            className="w-full h-10 pl-10 pr-4 text-xs rounded-xl bg-[#FFFCEB]/50 dark:bg-[#0E1627] border border-[#E6DCA8] dark:border-[#26344F] text-[#16202D] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400]"
+            className="w-full h-10 pl-10 pr-4 text-xs rounded-xl bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-[#26344F] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400]"
           />
         </div>
 
@@ -409,7 +409,7 @@ export const IncidentsPage: React.FC = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="h-10 px-3 text-xs font-semibold rounded-xl bg-[#FFFCEB]/50 dark:bg-[#0E1627] border border-[#E6DCA8] dark:border-[#26344F] text-[#16202D] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400]"
+            className="h-10 px-3 text-xs font-semibold rounded-xl bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-[#26344F] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400]"
           >
             <option value="ALL">All Statuses</option>
             <option value="ACTIVE">🔴 Active / Open</option>
@@ -426,7 +426,7 @@ export const IncidentsPage: React.FC = () => {
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   filterSeverity === sev
                     ? 'bg-[#FFC400] dark:bg-[#FFD21F] text-[#1A1400] shadow-sm'
-                    : 'text-[#566070] dark:text-[#9FADC2] hover:bg-black/5 dark:hover:bg-white/5 border border-transparent'
+                    : 'text-slate-600 dark:text-[#9FADC2] hover:bg-black/5 dark:hover:bg-white/5 border border-transparent'
                 }`}
               >
                 {sev === 'ALL' ? 'All Severities' : sev}
@@ -438,13 +438,13 @@ export const IncidentsPage: React.FC = () => {
 
       {/* Main Content: Map or Grid */}
       {viewMode === 'MAP' ? (
-        <Card className="p-4 bg-white dark:bg-[#162036] border-[#E6DCA8] dark:border-[#26344F] shadow-sm space-y-3">
+        <Card className="p-4 bg-white dark:bg-[#162036] border-slate-200 dark:border-[#26344F] shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-[#16202D] dark:text-white">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 Territory Disaster Map & Clustered Zones ({filtered.length})
               </h3>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8]">
                 Interactive geographic overview showing active DBSCAN clusters, casualty zones, and mesh geofences
               </p>
             </div>
@@ -480,7 +480,7 @@ export const IncidentsPage: React.FC = () => {
                 key={inc.id}
                 variant="alert"
                 alertColor={isCritical ? 'red' : inc.severity === 'HIGH' ? 'yellow' : 'teal'}
-                className="cursor-pointer hover:shadow-lg transition-all flex flex-col justify-between group border hover:border-[#FFD21F] dark:hover:border-[#FFD21F]"
+                className="cursor-pointer hover:shadow-lg transition-all flex flex-col justify-between group border border-slate-200 dark:border-[#26344F] hover:border-[#FFD21F] dark:hover:border-[#FFD21F]"
                 onClick={() => navigate(`/app/incidents/${inc.id}`)}
               >
                 <div>
@@ -488,7 +488,7 @@ export const IncidentsPage: React.FC = () => {
                   <div className="flex items-center justify-between mb-2.5">
                     <div className="flex items-center gap-2">
                       {getDisasterIcon(inc.type || inc.disaster_type || '')}
-                      <span className="font-mono text-xs font-bold text-[#8A5A00] dark:text-[#FFD21F]">
+                      <span className="font-mono text-xs font-bold text-amber-700 dark:text-[#FFD21F]">
                         {inc.id}
                       </span>
                     </div>
@@ -511,21 +511,21 @@ export const IncidentsPage: React.FC = () => {
 
                   {/* Title & Description */}
                   <h3
-                    className="text-base sm:text-lg font-bold text-[#16202D] dark:text-white leading-tight mb-2 group-hover:text-[#0891B2] transition-colors"
+                    className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight mb-2 group-hover:text-[#0891B2] transition-colors"
                     style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
                   >
                     {inc.title}
                   </h3>
 
-                  <p className="text-xs text-[#566070] dark:text-[#9FADC2] line-clamp-2 mb-4 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-[#9FADC2] line-clamp-2 mb-4 leading-relaxed">
                     {inc.description}
                   </p>
                 </div>
 
                 {/* Footer Metrics & Detail Link */}
-                <div className="pt-3 border-t border-[#E6DCA8]/60 dark:border-[#26344F]/60 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-[#566070] dark:text-[#9FADC2]">
-                    <span className="flex items-center gap-1 font-semibold text-[#16202D] dark:text-white">
+                <div className="pt-3 border-t border-slate-200 dark:border-[#26344F]/60 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-[#9FADC2]">
+                    <span className="flex items-center gap-1 font-semibold text-slate-900 dark:text-white">
                       <Users size={14} className="text-[#0E8A94]" /> ~{casualtyCount} souls
                     </span>
                     <span className="flex items-center gap-1 font-mono text-[#0891B2]">
@@ -533,7 +533,7 @@ export const IncidentsPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-[#566070] dark:text-[#9FADC2]">
+                  <div className="flex items-center justify-between text-xs text-[#64748B] dark:text-[#9FADC2]">
                     <span className="flex items-center gap-1 truncate max-w-[180px]">
                       <MapPin size={13} className="shrink-0 text-amber-500" />
                       <span className="truncate">{locationStr}</span>

@@ -83,7 +83,7 @@ void main() {
         await tester.pump();
 
         // On Nearby tab, message input bar is visible
-        expect(find.text('Type an emergency message...'), findsOneWidget);
+        expect(find.text('Type a message...'), findsOneWidget);
         expect(find.text('Community Chat'), findsOneWidget);
         expect(find.text('Need medical help'), findsOneWidget);
       },

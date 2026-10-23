@@ -27,7 +27,7 @@ export const Badge: React.FC<BadgeProps> = ({
       case 'LOW':
         return 'bg-[#D9F2E3] dark:bg-[#0F3322] text-[#1E8E4E] dark:text-[#4CD08A] border-[#1E8E4E]/30';
       default:
-        return 'bg-gray-100 dark:bg-gray-800 text-[#566070] dark:text-[#9FADC2] border-gray-400/30';
+        return 'bg-gray-100 dark:bg-gray-800 text-[#64748B] dark:text-[#9FADC2] border-gray-400/30';
     }
   };
 

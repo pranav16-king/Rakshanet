@@ -37,14 +37,14 @@ export const Logo: React.FC<LogoProps> = ({
         <svg
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#16202D"
+          stroke="#0F172A"
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
           className="w-5/6 h-5/6"
         >
           {/* Signal wave triangle beacon */}
-          <path d="M12 3L2 20h20L12 3z" fill="#16202D" stroke="none" />
+          <path d="M12 3L2 20h20L12 3z" fill="#0F172A" stroke="none" />
           <path d="M12 8v5" stroke="#FFC400" strokeWidth="2.5" />
           <circle cx="12" cy="16.5" r="1.2" fill="#FFC400" />
         </svg>
@@ -52,13 +52,13 @@ export const Logo: React.FC<LogoProps> = ({
 
       <div className="flex flex-col leading-tight">
         <span
-          className={`font-bold tracking-tight text-[#16202D] dark:text-[#EEF2F8] ${textSizes[size]}`}
+          className={`font-bold tracking-tight text-[#0F172A] dark:text-[#EEF2F8] ${textSizes[size]}`}
           style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
         >
           RakshaNet <span className="text-[#8A5A00] dark:text-[#FFD21F]">AI</span>
         </span>
         {showSubtitle && (
-          <span className="text-xs font-medium text-[#566070] dark:text-[#9FADC2] tracking-wider uppercase">
+          <span className="text-xs font-medium text-[#64748B] dark:text-[#9FADC2] tracking-wider uppercase">
             {subtitle}
           </span>
         )}

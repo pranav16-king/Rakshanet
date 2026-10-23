@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
+  variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -29,13 +29,15 @@ export const Button: React.FC<ButtonProps> = ({
     primary:
       'bg-[#FFC400] dark:bg-[#FFD21F] text-[#1A1400] font-semibold hover:brightness-105 active:scale-[0.98] shadow-sm',
     secondary:
-      'bg-white dark:bg-[#162036] text-[#16202D] dark:text-[#EEF2F8] border border-[#E6DCA8] dark:border-[#26344F] hover:bg-[#FFF5C2] dark:hover:bg-[#1E2B48] active:scale-[0.98]',
+      'bg-white dark:bg-[#162036] text-slate-800 dark:text-[#EEF2F8] border border-slate-200 dark:border-[#26344F] hover:bg-slate-50 dark:hover:bg-[#1E2B48] active:scale-[0.98]',
     danger:
       'bg-[#D92D20] dark:bg-[#FF5A4E] text-white font-semibold hover:brightness-110 active:scale-[0.98] shadow-sm',
+    success:
+      'bg-emerald-600 hover:bg-emerald-500 text-white font-semibold active:scale-[0.98] shadow-sm',
     ghost:
-      'bg-transparent text-[#566070] dark:text-[#9FADC2] hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.98]',
+      'bg-transparent text-slate-600 dark:text-[#9FADC2] hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.98]',
     outline:
-      'bg-transparent border border-[#E6DCA8] dark:border-white/30 text-[#16202D] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 active:scale-[0.98]',
+      'bg-transparent border border-slate-300 dark:border-white/30 text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 active:scale-[0.98]',
   };
 
   return (

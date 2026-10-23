@@ -34,10 +34,10 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       {/* Title & Subtitle */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[#16202D] dark:text-[#EEF2F8] font-display">
+        <h1 className="text-2xl font-bold tracking-tight text-[#0F172A] dark:text-[#EEF2F8] font-display">
           Dashboard
         </h1>
-        <p className="text-sm text-[#566070] dark:text-[#9FADC2] mt-0.5">
+        <p className="text-sm text-[#64748B] dark:text-[#9FADC2] mt-0.5">
           Real-time overview of disaster communication network
         </p>
       </div>
@@ -51,7 +51,7 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
             isEmptyMode
               ? 'bg-[#FFC400] text-[#1A1400] border-[#FFC400] font-bold shadow-xs'
-              : 'bg-white dark:bg-[#162036] text-[#566070] dark:text-[#9FADC2] border-[#E6DCA8] dark:border-[#26344F] hover:bg-[#FFFCEB] dark:hover:bg-[#1C2844]'
+              : 'bg-white dark:bg-[#162036] text-[#64748B] dark:text-[#9FADC2] border-[#E2E8F0] dark:border-[#26344F] hover:bg-[#F8FAFC] dark:hover:bg-[#1C2844]'
           }`}
           title="Toggle zero-incident empty state"
         >
@@ -65,7 +65,7 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({
             onClick={onRefresh}
             disabled={isFetching}
             aria-label="Refresh overview data"
-            className="p-2 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-[#566070] dark:text-[#9FADC2] hover:bg-[#FFFCEB] dark:hover:bg-[#1C2844] transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-white dark:bg-[#162036] border border-[#E2E8F0] dark:border-[#26344F] text-[#64748B] dark:text-[#9FADC2] hover:bg-[#F8FAFC] dark:hover:bg-[#1C2844] transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-[#FFC400]' : ''}`} />
           </button>
@@ -76,11 +76,11 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-[#16202D] dark:text-[#EEF2F8] hover:border-[#FFC400] transition-colors shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#162036] border border-[#E2E8F0] dark:border-[#26344F] text-[#0F172A] dark:text-[#EEF2F8] hover:border-[#FFC400] transition-colors shadow-2xs cursor-pointer"
           >
-            <Calendar className="w-3.5 h-3.5 text-[#566070] dark:text-[#9FADC2]" />
+            <Calendar className="w-3.5 h-3.5 text-[#64748B] dark:text-[#9FADC2]" />
             <span>{currentLabel}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#566070] dark:text-[#9FADC2]" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#64748B] dark:text-[#9FADC2]" />
           </button>
 
           {dropdownOpen && (
@@ -89,7 +89,7 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({
                 className="fixed inset-0 z-40"
                 onClick={() => setDropdownOpen(false)}
               />
-              <div className="absolute right-0 mt-2 w-44 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] shadow-lg py-1.5 z-50 animate-in fade-in zoom-in-95">
+              <div className="absolute right-0 mt-2 w-44 rounded-xl bg-white dark:bg-[#162036] border border-[#E2E8F0] dark:border-[#26344F] shadow-lg py-1.5 z-50 animate-in fade-in zoom-in-95">
                 {TIME_RANGES.map((r) => (
                   <button
                     key={r.id}
@@ -100,8 +100,8 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({
                     }}
                     className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${
                       r.id === timeRange
-                        ? 'bg-[#FFFCEB] dark:bg-[#0E1627] text-[#FFC400] font-bold'
-                        : 'text-[#16202D] dark:text-[#EEF2F8] hover:bg-[#FFFCEB] dark:hover:bg-[#1C2844]'
+                        ? 'bg-[#F8FAFC] dark:bg-[#0E1627] text-[#FFC400] font-bold'
+                        : 'text-[#0F172A] dark:text-[#EEF2F8] hover:bg-[#F8FAFC] dark:hover:bg-[#1C2844]'
                     }`}
                   >
                     <span>{r.label}</span>

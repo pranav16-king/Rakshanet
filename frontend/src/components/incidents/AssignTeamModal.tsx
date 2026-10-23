@@ -98,20 +98,20 @@ export const AssignTeamModal: React.FC<AssignTeamModalProps> = ({
     >
       <div
         className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden transition-colors flex flex-col max-h-[90vh] ${
-          isDark ? 'bg-[#111A2C] border-[#26344F]' : 'bg-white border-[#E6DCA8]'
+          isDark ? 'bg-[#111A2C] border-[#26344F]' : 'bg-white border-[#E2E8F0]'
         }`}
       >
         {/* Modal Header */}
         <div
           className={`px-6 py-4 border-b flex items-center justify-between ${
-            isDark ? 'border-[#26344F] bg-[#162036]' : 'border-[#E6DCA8] bg-[#FFF5C2]/50'
+            isDark ? 'border-[#26344F] bg-[#162036]' : 'border-[#E2E8F0] bg-[#F1F5F9]/50'
           }`}
         >
           <div>
             <h2
               id="modal-title"
               className={`font-display font-bold text-lg ${
-                isDark ? 'text-[#EEF2F8]' : 'text-[#16202D]'
+                isDark ? 'text-[#EEF2F8]' : 'text-[#0F172A]'
               }`}
             >
               Assign Rescue Response Team
@@ -131,7 +131,7 @@ export const AssignTeamModal: React.FC<AssignTeamModalProps> = ({
             className={`p-2 rounded-lg border transition-colors ${
               isDark
                 ? 'border-[#26344F] text-[#9FADC2] hover:text-white hover:bg-[#1f2d4d]'
-                : 'border-[#E6DCA8] text-[#566070] hover:text-[#16202D] hover:bg-[#ebdca8]'
+                : 'border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2E8F0]'
             }`}
           >
             <X size={18} />
@@ -162,10 +162,10 @@ export const AssignTeamModal: React.FC<AssignTeamModalProps> = ({
                       isSelected
                         ? isDark
                           ? 'bg-[#162036] border-[#FFD21F] ring-2 ring-[#FFD21F]/20'
-                          : 'bg-[#FFF5C2] border-[#8A5A00] ring-2 ring-[#FFC400]/30'
+                          : 'bg-[#F1F5F9] border-[#8A5A00] ring-2 ring-[#FFC400]/30'
                         : isDark
                         ? 'bg-[#0E1627] border-[#26344F] hover:border-[#3A4C70]'
-                        : 'bg-white border-[#E6DCA8] hover:border-[#C9BB6E]'
+                        : 'bg-white border-[#E2E8F0] hover:border-[#CBD5E1]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -176,7 +176,7 @@ export const AssignTeamModal: React.FC<AssignTeamModalProps> = ({
                         <div className="flex items-center gap-2">
                           <span
                             className={`text-sm font-bold ${
-                              isDark ? 'text-white' : 'text-[#16202D]'
+                              isDark ? 'text-white' : 'text-[#0F172A]'
                             }`}
                           >
                             {unit.name}
@@ -231,7 +231,7 @@ export const AssignTeamModal: React.FC<AssignTeamModalProps> = ({
               className={`w-full p-3 text-xs rounded-xl border outline-none transition-colors ${
                 isDark
                   ? 'bg-[#0E1627] border-[#26344F] text-[#EEF2F8] placeholder-[#5F6E86] focus:border-[#FFD21F]'
-                  : 'bg-[#F6F0D4] border-[#E6DCA8] text-[#16202D] placeholder-[#9AA1AB] focus:border-[#FFC400]'
+                  : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] focus:border-[#FFC400]'
               }`}
             />
           </div>
@@ -240,7 +240,7 @@ export const AssignTeamModal: React.FC<AssignTeamModalProps> = ({
         {/* Modal Footer */}
         <div
           className={`px-6 py-4 border-t flex items-center justify-between gap-3 ${
-            isDark ? 'border-[#26344F] bg-[#162036]' : 'border-[#E6DCA8] bg-[#FFF5C2]/40'
+            isDark ? 'border-[#26344F] bg-[#162036]' : 'border-[#E2E8F0] bg-[#F1F5F9]/40'
           }`}
         >
           <button
@@ -250,7 +250,7 @@ export const AssignTeamModal: React.FC<AssignTeamModalProps> = ({
             className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${
               isDark
                 ? 'border-[#26344F] text-[#9FADC2] hover:bg-[#1f2d4d]'
-                : 'border-[#E6DCA8] text-[#566070] hover:bg-[#ebdca8]'
+                : 'border-[#E2E8F0] text-[#64748B] hover:bg-[#E2E8F0]'
             }`}
           >
             Cancel

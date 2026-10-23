@@ -20,7 +20,8 @@ interface UserDetailsModalProps {
   person: Person | null;
   isOpen: boolean;
   onClose: () => void;
-  onAuthorizeChange: (personId: string, authorized: boolean) => void;
+  onAuthorizeChange?: (personId: string, authorized: boolean) => void;
+  onToggleAuthorization?: (personId: string, authorized: boolean) => void;
 }
 
 export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
@@ -28,6 +29,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   isOpen,
   onClose,
   onAuthorizeChange,
+  onToggleAuthorization,
 }) => {
   const [authReason, setAuthReason] = useState('');
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
@@ -35,15 +37,16 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   if (!isOpen || !person) return null;
 
   const isAuthorized = person.isAuthorized ?? false;
+  const dispatchAuth = onAuthorizeChange || onToggleAuthorization || (() => {});
 
   const handleGrantAuth = (e: React.FormEvent) => {
     e.preventDefault();
-    onAuthorizeChange(person.id, true);
+    dispatchAuth(person.id, true);
     setShowAuthPrompt(false);
   };
 
   const handleRevokeAuth = () => {
-    onAuthorizeChange(person.id, false);
+    dispatchAuth(person.id, false);
   };
 
   // Masking helpers

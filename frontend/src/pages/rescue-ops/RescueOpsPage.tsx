@@ -73,19 +73,19 @@ export const RescueOpsPage: React.FC = () => {
   const totalCapacity = fleet.reduce((acc, u) => acc + u.capacity, 0);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-100">
+    <div className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <span className="p-2 rounded-xl bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20">
               <Shield className="w-6 h-6" />
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
               Rescue Operations & Fleet Dispatch
             </h1>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Real-time management of amphibious boats, 4WD vehicles, helicopters, and MILP dispatch engine.
           </p>
         </div>
@@ -95,7 +95,7 @@ export const RescueOpsPage: React.FC = () => {
           <button
             onClick={fetchFleet}
             disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-slate-700 bg-[#162036] hover:bg-slate-700/60 text-slate-200 text-sm font-medium transition"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#162036] hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-sm font-medium transition cursor-pointer shadow-xs"
             title="Refresh Fleet"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -105,7 +105,7 @@ export const RescueOpsPage: React.FC = () => {
           <button
             onClick={handleRunOptimization}
             disabled={optimizing}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm shadow-lg shadow-amber-400/20 transition disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm shadow-md shadow-amber-400/20 transition disabled:opacity-50 cursor-pointer"
           >
             {optimizing ? (
               <>
@@ -123,7 +123,7 @@ export const RescueOpsPage: React.FC = () => {
       </div>
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-2">
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span>{errorMsg}</span>
         </div>
@@ -131,36 +131,36 @@ export const RescueOpsPage: React.FC = () => {
 
       {/* KPI stats strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-[#162036] border border-slate-700/70 shadow-sm">
-          <div className="text-xs text-slate-400">Total Registered Fleet</div>
-          <div className="text-2xl font-bold text-white mt-1">{fleet.length} Units</div>
-          <div className="text-xs text-slate-500 mt-0.5">Multi-agency coordination</div>
+        <div className="p-4 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-slate-700/70 shadow-xs">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Registered Fleet</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{fleet.length} Units</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Multi-agency coordination</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#162036] border border-slate-700/70 shadow-sm">
-          <div className="text-xs text-slate-400">Available For Immediate Dispatch</div>
-          <div className="text-2xl font-bold text-emerald-400 mt-1 flex items-center gap-2">
+        <div className="p-4 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-slate-700/70 shadow-xs">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Available For Immediate Dispatch</div>
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5" />
             {availableCount}
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">Ready for instant assignment</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Ready for instant assignment</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#162036] border border-slate-700/70 shadow-sm">
-          <div className="text-xs text-slate-400">Dispatched / In Transit</div>
-          <div className="text-2xl font-bold text-cyan-400 mt-1 flex items-center gap-2">
+        <div className="p-4 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-slate-700/70 shadow-xs">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Dispatched / In Transit</div>
+          <div className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 mt-1 flex items-center gap-2">
             <Clock className="w-5 h-5" />
             {inTransitCount}
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">Active field missions</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Active field missions</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#162036] border border-slate-700/70 shadow-sm">
-          <div className="text-xs text-slate-400">Total Evacuation Capacity</div>
-          <div className="text-2xl font-bold text-amber-400 mt-1">
-            {totalCapacity} <span className="text-xs font-normal text-slate-400">pax/trip</span>
+        <div className="p-4 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-slate-700/70 shadow-xs">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Evacuation Capacity</div>
+          <div className="text-2xl font-bold text-amber-500 dark:text-amber-400 mt-1">
+            {totalCapacity} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">pax/trip</span>
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">Combined rescue throughput</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Combined rescue throughput</div>
         </div>
       </div>
 
@@ -173,7 +173,7 @@ export const RescueOpsPage: React.FC = () => {
       )}
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-[#162036] p-3.5 rounded-xl border border-slate-700/70">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-[#162036] p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/70 shadow-xs">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -181,19 +181,19 @@ export const RescueOpsPage: React.FC = () => {
             placeholder="Search by unit ID, name, capability..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#0E1627] border border-slate-700 rounded-lg pl-9 pr-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+            className="w-full bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3.5 py-2 text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <Filter className="w-3.5 h-3.5" />
             <span>Type:</span>
           </div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="bg-[#0E1627] border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400"
+            className="bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             <option value="ALL">All Types</option>
             <option value="BOAT">Boats</option>
@@ -202,13 +202,13 @@ export const RescueOpsPage: React.FC = () => {
             <option value="HELICOPTER">Helicopter</option>
           </select>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 ml-2">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 ml-2">
             <span>Status:</span>
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-[#0E1627] border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400"
+            className="bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             <option value="ALL">All Statuses</option>
             <option value="AVAILABLE">Available</option>
@@ -235,29 +235,32 @@ export const RescueOpsPage: React.FC = () => {
 
       {/* Unit Detail Quick-view Drawer if selected */}
       {selectedUnit && (
-        <div className="p-5 rounded-xl border border-slate-700 bg-[#162036] flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#162036] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="text-xs text-slate-400">Selected Unit Detail</div>
-            <div className="text-lg font-bold text-white mt-0.5">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Selected Unit Detail</div>
+            <div className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
               {selectedUnit.unit_id} — {selectedUnit.name}
             </div>
-            <div className="text-xs text-slate-300 mt-1 flex items-center gap-3">
+            <div className="text-xs text-slate-600 dark:text-slate-300 mt-1 flex flex-wrap items-center gap-3">
               <span>Base: {selectedUnit.base_location || 'Field Station'}</span>
+              <span>•</span>
               <span>Speed: {selectedUnit.speed_kmh} km/h</span>
+              <span>•</span>
               <span>Crew: {selectedUnit.crew_count || 4} personnel</span>
+              <span>•</span>
               <span>Evacuation Capacity: {selectedUnit.capacity} people</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSelectedUnit(null)}
-              className="px-4 py-2 text-xs rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+              className="px-4 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
             >
               Close
             </button>
             <button
               onClick={handleRunOptimization}
-              className="px-4 py-2 text-xs rounded-lg bg-amber-400 font-bold text-slate-950 hover:bg-amber-300 transition"
+              className="px-4 py-2 text-xs rounded-lg bg-amber-400 font-bold text-slate-950 hover:bg-amber-300 transition cursor-pointer"
             >
               Run Dispatch for this Unit
             </button>
