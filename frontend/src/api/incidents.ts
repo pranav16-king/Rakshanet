@@ -487,7 +487,23 @@ export const incidentsApi = {
       const response = await apiClient.get<Incident[]>('/api/v1/incidents', {
         params: { eps_meters: epsMeters, min_samples: minSamples },
       });
-      if (response.data && response.data.length > 0) return response.data;
+      if (response.data && response.data.length > 0) {
+        return response.data.map((item: any) => {
+          const cat = item.category ? String(item.category) : '';
+          const categoryFormatted = cat ? cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase() : 'Disaster';
+          const incId = item.incident_id || item.id || 'INC-UNKNOWN';
+          const autoTitle = `${categoryFormatted} Response Zone - Sector ${incId}`;
+          return {
+            ...item,
+            id: incId,
+            incident_id: incId,
+            title: item.title || autoTitle,
+            type: item.type || item.category || 'Disaster',
+            severity: item.severity || item.urgency || 'HIGH',
+            status: item.status || 'Active',
+          };
+        });
+      }
     } catch {
       // fallback
     }

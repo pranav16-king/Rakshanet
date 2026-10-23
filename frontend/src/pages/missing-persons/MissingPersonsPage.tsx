@@ -223,10 +223,10 @@ export const MissingPersonsPage: React.FC = () => {
         const data = await incidentsApi.getIncidents();
         if (data && data.length > 0) {
           setAvailableIncidents(
-            data.map((inc) => ({
+            data.map((inc: any) => ({
               id: inc.incident_id || inc.id || 'INC-UNKNOWN',
-              title: inc.title,
-              disaster_type: inc.disaster_type,
+              title: inc.title || `${inc.category || 'Incident'} ${inc.incident_id || inc.id || ''}`,
+              disaster_type: inc.disaster_type || inc.category,
             }))
           );
         }
@@ -622,11 +622,15 @@ export const MissingPersonsPage: React.FC = () => {
                   className="px-3 py-2 text-xs font-semibold rounded-lg bg-[#F8FAFC] dark:bg-[#0B1220] border border-[#CBD5E1] dark:border-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#FFD21F]"
                 >
                   <option value="ALL">All Disaster Incidents</option>
-                  {availableIncidents.map((inc) => (
-                    <option key={inc.id} value={inc.id}>
-                      {inc.id}: {inc.title.slice(0, 32)}...
-                    </option>
-                  ))}
+                  {availableIncidents.map((inc) => {
+                    const rawTitle = inc.title || inc.id || 'Incident';
+                    const displayTitle = rawTitle.length > 32 ? `${rawTitle.slice(0, 32)}...` : rawTitle;
+                    return (
+                      <option key={inc.id} value={inc.id}>
+                        {inc.id}: {displayTitle}
+                      </option>
+                    );
+                  })}
                 </select>
 
                 {/* Priority Filter */}
@@ -1651,7 +1655,7 @@ const ReportMissingModal: React.FC<ReportMissingModalProps> = ({
             >
               {availableIncidents.map((inc) => (
                 <option key={inc.id} value={inc.id}>
-                  {inc.id}: {inc.title}
+                  {inc.id}: {inc.title || inc.id}
                 </option>
               ))}
             </select>
