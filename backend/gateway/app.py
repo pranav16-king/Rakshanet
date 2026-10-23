@@ -14,6 +14,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, stat
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Dict, Any, Optional
+from collections import defaultdict, deque
 import time
 import os
 import uuid
@@ -186,6 +187,356 @@ class WebSocketManager:
 
 
 ws_manager = WebSocketManager()
+
+
+# =============================================================================
+# AUTHENTICATED ONE-TO-ONE CALL SIGNALING
+# =============================================================================
+#
+# This is deliberately a signaling service only. WebRTC media remains peer to
+# peer (DTLS-SRTP) and must never be sent through this WebSocket. Sessions are
+# process-local because they describe ephemeral invitations, not call records.
+# Deployments that run more than one gateway worker need a shared, authenticated
+# presence/session store before enabling multi-worker call traffic.
+
+CALL_INVITE_TTL_SECONDS = max(15, min(120, int(os.getenv("CALL_INVITE_TTL_SECONDS", "45"))))
+CALL_RATE_LIMIT_COUNT = max(1, int(os.getenv("CALL_RATE_LIMIT_COUNT", "8")))
+CALL_RATE_LIMIT_WINDOW_SECONDS = max(10, int(os.getenv("CALL_RATE_LIMIT_WINDOW_SECONDS", "60")))
+_CALL_RELAY_EVENTS = {"sdp_offer", "sdp_answer", "ice_candidate"}
+
+
+class CallSignalingManager:
+    """Routes a narrowly validated signaling protocol between authenticated users."""
+
+    def __init__(self) -> None:
+        self._connections: Dict[str, WebSocket] = {}
+        self._sessions: Dict[str, Dict[str, Any]] = {}
+        self._active_call_by_user: Dict[str, str] = {}
+        self._invite_attempts: Dict[str, deque[float]] = defaultdict(deque)
+
+    @staticmethod
+    def _public_user(user: Dict[str, Any]) -> Dict[str, str]:
+        return {
+            "id": str(user["id"]),
+            "name": str(user.get("name") or "RakshaNet user"),
+            "role": str(user.get("role") or ""),
+        }
+
+    async def connect(self, user_id: str, websocket: WebSocket) -> None:
+        # One active signaling socket per account. The replacement is intentional
+        # so a stale app process cannot receive a subsequent invitation.
+        previous = self._connections.get(user_id)
+        if previous is not None and previous is not websocket:
+            try:
+                await previous.close(code=4000, reason="Session replaced")
+            except Exception:
+                pass
+        await websocket.accept()
+        self._connections[user_id] = websocket
+
+    async def send(self, user_id: str, message: Dict[str, Any]) -> bool:
+        websocket = self._connections.get(user_id)
+        if websocket is None:
+            return False
+        try:
+            await websocket.send_json(message)
+            return True
+        except Exception:
+            self._connections.pop(user_id, None)
+            return False
+
+    async def send_error(self, user_id: str, code: str, message: str, *, call_id: Optional[str] = None) -> None:
+        payload: Dict[str, Any] = {"event": "call_error", "code": code, "message": message}
+        if call_id:
+            payload["call_id"] = call_id
+        await self.send(user_id, payload)
+
+    def _cleanup_session(self, call_id: str) -> Optional[Dict[str, Any]]:
+        session = self._sessions.pop(call_id, None)
+        if session:
+            for user_id in (session["caller_id"], session["recipient_id"]):
+                if self._active_call_by_user.get(user_id) == call_id:
+                    self._active_call_by_user.pop(user_id, None)
+        return session
+
+    async def cleanup_expired(self) -> None:
+        now_ms = int(time.time() * 1000)
+        expired = [
+            call_id
+            for call_id, session in self._sessions.items()
+            if session["expires_at"] <= now_ms and session["status"] == "ringing"
+        ]
+        for call_id in expired:
+            session = self._cleanup_session(call_id)
+            if session:
+                await self.send(
+                    session["caller_id"],
+                    {"event": "call_terminal", "call_id": call_id, "status": "timeout"},
+                )
+                await self.send(
+                    session["recipient_id"],
+                    {"event": "call_cancelled", "call_id": call_id, "status": "timeout"},
+                )
+
+    def _allow_invite(self, caller_id: str) -> bool:
+        now = time.monotonic()
+        attempts = self._invite_attempts[caller_id]
+        while attempts and now - attempts[0] > CALL_RATE_LIMIT_WINDOW_SECONDS:
+            attempts.popleft()
+        if len(attempts) >= CALL_RATE_LIMIT_COUNT:
+            return False
+        attempts.append(now)
+        return True
+
+    @staticmethod
+    def _is_uuid(value: Any) -> bool:
+        try:
+            uuid.UUID(str(value))
+            return True
+        except (ValueError, TypeError, AttributeError):
+            return False
+
+    @staticmethod
+    def _valid_sdp(payload: Any, expected_type: str) -> bool:
+        return (
+            isinstance(payload, dict)
+            and payload.get("type") == expected_type
+            and isinstance(payload.get("sdp"), str)
+            and 1 <= len(payload["sdp"]) <= 32768
+        )
+
+    @staticmethod
+    def _valid_candidate(payload: Any) -> bool:
+        if not isinstance(payload, dict):
+            return False
+        candidate = payload.get("candidate")
+        mid = payload.get("sdpMid")
+        index = payload.get("sdpMLineIndex")
+        return (
+            isinstance(candidate, str)
+            and len(candidate) <= 4096
+            and (mid is None or isinstance(mid, str))
+            and (index is None or isinstance(index, int))
+        )
+
+    async def _terminate(
+        self,
+        call_id: str,
+        status_name: str,
+        *,
+        except_user: Optional[str] = None,
+    ) -> None:
+        session = self._cleanup_session(call_id)
+        if not session:
+            return
+        for user_id in (session["caller_id"], session["recipient_id"]):
+            if user_id != except_user:
+                await self.send(
+                    user_id,
+                    {"event": "call_terminal", "call_id": call_id, "status": status_name},
+                )
+
+    async def disconnect(self, user_id: str, websocket: WebSocket) -> None:
+        if self._connections.get(user_id) is websocket:
+            self._connections.pop(user_id, None)
+        call_id = self._active_call_by_user.get(user_id)
+        if call_id:
+            await self._terminate(call_id, "peer_disconnected", except_user=user_id)
+
+    async def receive(self, sender: Dict[str, Any], data: Any) -> None:
+        sender_id = str(sender["id"])
+        await self.cleanup_expired()
+        if not isinstance(data, dict):
+            await self.send_error(sender_id, "invalid_payload", "Call events must be JSON objects.")
+            return
+        event = data.get("event")
+        if not isinstance(event, str):
+            await self.send_error(sender_id, "invalid_event", "A call event is required.")
+            return
+
+        if event == "call_invite":
+            await self._invite(sender, data)
+            return
+
+        call_id = data.get("call_id")
+        if not self._is_uuid(call_id):
+            await self.send_error(sender_id, "invalid_call_id", "The call identifier is invalid.")
+            return
+        call_id = str(call_id)
+        session = self._sessions.get(call_id)
+        if not session:
+            await self.send_error(sender_id, "unknown_call", "This call is no longer available.", call_id=call_id)
+            return
+        if sender_id not in (session["caller_id"], session["recipient_id"]):
+            await self.send_error(sender_id, "not_call_member", "You are not authorized for this call.", call_id=call_id)
+            return
+
+        is_caller = sender_id == session["caller_id"]
+        recipient_id = session["recipient_id"] if is_caller else session["caller_id"]
+
+        if event == "call_accept":
+            if is_caller or session["status"] != "ringing":
+                await self.send_error(sender_id, "invalid_state", "This invitation cannot be accepted.", call_id=call_id)
+                return
+            session["status"] = "connecting"
+            await self.send(recipient_id, {"event": "call_accepted", "call_id": call_id})
+            return
+
+        if event == "call_reject":
+            if is_caller or session["status"] not in {"ringing", "connecting"}:
+                await self.send_error(sender_id, "invalid_state", "This invitation cannot be rejected.", call_id=call_id)
+                return
+            await self._terminate(call_id, "rejected")
+            return
+
+        if event == "call_cancel":
+            if not is_caller or session["status"] not in {"ringing", "connecting"}:
+                await self.send_error(sender_id, "invalid_state", "This call cannot be cancelled.", call_id=call_id)
+                return
+            await self._terminate(call_id, "cancelled")
+            return
+
+        if event == "call_end":
+            if session["status"] not in {"connecting", "active"}:
+                await self.send_error(sender_id, "invalid_state", "This call is not active.", call_id=call_id)
+                return
+            await self._terminate(call_id, "ended")
+            return
+
+        if event not in _CALL_RELAY_EVENTS or session["status"] not in {"connecting", "active"}:
+            await self.send_error(sender_id, "invalid_state", "This signal is not valid for the call state.", call_id=call_id)
+            return
+
+        if event == "sdp_offer" and (not is_caller or not self._valid_sdp(data.get("description"), "offer")):
+            await self.send_error(sender_id, "invalid_signal", "Only the caller may send a valid SDP offer.", call_id=call_id)
+            return
+        if event == "sdp_answer" and (is_caller or not self._valid_sdp(data.get("description"), "answer")):
+            await self.send_error(sender_id, "invalid_signal", "Only the recipient may send a valid SDP answer.", call_id=call_id)
+            return
+        if event == "ice_candidate" and not self._valid_candidate(data.get("candidate")):
+            await self.send_error(sender_id, "invalid_signal", "The ICE candidate is invalid.", call_id=call_id)
+            return
+
+        # Forward only the minimum required message fields. Caller identity is
+        # injected by the server, never taken from untrusted client data.
+        payload: Dict[str, Any] = {"event": event, "call_id": call_id, "from_user_id": sender_id}
+        if event.startswith("sdp_"):
+            payload["description"] = data["description"]
+        else:
+            payload["candidate"] = data["candidate"]
+        await self.send(recipient_id, payload)
+
+    async def _invite(self, caller: Dict[str, Any], data: Dict[str, Any]) -> None:
+        caller_id = str(caller["id"])
+        recipient_id = data.get("recipient_id")
+        if not isinstance(recipient_id, str) or not recipient_id.strip():
+            await self.send_error(caller_id, "invalid_recipient", "A recipient identifier is required.")
+            return
+        recipient_id = recipient_id.strip()
+        if recipient_id == caller_id:
+            await self.send_error(caller_id, "invalid_recipient", "You cannot call your own account.")
+            return
+        if not self._allow_invite(caller_id):
+            await self.send_error(caller_id, "rate_limited", "Too many call invitations. Please wait before trying again.")
+            return
+        if caller_id in self._active_call_by_user or recipient_id in self._active_call_by_user:
+            await self.send_error(caller_id, "busy", "You or the recipient is already in a call.")
+            return
+        recipient = gateway_storage.get_user_by_id(recipient_id)
+        if not recipient:
+            await self.send_error(caller_id, "recipient_unknown", "The recipient is not available for internet calls.")
+            return
+        if recipient_id not in self._connections:
+            await self.send_error(caller_id, "recipient_unreachable", "The recipient is not connected to call signaling.")
+            return
+
+        call_id = str(uuid.uuid4())
+        created_at = int(time.time() * 1000)
+        expires_at = created_at + CALL_INVITE_TTL_SECONDS * 1000
+        session = {
+            "call_id": call_id,
+            "caller_id": caller_id,
+            "recipient_id": recipient_id,
+            "created_at": created_at,
+            "expires_at": expires_at,
+            "status": "ringing",
+        }
+        self._sessions[call_id] = session
+        self._active_call_by_user[caller_id] = call_id
+        self._active_call_by_user[recipient_id] = call_id
+
+        await self.send(
+            caller_id,
+            {
+                "event": "call_created",
+                "call_id": call_id,
+                "recipient": self._public_user(recipient),
+                "created_at": created_at,
+                "expires_at": expires_at,
+                "transport": "internet_webrtc",
+            },
+        )
+        delivered = await self.send(
+            recipient_id,
+            {
+                "event": "incoming_call",
+                "call_id": call_id,
+                "caller": self._public_user(caller),
+                "created_at": created_at,
+                "expires_at": expires_at,
+                "transport": "internet_webrtc",
+            },
+        )
+        if not delivered:
+            await self._terminate(call_id, "recipient_unreachable")
+
+
+call_signaling_manager = CallSignalingManager()
+
+
+async def _authenticate_call_websocket(websocket: WebSocket) -> Optional[Dict[str, Any]]:
+    """Authenticate before accepting a call-signaling WebSocket."""
+    authorization = websocket.headers.get("authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        await websocket.close(code=4401, reason="Bearer token required")
+        return None
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        email = payload.get("sub")
+        if not isinstance(email, str):
+            raise jwt.PyJWTError("Token missing subject")
+        user = gateway_storage.get_user_by_email(email)
+        if not user or str(payload.get("id")) != str(user["id"]):
+            raise jwt.PyJWTError("Token subject mismatch")
+        return user
+    except jwt.PyJWTError:
+        await websocket.close(code=4401, reason="Invalid token")
+        return None
+
+
+@app.websocket("/api/v1/calls/signaling")
+async def call_signaling_endpoint(websocket: WebSocket):
+    """Authenticated, one-to-one WebRTC signaling endpoint for mobile clients."""
+    user = await _authenticate_call_websocket(websocket)
+    if user is None:
+        return
+    user_id = str(user["id"])
+    await call_signaling_manager.connect(user_id, websocket)
+    await call_signaling_manager.send(
+        user_id,
+        {"event": "call_ready", "user": CallSignalingManager._public_user(user)},
+    )
+    try:
+        while True:
+            await call_signaling_manager.receive(user, await websocket.receive_json())
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        # Do not expose parse errors, tokens, SDP, or ICE candidates to clients/logs.
+        await call_signaling_manager.send_error(user_id, "protocol_error", "The signaling connection was closed.")
+    finally:
+        await call_signaling_manager.disconnect(user_id, websocket)
 
 
 # =============================================================================
