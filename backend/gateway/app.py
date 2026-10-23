@@ -752,38 +752,61 @@ import secrets
 
 
 def _normalize_incident_dict(inc: Dict[str, Any]) -> Dict[str, Any]:
-    inc_id = inc.get("incident_id") or inc.get("id") or "INC-UNKNOWN"
-    cat = inc.get("disaster_type") or inc.get("category") or inc.get("type") or "Flood"
-    cat_str = str(cat).capitalize()
-    title = inc.get("title") or f"{cat_str} Distress Incident - Sector {inc_id}"
-    lat = float(inc.get("lat") or inc.get("centroid_lat") or 30.1458)
-    lng = float(inc.get("lng") or inc.get("centroid_lng") or 78.2982)
-    radius = float(inc.get("cluster_radius_meters") or inc.get("radius_meters") or 600.0)
-    casualties = int(inc.get("casualty_estimate") or inc.get("people_count") or inc.get("estimated_casualties") or inc.get("affectedPeople") or 142)
-    devices = int(inc.get("devices_count") or inc.get("total_devices") or inc.get("devicesCount") or len(inc.get("associated_devices") or []) or 28)
-    severity = str(inc.get("severity") or inc.get("urgency") or "CRITICAL").upper()
-    status_str = str(inc.get("status") or "ACTIVE").upper()
+    def finite_number(value: Any) -> Optional[float]:
+        try:
+            number = float(value)
+            return number if math.isfinite(number) else None
+        except (TypeError, ValueError):
+            return None
+
+    def optional_count(*values: Any) -> Optional[int]:
+        for value in values:
+            if value is None:
+                continue
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    inc_id = str(inc.get("incident_id") or inc.get("id") or "")
+    category = inc.get("disaster_type") or inc.get("category") or inc.get("type")
+    category_text = str(category).strip() if category is not None else "UNSPECIFIED"
+    title = inc.get("title")
+    title = str(title).strip() if title is not None and str(title).strip() else None
+    lat = finite_number(inc.get("lat") if inc.get("lat") is not None else inc.get("centroid_lat"))
+    lng = finite_number(inc.get("lng") if inc.get("lng") is not None else inc.get("centroid_lng"))
+    radius = finite_number(inc.get("cluster_radius_meters") if inc.get("cluster_radius_meters") is not None else inc.get("radius_meters"))
+    people = optional_count(inc.get("people_count"), inc.get("casualty_estimate"), inc.get("estimated_casualties"), inc.get("affectedPeople"))
+    devices = optional_count(inc.get("devices_count"), inc.get("total_devices"), inc.get("devicesCount"))
+    associated_devices = inc.get("associated_devices") or inc.get("device_ids") or []
+    if devices is None and isinstance(associated_devices, list):
+        devices = len(associated_devices)
+    severity = str(inc.get("severity") or inc.get("urgency") or "UNKNOWN").upper()
+    status_str = str(inc.get("status") or "UNCLASSIFIED").upper()
+    resources = inc.get("resourcesNeeded") or inc.get("resources_needed") or []
+    coordinates = {"lat": lat, "lng": lng} if lat is not None and lng is not None else None
 
     return {
         "id": inc_id,
         "incident_id": inc_id,
         "title": title,
-        "type": cat_str,
-        "disaster_type": cat_str,
-        "category": cat_str,
+        "type": category_text,
+        "disaster_type": category_text,
+        "category": category_text,
         "severity": severity,
         "status": status_str,
         "lat": lat,
         "lng": lng,
-        "coordinates": {"lat": lat, "lng": lng},
-        "affected_area": inc.get("affected_area") or f"Radius {int(radius)}m Sector Centroid",
-        "affectedAreaKm2": inc.get("affectedAreaKm2") or inc.get("affected_area_km2") or round(math.pi * (radius / 1000.0) ** 2, 2) or 12.0,
+        "coordinates": coordinates,
+        "affected_area": inc.get("affected_area"),
+        "affectedAreaKm2": finite_number(inc.get("affectedAreaKm2") if inc.get("affectedAreaKm2") is not None else inc.get("affected_area_km2")),
         "clusterRadiusMeters": radius,
         "cluster_radius_meters": radius,
-        "casualty_estimate": casualties,
-        "estimated_casualties": casualties,
-        "people_count": casualties,
-        "affectedPeople": casualties,
+        "casualty_estimate": people,
+        "estimated_casualties": people,
+        "people_count": people,
+        "affectedPeople": people,
         "devices_count": devices,
         "devicesCount": devices,
         "total_devices": devices,
@@ -793,36 +816,19 @@ def _normalize_incident_dict(inc: Dict[str, Any]) -> Dict[str, Any]:
         "centroid_lng": lng,
         "assigned_team": inc.get("assigned_team"),
         "assignedUnitId": inc.get("assignedUnitId") or inc.get("assigned_unit_id"),
-        "resourcesNeeded": inc.get("resourcesNeeded") or inc.get("resources_needed") or ["Rescue Boats", "Medical Teams"],
-        "resources_needed": inc.get("resources_needed") or inc.get("resourcesNeeded") or ["Rescue Boats", "Medical Teams"],
-        "ai_confidence": inc.get("ai_confidence", 0.94),
-        "aiExplainability": inc.get("aiExplainability") or inc.get("ai_explainability") or {
-            "priorityScore": 95 if severity == "CRITICAL" else 82,
-            "confidencePct": 94,
-            "confidenceGrade": "HIGH",
-            "modelVersion": "RakshaNet-SpatialTriage-v2.1",
-            "synthesis": f"Automated AI spatial triage for {title}. High casualty risk detected.",
-            "disclaimer": "Probabilistic casualty & search zone model. Values are estimated, not exact.",
-            "factors": {
-                "lastContactTime": {"name": "Last Contact Time", "valueDisplay": "2 min ago", "status": "critical"},
-                "incidentSeverity": {"name": "Incident Severity", "valueDisplay": severity, "status": "critical"},
-                "affectedPopulation": {"name": "Estimated Casualties", "valueDisplay": f"{casualties} souls", "status": "critical"},
-                "hazardBoundaryProximity": {"name": "Hazard Proximity", "valueDisplay": "Active Inundation", "status": "critical"},
-                "communicationStatus": {"name": "Mesh Comms", "valueDisplay": "DTN Relay Active", "status": "normal"}
-            }
-        },
-        "ai_explainability": inc.get("ai_explainability") or inc.get("aiExplainability") or {
-            "factors": [f"DBSCAN spatial cluster of {devices} nodes within {int(radius)}m radius"],
-            "model_version": "RakshaNet-SpatialTriage-v2.1"
-        },
-        "description": inc.get("description") or f"Emergency distress signal cluster detected across local mesh relay network. Multi-unit rescue dispatch protocol initiated.",
-        "firstReported": inc.get("firstReported") or "12 min ago",
-        "firstReportedTimestamp": inc.get("firstReportedTimestamp") or inc.get("created_at") or int(time.time() * 1000 - 720000),
-        "lastUpdate": inc.get("lastUpdate") or "Just now",
-        "lastUpdateTimestamp": inc.get("lastUpdateTimestamp") or inc.get("updated_at") or int(time.time() * 1000),
-        "associated_devices": inc.get("associated_devices") or inc.get("device_ids") or [],
-        "created_at": inc.get("created_at") or int(time.time() * 1000 - 720000),
-        "updated_at": inc.get("updated_at") or int(time.time() * 1000),
+        "resourcesNeeded": resources if isinstance(resources, list) else [],
+        "resources_needed": resources if isinstance(resources, list) else [],
+        "ai_confidence": finite_number(inc.get("ai_confidence")),
+        "aiExplainability": inc.get("aiExplainability") or inc.get("ai_explainability") or {},
+        "ai_explainability": inc.get("ai_explainability") or inc.get("aiExplainability") or {},
+        "description": inc.get("description"),
+        "firstReported": inc.get("firstReported") or inc.get("first_reported"),
+        "firstReportedTimestamp": inc.get("firstReportedTimestamp") or inc.get("created_at"),
+        "lastUpdate": inc.get("lastUpdate") or inc.get("last_updated"),
+        "lastUpdateTimestamp": inc.get("lastUpdateTimestamp") or inc.get("updated_at"),
+        "associated_devices": associated_devices if isinstance(associated_devices, list) else [],
+        "created_at": inc.get("created_at"),
+        "updated_at": inc.get("updated_at"),
     }
 
 
@@ -857,23 +863,22 @@ def get_incidents_list(
             clusters = engine.cluster_distress_signals(distress_packets)
             for cl in clusters:
                 if cl.incident_id not in inc_map:
-                    cat_name = getattr(cl, "category", "Flood").capitalize()
+                    cat_name = str(getattr(cl, "category", None) or "UNSPECIFIED").capitalize()
                     cl_dict = {
                         "incident_id": cl.incident_id,
-                        "title": f"{cat_name} Distress Response - Sector {cl.incident_id}",
+                        "title": cl.incident_id,
                         "disaster_type": cat_name,
-                        "severity": cl.urgency,
-                        "status": getattr(cl, "status", "ACTIVE"),
+                        "severity": getattr(cl, "urgency", "UNKNOWN"),
+                        "status": getattr(cl, "status", "CLUSTERED"),
                         "lat": cl.centroid_lat,
                         "lng": cl.centroid_lng,
-                        "affected_area": f"Radius {int(cl.radius_meters)}m cluster centroid",
                         "cluster_radius_meters": cl.radius_meters,
                         "casualty_estimate": cl.estimated_casualties,
                         "people_count": cl.estimated_casualties,
                         "devices_count": cl.total_devices,
                         "associated_devices": getattr(cl, "device_ids", []),
-                        "created_at": getattr(cl, "first_reported_at", int(time.time() * 1000)),
-                        "updated_at": getattr(cl, "last_reported_at", int(time.time() * 1000)),
+                        "created_at": getattr(cl, "first_reported_at", None),
+                        "updated_at": getattr(cl, "last_reported_at", None),
                     }
                     gateway_storage.upsert_incident(cl_dict)
                     inc_map[cl.incident_id] = _normalize_incident_dict(cl_dict)
@@ -902,27 +907,24 @@ def get_incident_detail(incident_id: str):
     cluster = next((c for c in clusters if c.incident_id == incident_id), None)
 
     if cluster:
-        category_name = getattr(cluster, "category", "Flood").capitalize()
+        category_name = str(getattr(cluster, "category", None) or "UNSPECIFIED").capitalize()
         raw = {
             "incident_id": cluster.incident_id,
-            "title": f"{category_name} Distress Alert ({cluster.total_devices} devices)",
+            "title": cluster.incident_id,
             "disaster_type": category_name,
             "category": category_name,
-            "severity": cluster.urgency,
-            "status": getattr(cluster, "status", "ACTIVE"),
+            "severity": getattr(cluster, "urgency", "UNKNOWN"),
+            "status": getattr(cluster, "status", "CLUSTERED"),
             "lat": cluster.centroid_lat,
             "lng": cluster.centroid_lng,
-            "affected_area": f"Radius {int(cluster.radius_meters)}m cluster centroid",
             "cluster_radius_meters": cluster.radius_meters,
             "casualty_estimate": cluster.estimated_casualties,
             "people_count": cluster.estimated_casualties,
             "devices_count": cluster.total_devices,
             "assigned_team": None,
-            "resources_needed": ["Rescue Units Needed", "Medical First Responders"],
-            "ai_confidence": 0.94,
             "associated_devices": getattr(cluster, "device_ids", []),
-            "created_at": getattr(cluster, "first_reported_at", int(time.time() * 1000)),
-            "updated_at": getattr(cluster, "last_reported_at", int(time.time() * 1000))
+            "created_at": getattr(cluster, "first_reported_at", None),
+            "updated_at": getattr(cluster, "last_reported_at", None)
         }
         gateway_storage.upsert_incident(raw)
         return _normalize_incident_dict(raw)
@@ -1044,29 +1046,51 @@ def get_incident_mesh_topology(incident_id: str):
 @app.post("/api/v1/incidents/{incident_id}/messages")
 async def broadcast_incident_mesh_message(incident_id: str, req: IncidentBroadcastMessage):
     """
-    Broadcasts an incident command center tactical instruction or warning
-    directly into the local BLE/WiFi mesh network of that incident.
+    Queues a command for a field gateway. The cloud service cannot itself
+    transmit BLE/Wi-Fi mesh frames, so it never claims immediate field delivery.
     """
     import secrets
     now = int(time.time() * 1000)
     msg_id = f"CMD-MSG-{secrets.token_hex(4).upper()}"
+    if req.recipient_device_id and not req.recipient_encryption_key:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Targeted mesh commands require the recipient's verified encryption key. No message was queued.",
+        )
     packet = {
         "ver": 1,
         "msg_id": msg_id,
         "sender_id": "COMMAND-CENTER",
-        "sender_name": "Command Center Incident Commander",
+        "sender_name": None,
         "conv_id": f"INCIDENT_{incident_id}",
         "ts": now,
         "ttl": 5,
         "hops": 0,
-        "type": "BROADCAST",
+        "type": "TARGETED_COMMAND" if req.recipient_device_id else "BROADCAST",
         "payload": req.message,
-        "meta": {"priority": req.priority, "channel": req.channel, "incident_id": incident_id}
+        "meta": {
+            "priority": req.priority,
+            "channel": req.channel,
+            "incident_id": incident_id,
+            "recipient_device_id": req.recipient_device_id,
+            # A browser-to-device encrypted field command requires a verified
+            # device key and a field gateway implementation. This server only
+            # queues the command; it does not falsely mark it encrypted.
+            "encryption_state": "KEY_PRESENT_AWAITING_FIELD_GATEWAY" if req.recipient_encryption_key else "NOT_REQUESTED",
+        }
     }
-    gateway_storage.ingest_packet(packet, mule_id="COMMAND-CONSOLE")
+    queued_command = gateway_storage.queue_field_command({
+        "command_id": msg_id,
+        "incident_id": incident_id,
+        "recipient_device_id": req.recipient_device_id,
+        "recipient_encryption_key": req.recipient_encryption_key,
+        "payload": req.message,
+        "priority": req.priority,
+        "channel": req.channel,
+    })
 
     await ws_manager.broadcast({
-        "event": "NEW_PACKET_INGESTED",
+        "event": "FIELD_COMMAND_QUEUED",
         "incident_id": incident_id,
         "packet": packet,
         "timestamp": now
@@ -1076,8 +1100,8 @@ async def broadcast_incident_mesh_message(incident_id: str, req: IncidentBroadca
         "success": True,
         "message_id": msg_id,
         "incident_id": incident_id,
-        "status": "TRANSMITTING_OVER_MESH",
-        "broadcast_timestamp": now
+        "status": queued_command["status"],
+        "broadcast_timestamp": queued_command["created_at"]
     }
 
 
