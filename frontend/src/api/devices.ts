@@ -8,14 +8,14 @@ import type {
   DeviceStatus,
 } from '../types/devices';
 
-const DEFAULT_METRICS: DeviceSummaryMetrics = {
-  totalDevices: 8,
-  onlineCount: 5,
-  onlinePercent: 63,
-  relayCount: 2,
-  relayPercent: 25,
-  offlineCount: 1,
-  offlinePercent: 12,
+const EMPTY_METRICS: DeviceSummaryMetrics = {
+  totalDevices: 0,
+  onlineCount: 0,
+  onlinePercent: 0,
+  relayCount: 0,
+  relayPercent: 0,
+  offlineCount: 0,
+  offlinePercent: 0,
 };
 
 function formatTimeAgo(timestampMs?: number): string {
@@ -55,20 +55,20 @@ export const devicesApi = {
       const response = await apiClient.get<any>('/api/v1/devices/stats');
       const d = response.data;
       if (d && typeof d.total === 'number') {
-        const total = d.total || 8;
+        const total = d.total || 0;
         return {
           totalDevices: total,
-          onlineCount: d.online ?? 5,
-          onlinePercent: total > 0 ? Math.round(((d.online ?? 5) / total) * 100) : 63,
-          relayCount: d.relay ?? 2,
-          relayPercent: total > 0 ? Math.round(((d.relay ?? 2) / total) * 100) : 25,
-          offlineCount: d.offline ?? 1,
-          offlinePercent: total > 0 ? Math.round(((d.offline ?? 1) / total) * 100) : 12,
+          onlineCount: d.online ?? 0,
+          onlinePercent: total > 0 ? Math.round(((d.online ?? 0) / total) * 100) : 0,
+          relayCount: d.relay ?? 0,
+          relayPercent: total > 0 ? Math.round(((d.relay ?? 0) / total) * 100) : 0,
+          offlineCount: d.offline ?? 0,
+          offlinePercent: total > 0 ? Math.round(((d.offline ?? 0) / total) * 100) : 0,
         };
       }
-      return DEFAULT_METRICS;
+      return EMPTY_METRICS;
     } catch {
-      return DEFAULT_METRICS;
+      return EMPTY_METRICS;
     }
   },
 

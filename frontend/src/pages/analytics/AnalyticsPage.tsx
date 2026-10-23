@@ -26,6 +26,24 @@ import {
 import { Card } from '../../components/common/Card';
 import { analyticsApi, type LiveAnalyticsData } from '../../api/analytics';
 
+const EMPTY_DATA: LiveAnalyticsData = {
+  totalMessages: 0,
+  totalMessagesDelta: '',
+  uniqueUsers: 0,
+  uniqueUsersDelta: '',
+  incidentsHandled: 0,
+  incidentsHandledDelta: '',
+  peopleHelped: 0,
+  peopleHelpedDelta: '',
+  totalSosRelayed: 0,
+  resolutionRatePct: 0,
+  avgResponseMinutes: 0,
+  networkEfficiencyPct: 0,
+  days: [],
+  incidentDistribution: {},
+  deviceStats: { total: 0, online: 0, relay: 0, offline: 0 },
+};
+
 export const AnalyticsPage: React.FC = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<string>('7d');
@@ -33,38 +51,7 @@ export const AnalyticsPage: React.FC = () => {
 
   // Live Query from Gateway Endpoints (Auto-refresh every 12 seconds)
   const {
-    data = {
-      totalMessages: 1575,
-      totalMessagesDelta: '+28% throughput',
-      uniqueUsers: 14,
-      uniqueUsersDelta: '+14% active field agents',
-      incidentsHandled: 6,
-      incidentsHandledDelta: '78.5% triage efficiency',
-      peopleHelped: 106,
-      peopleHelpedDelta: 'Poisson casualty model',
-      totalSosRelayed: 343,
-      resolutionRatePct: 78.5,
-      avgResponseMinutes: 8.4,
-      networkEfficiencyPct: 99.2,
-      days: [
-        { date: 'Oct 17', total: 120, sos: 26, reports: 60, team: 33 },
-        { date: 'Oct 18', total: 155, sos: 34, reports: 77, team: 43 },
-        { date: 'Oct 19', total: 190, sos: 41, reports: 95, team: 53 },
-        { date: 'Oct 20', total: 225, sos: 49, reports: 112, team: 63 },
-        { date: 'Oct 21', total: 260, sos: 57, reports: 130, team: 72 },
-        { date: 'Oct 22', total: 295, sos: 64, reports: 147, team: 82 },
-        { date: 'Oct 23', total: 330, sos: 72, reports: 165, team: 92 },
-      ],
-      incidentDistribution: {
-        Flood: 3,
-        Earthquake: 1,
-        Landslide: 1,
-        Cyclone: 1,
-        Fire: 1,
-        General_emergency: 2,
-      },
-      deviceStats: { total: 8, online: 5, relay: 2, offline: 1 },
-    },
+    data = EMPTY_DATA,
     isLoading,
     isFetching,
     refetch,
@@ -73,6 +60,7 @@ export const AnalyticsPage: React.FC = () => {
     queryFn: () => analyticsApi.getSummary(timeRange),
     refetchInterval: 12000,
   });
+
 
   const days = data.days || [];
   const maxDayTotal = Math.max(...days.map((d) => d.total || 0), 100);

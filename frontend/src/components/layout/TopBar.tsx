@@ -65,7 +65,7 @@ export const TopBar: React.FC<TopBarProps> = ({ isSidebarCollapsed }) => {
           title="Interactive Offline Mesh Architecture, Multi-Hop Simulator & Protocols"
         >
           <Network size={13} className="text-amber-500" />
-          <span>Mesh Engine Demo</span>
+          <span>Mesh Architecture</span>
         </Link>
 
         {/* Live Updates Badge */}
@@ -105,9 +105,11 @@ export const TopBar: React.FC<TopBarProps> = ({ isSidebarCollapsed }) => {
               <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:text-[#FFD21F] border border-amber-500/20 uppercase tracking-wider">
                 {user?.role || 'Admin'}
               </span>
-              <span className="text-[11px] text-slate-500 dark:text-[#9FADC2]">
-                Government HQ
-              </span>
+              {(user as any)?.organization || (user as any)?.agency ? (
+                <span className="text-[11px] text-slate-500 dark:text-[#9FADC2]">
+                  {(user as any).organization || (user as any).agency}
+                </span>
+              ) : null}
             </div>
           </div>
         </div>

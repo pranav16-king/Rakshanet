@@ -69,76 +69,14 @@ export const IncidentAreaMeshMap: React.FC<IncidentAreaMeshMapProps> = ({
   const lng = incident.coordinates?.lng || topology?.centroid?.lng || 80.2285;
   const radius = incident.clusterRadiusMeters || topology?.radius_meters || 600;
 
-  const beacons = useMemo(() => topology?.sos_beacons || [
-    {
-      beacon_id: 'BEACON-1',
-      device_id: 'SR-7B1A',
-      name: 'Rohan & Family',
-      lat: lat + 0.0018,
-      lng: lng - 0.0012,
-      status: 'CRITICAL_TRAPPED',
-      casualties: 4,
-      battery: 28,
-      last_ping_seconds_ago: 45,
-    },
-    {
-      beacon_id: 'BEACON-2',
-      device_id: 'SR-3E9C',
-      name: 'Kavitha M. (Diabetic)',
-      lat: lat - 0.0022,
-      lng: lng + 0.0015,
-      status: 'MEDICAL_URGENT',
-      casualties: 2,
-      battery: 42,
-      last_ping_seconds_ago: 110,
-    },
-    {
-      beacon_id: 'BEACON-3',
-      device_id: 'SR-9A2F',
-      name: 'Primary School Terrace',
-      lat: lat + 0.0031,
-      lng: lng + 0.0028,
-      status: 'SAFE_HAVEN_SIGHTED',
-      casualties: 12,
-      battery: 74,
-      last_ping_seconds_ago: 190,
-    },
-  ], [topology, lat, lng]);
+  const beacons = useMemo(() => topology?.sos_beacons || [], [topology]);
 
-  const relays = useMemo(() => topology?.mesh_relays || [
-    {
-      relay_id: 'MULE-NODE-04',
-      name: 'Relief Worker Phone Relay #4',
-      lat: lat + 0.0008,
-      lng: lng - 0.0004,
-      hops_to_gateway: 1,
-      status: 'ACTIVE_RELAYING',
-      battery: 65,
-      packets_forwarded: 42,
-    },
-    {
-      relay_id: 'MULE-DRONE-RECON',
-      name: 'Airborne Drone BLE Relay',
-      lat: lat - 0.0010,
-      lng: lng + 0.0008,
-      hops_to_gateway: 1,
-      status: 'AIRBORNE_RELAYING',
-      battery: 80,
-      packets_forwarded: 128,
-    },
-  ], [topology, lat, lng]);
 
-  const rescueUnits = useMemo(() => topology?.rescue_units || [
-    {
-      unit_id: 'NDRF-BOAT-01',
-      name: 'NDRF Zodiac Inflatable Boat 01',
-      type: 'BOAT',
-      lat: lat - 0.0030,
-      lng: lng - 0.0020,
-      status: 'EN_ROUTE',
-      eta_minutes: 6,
-    },
-  ], [topology, lat, lng]);
+  const relays = useMemo(() => topology?.mesh_relays || [], [topology]);
+
+  const rescueUnits = useMemo(() => topology?.rescue_units || [], [topology]);
+
+
 
   // Initialize and redraw map
   useEffect(() => {

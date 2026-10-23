@@ -5,142 +5,6 @@ import type {
   BroadcastMessagePayload,
 } from '../types/messages';
 
-// Resilient fallback initial messages matching media_1791015140209.jpg (middle-right screen)
-const INITIAL_MESSAGES: FieldMessage[] = [
-  {
-    id: 'msg-001',
-    senderName: 'Amit Kumar',
-    senderAvatarInitial: 'A',
-    avatarColor: 'sky',
-    text: 'Flood in my area, water level rising fast. 5 people trapped on second floor.',
-    location: 'Sector 4B Riverside Colony',
-    timestamp: '5 min ago',
-    createdAt: Date.now() - 5 * 60 * 1000,
-    statusBadge: 'SOS INC-FLD-2026-001',
-    badgeType: 'sos',
-    deliveryStatus: 'relayed', // 2 ticks mesh relayed
-    meshHops: 2,
-    relayDeviceId: 'SR-9A1C',
-    incidentId: 'INC-FLD-2026-001',
-    acknowledged: false,
-  },
-  {
-    id: 'msg-002',
-    senderName: 'Priya Sharma',
-    senderAvatarInitial: 'P',
-    avatarColor: 'blue',
-    text: 'We are sheltered at high ground near Sector 3 bridge. Water still rising.',
-    location: 'Sector 4B Riverside Colony',
-    timestamp: '8 min ago',
-    createdAt: Date.now() - 8 * 60 * 1000,
-    statusBadge: 'SOS INC-FLD-2026-001',
-    badgeType: 'sos',
-    deliveryStatus: 'delivered', // double green delivered
-    meshHops: 1,
-    relayDeviceId: 'SR-8F42',
-    incidentId: 'INC-FLD-2026-001',
-    acknowledged: true,
-  },
-  {
-    id: 'msg-003',
-    senderName: 'Rahul Mehta',
-    senderAvatarInitial: 'R',
-    avatarColor: 'purple',
-    text: 'Highway corridor completely blocked due to boulders and landslide. Bus stranded.',
-    location: 'NH-48 Mountain Pass km 74',
-    timestamp: '10 min ago',
-    createdAt: Date.now() - 10 * 60 * 1000,
-    statusBadge: 'Report INC-LND-2026-003',
-    badgeType: 'report',
-    deliveryStatus: 'delivered', // double green delivered
-    meshHops: 2,
-    relayDeviceId: 'SR-3D7B',
-    incidentId: 'INC-LND-2026-003',
-    acknowledged: true,
-  },
-  {
-    id: 'msg-004',
-    senderName: 'Sneha Patel',
-    senderAvatarInitial: 'S',
-    avatarColor: 'rose',
-    text: 'Dense toxic fumes spreading from transformer fire. Low insulin supply.',
-    location: 'Industrial Park Gate 3',
-    timestamp: '15 min ago',
-    createdAt: Date.now() - 15 * 60 * 1000,
-    statusBadge: 'Medical INC-FIR-2026-005',
-    badgeType: 'medical',
-    deliveryStatus: 'queued', // 1 tick queued
-    meshHops: 3,
-    relayDeviceId: 'SR-6E2F',
-    incidentId: 'INC-FIR-2026-005',
-    acknowledged: false,
-  },
-  {
-    id: 'msg-005',
-    senderName: 'Volunteer Team Alpha',
-    senderAvatarInitial: 'V',
-    avatarColor: 'teal',
-    text: 'NDRF Zodiac Boat deployed to Sector 4 low-lying banks.',
-    location: 'Sector 4B Riverside Colony',
-    timestamp: '18 min ago',
-    createdAt: Date.now() - 18 * 60 * 1000,
-    statusBadge: 'Team',
-    badgeType: 'team',
-    deliveryStatus: 'delivered', // double green delivered
-    meshHops: 1,
-    relayDeviceId: 'SR-7G9H',
-    acknowledged: true,
-  },
-  {
-    id: 'msg-006',
-    senderName: 'Organizer Ananya',
-    senderAvatarInitial: 'O',
-    avatarColor: 'indigo',
-    text: 'Relief shelter ready at Guindy Metro auditorium with food & dry blankets.',
-    location: 'Guindy Metro Relief Shelter',
-    timestamp: '25 min ago',
-    createdAt: Date.now() - 25 * 60 * 1000,
-    statusBadge: 'System',
-    badgeType: 'system',
-    deliveryStatus: 'delivered', // double green delivered
-    meshHops: 1,
-    acknowledged: true,
-  },
-  {
-    id: 'msg-007',
-    senderName: 'Insp. Anita Deshmukh',
-    senderAvatarInitial: 'A',
-    avatarColor: 'rose',
-    text: 'Canine search team actively searching collapsed Commercial Plaza Block B.',
-    location: 'South Market Commercial Plaza',
-    timestamp: '35 min ago',
-    createdAt: Date.now() - 35 * 60 * 1000,
-    statusBadge: 'Team INC-EQ-2026-002',
-    badgeType: 'team',
-    deliveryStatus: 'delivered',
-    meshHops: 2,
-    incidentId: 'INC-EQ-2026-002',
-    acknowledged: true,
-  },
-  {
-    id: 'msg-008',
-    senderName: 'Command Gateway Base',
-    senderAvatarInitial: 'C',
-    avatarColor: 'indigo',
-    text: 'Tactical mesh ingestion active across all 5 disaster incident sectors.',
-    location: 'Disaster Command Center Base',
-    timestamp: '42 min ago',
-    createdAt: Date.now() - 42 * 60 * 1000,
-    statusBadge: 'System',
-    badgeType: 'system',
-    deliveryStatus: 'delivered',
-    meshHops: 0,
-    acknowledged: true,
-  },
-];
-
-let localMessages = [...INITIAL_MESSAGES];
-
 export const messagesApi = {
   getMessages: async (tab: MessageFilterTab = 'all'): Promise<FieldMessage[]> => {
     try {
@@ -161,7 +25,9 @@ export const messagesApi = {
           if (item.status === 'QUEUED') deliveryStatus = 'queued';
           else if (item.status === 'RELAYED' || (item.hops && item.hops > 0)) deliveryStatus = 'relayed';
 
-          const created = item.timestamp ? (item.timestamp > 1e11 ? item.timestamp : item.timestamp * 1000) : Date.now();
+          const created = item.timestamp
+            ? item.timestamp > 1e11 ? item.timestamp : item.timestamp * 1000
+            : Date.now();
           const senderName = item.sender_name || item.sender_id || 'Anonymous Field Node';
 
           const diffMinutes = Math.floor((Date.now() - created) / 60000);
@@ -192,51 +58,27 @@ export const messagesApi = {
             location: locationStr,
             timestamp: timeAgo,
             createdAt: created,
-            statusBadge: badgeType === 'sos' ? `SOS ${item.meta?.incident_id || 'DISTRESS'}` : (item.type || 'Message'),
+            statusBadge: badgeType === 'sos'
+              ? `SOS ${item.meta?.incident_id || 'DISTRESS'}`
+              : (item.type || 'Message'),
             badgeType,
             deliveryStatus,
             meshHops: item.hops ?? 0,
             relayDeviceId: item.mule_device_id || item.meta?.relay_device_id || 'SR-GATEWAY',
-            incidentId: item.conv_id || item.meta?.incident_id || 'INC-FLD-2026-001',
+            incidentId: item.conv_id || item.meta?.incident_id,
             acknowledged: item.status === 'DELIVERED' || item.meta?.acknowledged === true,
           };
         });
       }
+      return [];
     } catch {
-      // Resilient fallback with offline state simulation
+      return [];
     }
-    if (tab === 'all') return localMessages;
-    if (tab === 'sos') return localMessages.filter((m) => m.badgeType === 'sos' || m.badgeType === 'medical');
-    if (tab === 'report') return localMessages.filter((m) => m.badgeType === 'report');
-    if (tab === 'team') return localMessages.filter((m) => m.badgeType === 'team');
-    if (tab === 'system') return localMessages.filter((m) => m.badgeType === 'system');
-    return localMessages;
   },
 
   sendBroadcast: async (payload: BroadcastMessagePayload): Promise<FieldMessage> => {
-    try {
-      const response = await apiClient.post<FieldMessage>('/api/v1/messages/broadcast', payload);
-      return response.data;
-    } catch {
-      // Local fallback simulation
-      const newMsg: FieldMessage = {
-        id: `msg-${Date.now()}`,
-        senderName: 'Command Center',
-        senderAvatarInitial: 'C',
-        avatarColor: 'amber',
-        text: payload.text,
-        location: payload.location || 'HQ Command Base',
-        timestamp: 'Just now',
-        createdAt: Date.now(),
-        statusBadge: payload.priority === 'CRITICAL' ? 'SOS BROADCAST' : 'Team Broadcast',
-        badgeType: payload.badgeType,
-        deliveryStatus: 'relayed',
-        meshHops: 1,
-        acknowledged: true,
-      };
-      localMessages = [newMsg, ...localMessages];
-      return newMsg;
-    }
+    const response = await apiClient.post<FieldMessage>('/api/v1/messages/broadcast', payload);
+    return response.data;
   },
 
   acknowledgeMessage: async (id: string): Promise<FieldMessage | null> => {
@@ -244,12 +86,7 @@ export const messagesApi = {
       const response = await apiClient.patch<FieldMessage>(`/api/v1/messages/${id}/ack`);
       return response.data;
     } catch {
-      const msg = localMessages.find((m) => m.id === id);
-      if (msg) {
-        msg.acknowledged = true;
-        msg.deliveryStatus = 'delivered';
-      }
-      return msg || null;
+      return null;
     }
   },
 };
