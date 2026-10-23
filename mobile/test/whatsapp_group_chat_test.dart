@@ -63,6 +63,9 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await AppDatabase.instance.ensureInitialized();
+    await AppDatabase.instance.delete('groups');
+    await AppDatabase.instance.delete('group_invites');
+    await AppDatabase.instance.delete('group_members');
     await DeviceIdentityService.instance.initialize();
   });
 
@@ -180,6 +183,43 @@ void main() {
         expect(groupService.selectedGroup, isNull);
         expect(find.text('New Group'), findsOneWidget);
         expect(find.text('Join with Code'), findsOneWidget);
+      },
+    );
+
+    test(
+      'WG4: GroupService initializes with zero default groups or mock invitations and purges legacy mock invites',
+      () async {
+        // Pre-insert legacy mock invite into DB to verify purge behavior
+        await AppDatabase.instance.insert(
+          'group_invites',
+          {
+            'id': 'INV-NDRF-SEC4',
+            'group_id': 'GRP-NDRF04',
+            'group_name': 'NDRF Sector-4 Relief Squad',
+            'inviter_id': 'SR-NDRF-HQ01',
+            'inviter_name': 'Cmdr. Rajesh Verma (NDRF)',
+            'invitee_device_id': 'DEV_ME',
+            'status': 'PENDING',
+            'sent_at': DateTime.now().millisecondsSinceEpoch,
+          },
+        );
+
+        final groupService = GroupService();
+        await groupService.loadGroups();
+        await groupService.loadPendingInvites();
+
+        // Must be zero default groups and zero invitations
+        expect(groupService.groups, isEmpty);
+        expect(groupService.pendingInvites, isEmpty);
+        expect(groupService.pendingInviteCount, equals(0));
+
+        // DB rows must be purged
+        final remainingInvites = await AppDatabase.instance.query(
+          'group_invites',
+          where: 'id IN (?, ?)',
+          whereArgs: const ['INV-NDRF-SEC4', 'INV-MED-RELAY'],
+        );
+        expect(remainingInvites, isEmpty);
       },
     );
   });

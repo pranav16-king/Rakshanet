@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
@@ -19,8 +18,6 @@ class GroupService extends ChangeNotifier {
     _initListener();
     _initializeGroupsAndInvites();
   }
-
-  static const String _prefSeededInvitesKey = 'rakshanet_seeded_mesh_invites_v2';
 
   final MeshEngine _meshEngine = MeshEngine();
   final DatabaseService _dbService = DatabaseService();
@@ -51,56 +48,32 @@ class GroupService extends ChangeNotifier {
   StreamSubscription<MessageEnvelope>? _envelopeSub;
 
   Future<void> _initializeGroupsAndInvites() async {
-    await _ensureDefaultMeshInvitesSeeded();
+    await purgeDefaultMeshGroupsAndInvites();
     await loadGroups();
     await loadPendingInvites();
   }
 
-  /// Ensures initial mesh responder group invitations exist on first run so
-  /// Accept / Reject group invite workflows work even before a second BLE peer pairs.
-  Future<void> _ensureDefaultMeshInvitesSeeded() async {
+  /// Purges demonstration/default group invitations and groups so users start
+  /// with a completely clean state without fake/mock data.
+  Future<void> purgeDefaultMeshGroupsAndInvites() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final alreadySeeded = prefs.getBool(_prefSeededInvitesKey) ?? false;
-      final existingAll = await AppDatabase.instance.query('group_invites');
-      if (alreadySeeded || existingAll.isNotEmpty) return;
-
-      final now = DateTime.now();
-      final myDeviceId = DatabaseService.myDeviceId;
-
-      final seedInvites = [
-        GroupInvite(
-          id: 'INV-NDRF-SEC4',
-          groupId: 'GRP-NDRF04',
-          groupName: 'NDRF Sector-4 Relief Squad',
-          inviterId: 'SR-NDRF-HQ01',
-          inviterName: 'Cmdr. Rajesh Verma (NDRF)',
-          inviteeDeviceId: myDeviceId,
-          status: GroupMemberStatus.pending,
-          sentAt: now.subtract(const Duration(minutes: 12)),
-        ),
-        GroupInvite(
-          id: 'INV-MED-RELAY',
-          groupId: 'GRP-MEDRLY',
-          groupName: 'Medical & Triage Mesh Relay',
-          inviterId: 'SR-MED-0842',
-          inviterName: 'Dr. Priya Nair (Field Triage)',
-          inviteeDeviceId: myDeviceId,
-          status: GroupMemberStatus.pending,
-          sentAt: now.subtract(const Duration(minutes: 28)),
-        ),
-      ];
-
-      for (final inv in seedInvites) {
-        await AppDatabase.instance.insert(
-          'group_invites',
-          inv.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      await prefs.setBool(_prefSeededInvitesKey, true);
+      await AppDatabase.instance.delete(
+        'group_invites',
+        where: 'id = ? OR id = ?',
+        whereArgs: const ['INV-NDRF-SEC4', 'INV-MED-RELAY'],
+      );
+      await AppDatabase.instance.delete(
+        'groups',
+        where: 'id = ? OR id = ?',
+        whereArgs: const ['GRP-NDRF04', 'GRP-MEDRLY'],
+      );
+      await AppDatabase.instance.delete(
+        'group_members',
+        where: 'group_id = ? OR group_id = ?',
+        whereArgs: const ['GRP-NDRF04', 'GRP-MEDRLY'],
+      );
     } catch (e) {
-      debugPrint('[GroupService] Seed mesh invites warning: $e');
+      debugPrint('[GroupService] Purge default groups notice: $e');
     }
   }
 
@@ -123,6 +96,7 @@ class GroupService extends ChangeNotifier {
 
   Future<void> loadGroups() async {
     try {
+      await purgeDefaultMeshGroupsAndInvites();
       final rows = await AppDatabase.instance.query(
         'groups',
         orderBy: 'updated_at DESC',
@@ -171,6 +145,7 @@ class GroupService extends ChangeNotifier {
 
   Future<void> loadPendingInvites() async {
     try {
+      await purgeDefaultMeshGroupsAndInvites();
       final pendingRows = await AppDatabase.instance.query(
         'group_invites',
         where: 'status = ?',

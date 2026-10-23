@@ -382,7 +382,7 @@ class _ChatScreenState extends State<ChatScreen> {
           autofocus: true,
           style: TextStyle(color: theme.text),
           decoration: InputDecoration(
-            hintText: 'Enter Group Code (e.g. GRP-NDRF04) or Name',
+            hintText: 'Enter Group Code (e.g. GRP-RESCUE) or Name',
             hintStyle: TextStyle(color: theme.textMuted.withValues(alpha: 0.6)),
             filled: true,
             fillColor: theme.surfaceSunken,

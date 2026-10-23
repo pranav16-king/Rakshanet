@@ -65,6 +65,10 @@ class AppDatabase {
   }
 
   bool get isInMemoryFallback => _isInMemory;
+  bool get isInMemory => _isInMemory;
+
+  /// Whether the database has finished initialization
+  bool get isInitialized => _initCompleter.isCompleted;
 
   /// Ensure database is initialized before executing operations
   Future<void> ensureInitialized() async {
@@ -163,9 +167,32 @@ class AppDatabase {
     // shelter records remain untouched.
     await db.delete(
       'shelters',
-      where: 'id IN (?, ?, ?)',
+      where: 'id = ? OR id = ? OR id = ?',
       whereArgs: const ['shelter_01', 'shelter_02', 'shelter_03'],
     );
+
+    // Remove demonstration/default groups and invitations
+    try {
+      await db.delete(
+        'group_invites',
+        where: 'id = ? OR id = ?',
+        whereArgs: const ['INV-NDRF-SEC4', 'INV-MED-RELAY'],
+      );
+    } catch (_) {}
+    try {
+      await db.delete(
+        'groups',
+        where: 'id = ? OR id = ?',
+        whereArgs: const ['GRP-NDRF04', 'GRP-MEDRLY'],
+      );
+    } catch (_) {}
+    try {
+      await db.delete(
+        'group_members',
+        where: 'group_id = ? OR group_id = ?',
+        whereArgs: const ['GRP-NDRF04', 'GRP-MEDRLY'],
+      );
+    } catch (_) {}
 
     // Fix conversation_id mismatch: unify legacy 'global_emergency' → 'CONV_COMMUNITY'
     try {
@@ -984,17 +1011,47 @@ class AppDatabase {
     final clean = whereClause.trim();
     if (clean.isEmpty) return true;
 
+    // Check for IN clause: e.g. "id IN (?, ?)" or "id NOT IN (?, ?, ...)"
+    final inMatch = RegExp(
+      r'^(\w+)\s+(NOT\s+)?IN\s*\(([^)]+)\)$',
+      caseSensitive: false,
+    ).firstMatch(clean);
+    if (inMatch != null && args != null) {
+      final col = inMatch.group(1)!;
+      final isNot = inMatch.group(2) != null;
+      final matchesAny = args.any((arg) => _compareEquals(row[col], arg));
+      return isNot ? !matchesAny : matchesAny;
+    }
+
     bool evalCondition(String condition, Object? arg) {
-      final match =
-          RegExp(r'^(\w+)\s*(=|!=|<>)\s*\?$').firstMatch(condition.trim());
-      if (match == null) return true;
+      final match = RegExp(
+        r'^(\w+)\s*(=|!=|<>|<=|>=|<|>)\s*\?$',
+      ).firstMatch(condition.trim());
+      if (match == null) return false;
       final col = match.group(1)!;
       final op = match.group(2)!;
-      final eq = _compareEquals(row[col], arg);
-      if (op == '!=' || op == '<>') {
-        return !eq;
+      final val = row[col];
+      switch (op) {
+        case '=':
+          return _compareEquals(val, arg);
+        case '!=':
+        case '<>':
+          return !_compareEquals(val, arg);
+        case '<':
+          if (val is num && arg is num) return val < arg;
+          return val.toString().compareTo(arg.toString()) < 0;
+        case '<=':
+          if (val is num && arg is num) return val <= arg;
+          return val.toString().compareTo(arg.toString()) <= 0;
+        case '>':
+          if (val is num && arg is num) return val > arg;
+          return val.toString().compareTo(arg.toString()) > 0;
+        case '>=':
+          if (val is num && arg is num) return val >= arg;
+          return val.toString().compareTo(arg.toString()) >= 0;
+        default:
+          return false;
       }
-      return eq;
     }
 
     // Handle compound with AND: "col1 = ? AND col2 != ?"

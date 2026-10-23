@@ -42,7 +42,7 @@ class _PendingInvitesScreenState extends State<PendingInvitesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Enter a mesh group code (e.g. GRP-NDRF04) or group name shared by a responder:',
+              'Enter a mesh group code (e.g. GRP-RESCUE) or group name shared by a responder:',
               style: TextStyle(color: theme.textMuted, fontSize: 13),
             ),
             const SizedBox(height: 12),
