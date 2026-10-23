@@ -48,11 +48,11 @@ export class OfflineGridLayer extends L.GridLayer {
     }
 
     const isLight = this.gridTheme === 'light';
-    const bgColor = isLight ? '#FFFCEB' : mapLayerTokens.offlineGrid.bg; // #0B1220
-    const majorLineColor = isLight ? '#E6DCA8' : mapLayerTokens.offlineGrid.lineMajor; // #26344F
-    const minorLineColor = isLight ? '#F6F0D4' : mapLayerTokens.offlineGrid.lineMinor; // #162036
+    const bgColor = isLight ? '#F8FAFC' : mapLayerTokens.offlineGrid.bg; // #0B1220
+    const majorLineColor = isLight ? '#E2E8F0' : mapLayerTokens.offlineGrid.lineMajor; // #26344F
+    const minorLineColor = isLight ? '#F8FAFC' : mapLayerTokens.offlineGrid.lineMinor; // #162036
     const textColor = isLight ? '#8A5A00' : mapLayerTokens.offlineGrid.coordsText; // #9FADC2
-    const crosshairColor = isLight ? '#C9BB6E' : mapLayerTokens.offlineGrid.crosshair; // #3A4C70
+    const crosshairColor = isLight ? '#CBD5E1' : mapLayerTokens.offlineGrid.crosshair; // #3A4C70
 
     // 1. Fill tile background
     ctx.fillStyle = bgColor;
@@ -115,7 +115,7 @@ export class OfflineGridLayer extends L.GridLayer {
         ctx.fillText(`${latStr}, ${lngStr}`, 6, 14);
 
         // Bottom-right tactical cell ID
-        ctx.fillStyle = isLight ? '#9AA1AB' : '#5F6E86';
+        ctx.fillStyle = isLight ? '#94A3B8' : '#5F6E86';
         ctx.font = '700 9px "JetBrains Mono", monospace';
         const cellTag = `Z${coords.z}·${coords.x},${coords.y}`;
         const textWidth = ctx.measureText(cellTag).width;

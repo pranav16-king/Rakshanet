@@ -119,20 +119,20 @@ export const CommunicationGapsMap: React.FC<CommunicationGapsMapProps> = ({
       });
 
       marker.bindPopup(`
-        <div style="font-family: sans-serif; color: #16202D; min-width: 190px;">
+        <div style="font-family: sans-serif; color: #0F172A; min-width: 190px;">
           <div style="font-weight: bold; font-family: monospace; color: #7A4DD8; font-size: 13px;">
             ${anomaly.sector_id}
           </div>
           <div style="font-size: 12px; margin-top: 4px; font-weight: 600; color: #D92D20;">
             ${anomaly.drop_percentage.toFixed(1)}% Telemetry Blackout
           </div>
-          <div style="font-size: 11px; color: #566070; margin-top: 4px;">
+          <div style="font-size: 11px; color: #64748B; margin-top: 4px;">
             Baseline: ${anomaly.baseline_nodes} nodes ➔ Now: ${anomaly.current_nodes} nodes
           </div>
-          <div style="font-size: 11px; color: #16202D; margin-top: 2px;">
+          <div style="font-size: 11px; color: #0F172A; margin-top: 2px;">
             Estimated trapped: ~${anomaly.estimated_silenced_people} people
           </div>
-          <div style="font-size: 11px; color: #566070; margin-top: 2px;">
+          <div style="font-size: 11px; color: #64748B; margin-top: 2px;">
             Silence duration: ${anomaly.silence_duration_minutes.toFixed(0)} min
           </div>
           <div style="margin-top: 6px; padding: 4px 6px; background: #F3EEFF; border: 1px solid #C4A7FF; border-radius: 4px; font-size: 10px; font-family: monospace;">
@@ -163,17 +163,17 @@ export const CommunicationGapsMap: React.FC<CommunicationGapsMapProps> = ({
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
       {/* Map Legend Overlay */}
-      <div className="absolute top-3 right-3 z-[1000] p-3 rounded-lg bg-[#0E1627]/90 backdrop-blur border border-slate-700/80 text-xs space-y-1.5 shadow-md">
-        <div className="font-semibold text-slate-200">GIS Communication Layers</div>
-        <div className="flex items-center gap-2 text-slate-300">
+      <div className="absolute top-3 right-3 z-[1000] p-3 rounded-lg bg-white/95 dark:bg-[#0E1627]/90 backdrop-blur border border-slate-200 dark:border-slate-700/80 text-xs space-y-1.5 shadow-md">
+        <div className="font-semibold text-slate-900 dark:text-slate-200">GIS Communication Layers</div>
+        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
           <span className="w-3 h-3 rounded-full bg-[#7A4DD8] border border-purple-300" />
           <span>Hatched Sector (Critical &gt;75% Drop)</span>
         </div>
-        <div className="flex items-center gap-2 text-slate-300">
+        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
           <span className="w-3 h-3 rounded-full bg-[#E07B00] border border-amber-300" />
           <span>Warning Sector (&gt;45% Drop)</span>
         </div>
-        <div className="text-[10px] text-purple-300 mt-1 font-mono">
+        <div className="text-[10px] text-purple-700 dark:text-purple-300 mt-1 font-mono">
           Decay window: 120 min spatiotemporal
         </div>
       </div>

@@ -1,11 +1,11 @@
-export type DeviceType = 'Phone' | 'Tablet';
+export type DeviceType = 'Phone' | 'Tablet' | 'Relay Beacon' | 'Satellite Uplink';
 
 export type DeviceStatus = 'Online' | 'Relay' | 'Offline';
 
 export type DeviceTab = 'list' | 'topology' | 'logs';
 
 export interface Device {
-  id: string; // e.g. 'SR-8F42'
+  id: string; // e.g. 'DEV-SAT-08'
   userName: string;
   type: DeviceType;
   location: string;
@@ -16,6 +16,11 @@ export interface Device {
   lastPing: string;
   hardwareModel?: string;
   relayActive?: boolean;
+  lat?: number;
+  lng?: number;
+  packetsForwarded?: number;
+  ownerName?: string;
+  lastSeenTimestamp?: number;
 }
 
 export interface DeviceSummaryMetrics {
@@ -39,6 +44,8 @@ export interface NetworkTopologyNode {
   signalDbm: number;
   hops: number;
   connections: string[];
+  hardwareType?: DeviceType;
+  packetsForwarded?: number;
 }
 
 export interface ConnectionLog {
@@ -51,4 +58,5 @@ export interface ConnectionLog {
   hopCount: number;
   rssiDbm: number;
   status: 'Delivered' | 'Relayed' | 'Queued' | 'Dropped';
+  packetType?: string;
 }

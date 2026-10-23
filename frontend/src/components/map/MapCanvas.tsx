@@ -44,12 +44,12 @@ const MapControls: React.FC<{ defaultCenter: [number, number]; defaultZoom: numb
 
   return (
     <div className="leaflet-top leaflet-left !top-20 !left-4 z-[400] flex flex-col gap-2">
-      <div className="flex flex-col bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] rounded-xl shadow-md overflow-hidden">
+      <div className="flex flex-col bg-white dark:bg-[#162036] border border-[#E2E8F0] dark:border-[#26344F] rounded-xl shadow-md overflow-hidden">
         <button
           type="button"
           onClick={() => map.zoomIn()}
           aria-label="Zoom in"
-          className="p-2 text-[#16202D] dark:text-[#EEF2F8] hover:bg-[#FFFCEB] dark:hover:bg-[#1C2844] transition-colors border-b border-[#E6DCA8] dark:border-[#26344F] cursor-pointer"
+          className="p-2 text-[#0F172A] dark:text-[#EEF2F8] hover:bg-[#F8FAFC] dark:hover:bg-[#1C2844] transition-colors border-b border-[#E2E8F0] dark:border-[#26344F] cursor-pointer"
         >
           <Plus className="w-4 h-4" />
         </button>
@@ -57,7 +57,7 @@ const MapControls: React.FC<{ defaultCenter: [number, number]; defaultZoom: numb
           type="button"
           onClick={() => map.zoomOut()}
           aria-label="Zoom out"
-          className="p-2 text-[#16202D] dark:text-[#EEF2F8] hover:bg-[#FFFCEB] dark:hover:bg-[#1C2844] transition-colors cursor-pointer"
+          className="p-2 text-[#0F172A] dark:text-[#EEF2F8] hover:bg-[#F8FAFC] dark:hover:bg-[#1C2844] transition-colors cursor-pointer"
         >
           <Minus className="w-4 h-4" />
         </button>
@@ -67,7 +67,7 @@ const MapControls: React.FC<{ defaultCenter: [number, number]; defaultZoom: numb
         type="button"
         onClick={() => map.flyTo(defaultCenter, defaultZoom, { duration: 1.2 })}
         aria-label="Recenter map"
-        className="p-2 bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] rounded-xl shadow-md text-[#16202D] dark:text-[#EEF2F8] hover:bg-[#FFFCEB] dark:hover:bg-[#1C2844] transition-colors cursor-pointer"
+        className="p-2 bg-white dark:bg-[#162036] border border-[#E2E8F0] dark:border-[#26344F] rounded-xl shadow-md text-[#0F172A] dark:text-[#EEF2F8] hover:bg-[#F8FAFC] dark:hover:bg-[#1C2844] transition-colors cursor-pointer"
         title="Recenter to active disaster sector"
       >
         <Crosshair className="w-4 h-4 text-[#FFC400]" />

@@ -179,7 +179,7 @@ export const LiveMapPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1
-              className="text-2xl sm:text-3xl font-black text-[#16202D] dark:text-white tracking-tight"
+              className="text-2xl sm:text-3xl font-black text-[#0F172A] dark:text-white tracking-tight"
               style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
             >
               Live Map & Devices
@@ -189,7 +189,7 @@ export const LiveMapPage: React.FC = () => {
               Live Telemetry
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-[#566070] dark:text-[#9FADC2]">
+          <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#9FADC2]">
             Real-time geospatial locations of mesh nodes, rescue units, and AI-clustered disaster incidents
           </p>
         </div>
@@ -200,14 +200,14 @@ export const LiveMapPage: React.FC = () => {
           <div className="relative">
             <Search
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#566070] dark:text-[#9FADC2]"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#9FADC2]"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search node, ID, incident..."
-              className="h-9 pl-9 pr-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs text-[#16202D] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400]"
+              className="h-9 pl-9 pr-3 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400]"
             />
           </div>
 
@@ -215,7 +215,7 @@ export const LiveMapPage: React.FC = () => {
           <select
             value={severityFilter}
             onChange={(e) => setSeverityFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs font-semibold text-[#16202D] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400] cursor-pointer"
+            className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400] cursor-pointer"
           >
             <option value="ALL">All Severities</option>
             <option value="CRITICAL">Critical Only</option>
@@ -228,7 +228,7 @@ export const LiveMapPage: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs font-semibold text-[#16202D] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400] cursor-pointer"
+            className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC400] cursor-pointer"
           >
             <option value="ALL">All Devices</option>
             <option value="Online">Online</option>
@@ -241,7 +241,7 @@ export const LiveMapPage: React.FC = () => {
             type="button"
             onClick={handleRefreshAll}
             aria-label="Refresh live data"
-            className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-[#E6DCA8] dark:border-[#26344F] text-xs font-bold text-[#16202D] dark:text-white hover:bg-[#FFFCEB] dark:hover:bg-[#1C2844] transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+            className="h-9 px-3 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-[#26344F] text-xs font-bold text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-[#1C2844] transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
             title="Force refresh live map telemetry"
           >
             <RefreshCw
@@ -257,7 +257,7 @@ export const LiveMapPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
         {/* Map View Canvas Container */}
         <div className="lg:col-span-8 xl:col-span-9 relative">
-          <div className="relative h-[650px] w-full rounded-2xl bg-[#0B1220] border-2 border-[#E6DCA8] dark:border-[#26344F] overflow-hidden shadow-xl">
+          <div className="relative h-[650px] w-full rounded-2xl bg-[#0B1220] border-2 border-slate-200 dark:border-[#26344F] overflow-hidden shadow-xl">
             {/* Interactive Real MapCanvas */}
             <MapCanvas
               incidents={filteredIncidents}
@@ -338,8 +338,11 @@ export const LiveMapPage: React.FC = () => {
               setSelectedDevice(null);
               setSelectedRescueTeam(null);
             }}
+            onViewDetails={(id) => {
+              navigate(`/app/incidents/${encodeURIComponent(id)}`);
+            }}
             onAssignTeam={(id) => {
-              navigate(`/dispatch?incidentId=${encodeURIComponent(id)}`);
+              navigate(`/app/incidents/${encodeURIComponent(id)}`);
             }}
           />
         </div>
@@ -348,14 +351,14 @@ export const LiveMapPage: React.FC = () => {
         <div className="lg:col-span-4 xl:col-span-3 space-y-6">
           {/* Map Layers Card */}
           <Card>
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#E6DCA8] dark:border-[#26344F]">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200 dark:border-[#26344F]">
               <div className="flex items-center gap-2">
-                <Layers size={18} className="text-[#8A5A00] dark:text-[#FFD21F]" />
-                <h3 className="text-sm font-bold text-[#16202D] dark:text-white">
+                <Layers size={18} className="text-amber-600 dark:text-[#FFD21F]" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   Map Layers
                 </h3>
               </div>
-              <span className="text-[11px] font-semibold text-[#566070] dark:text-[#9FADC2]">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-[#9FADC2]">
                 {Object.values(activeLayers).filter(Boolean).length}/6 Active
               </span>
             </div>
@@ -371,7 +374,7 @@ export const LiveMapPage: React.FC = () => {
                   >
                     <div className="flex items-center gap-2.5">
                       <span className={`w-2.5 h-2.5 rounded-full ${item.dotColor} shadow-2xs`} />
-                      <span className="text-xs font-semibold text-[#16202D] dark:text-[#EEF2F8]">
+                      <span className="text-xs font-semibold text-slate-900 dark:text-[#EEF2F8]">
                         {item.label}
                       </span>
                       {item.count !== undefined && (
@@ -383,12 +386,12 @@ export const LiveMapPage: React.FC = () => {
                     <button
                       type="button"
                       aria-label={`Toggle layer ${item.label}`}
-                      className="text-[#8A5A00] dark:text-[#FFD21F] cursor-pointer"
+                      className="text-amber-600 dark:text-[#FFD21F] cursor-pointer"
                     >
                       {isChecked ? (
                         <Eye size={16} />
                       ) : (
-                        <EyeOff size={16} className="text-[#566070] dark:text-gray-500" />
+                        <EyeOff size={16} className="text-slate-400 dark:text-gray-500" />
                       )}
                     </button>
                   </div>
@@ -399,16 +402,16 @@ export const LiveMapPage: React.FC = () => {
 
           {/* Live Devices Card with Real Data */}
           <Card>
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#E6DCA8] dark:border-[#26344F]">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200 dark:border-[#26344F]">
               <div className="flex items-center gap-2">
                 <Radio size={18} className="text-[#0E8A94] dark:text-[#3CC6D0]" />
-                <h3 className="text-sm font-bold text-[#16202D] dark:text-white">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   Live Devices ({deviceStats.total || devices.length})
                 </h3>
               </div>
               <Link
-                to="/devices"
-                className="text-[11px] font-bold text-[#8A5A00] dark:text-[#FFD21F] hover:underline"
+                to="/app/devices"
+                className="text-[11px] font-bold text-amber-600 dark:text-[#FFD21F] hover:underline"
               >
                 View All
               </Link>
@@ -458,16 +461,16 @@ export const LiveMapPage: React.FC = () => {
                   />
                 ))
               ) : isDevicesLoading ? (
-                <div className="py-8 text-center text-xs text-[#566070] dark:text-[#9FADC2]">
+                <div className="py-8 text-center text-xs text-slate-400 dark:text-[#9FADC2]">
                   Scanning mesh spectrum for active nodes...
                 </div>
               ) : (
-                <div className="py-8 text-center px-3 rounded-xl bg-gray-50 dark:bg-[#0E1627] border border-dashed border-[#E6DCA8] dark:border-[#26344F]">
+                <div className="py-8 text-center px-3 rounded-xl bg-gray-50 dark:bg-[#0E1627] border border-dashed border-slate-200 dark:border-[#26344F]">
                   <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2 opacity-80" />
-                  <p className="text-xs font-semibold text-[#16202D] dark:text-white">
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">
                     No active distress beacons in sector
                   </p>
-                  <p className="text-[11px] text-[#566070] dark:text-[#9FADC2] mt-1">
+                  <p className="text-[11px] text-slate-500 dark:text-[#9FADC2] mt-1">
                     Mesh radio scanning active · Waiting for BLE/LoRa peer handshake
                   </p>
                 </div>

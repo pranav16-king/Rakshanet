@@ -28,7 +28,7 @@ export interface RakshaMapViewProps {
  * and offline procedural grid vector canvas.
  */
 export function RakshaMapView({
-  center = [30.1455, 78.4984], // Default: Uttarakhand / Himalayan disaster-prone zone
+  center = [13.0425, 80.2285], // Default: Active Disaster Sector Centroid (Ward 14 / Adyar Basin Grid)
   zoom = 13,
   minZoom = 3,
   maxZoom = 20,

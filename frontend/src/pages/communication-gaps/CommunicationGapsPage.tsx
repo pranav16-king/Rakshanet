@@ -70,19 +70,19 @@ export const CommunicationGapsPage: React.FC = () => {
   const selectedAnomaly = anomalies.find((a) => a.anomaly_id === selectedAnomalyId);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-100">
+    <div className="space-y-6 text-slate-900 dark:text-slate-100">
       {/* Header bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+            <span className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
               <Radio className="w-6 h-6" />
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
               Communication Gaps & Black Hole Detector
             </h1>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Feature 16: Autonomous detection of sudden telemetry decay curves, cut-off villages, and complete silence zones.
           </p>
         </div>
@@ -91,7 +91,7 @@ export const CommunicationGapsPage: React.FC = () => {
           <button
             onClick={fetchAnomalies}
             disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-slate-700 bg-[#162036] hover:bg-slate-700/60 text-slate-200 text-sm font-medium transition"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#162036] hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-sm font-medium transition shadow-xs"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -100,7 +100,7 @@ export const CommunicationGapsPage: React.FC = () => {
           <button
             onClick={handleTriggerScan}
             disabled={scanning}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-600/20 transition disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-md transition disabled:opacity-50"
           >
             <Zap className={`w-4 h-4 ${scanning ? 'animate-spin' : ''}`} />
             {scanning ? 'Scanning Spatiotemporal Grid...' : 'Trigger Black Hole Scan'}
@@ -109,14 +109,14 @@ export const CommunicationGapsPage: React.FC = () => {
       </div>
 
       {scanNotice && (
-        <div className="p-4 rounded-xl bg-purple-900/30 border border-purple-500/40 text-purple-300 text-sm flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-500/40 text-purple-800 dark:text-purple-300 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-purple-400 flex-shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
             <span>{scanNotice}</span>
           </div>
           <button
             onClick={() => setScanNotice(null)}
-            className="text-xs text-purple-300 hover:text-white"
+            className="text-xs text-purple-600 dark:text-purple-300 hover:text-purple-900 dark:hover:text-white font-medium"
           >
             Dismiss
           </button>
@@ -125,42 +125,42 @@ export const CommunicationGapsPage: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-[#162036] border border-slate-700/70 shadow-sm">
-          <div className="text-xs text-slate-400">Silenced Sectors Tracked</div>
-          <div className="text-2xl font-bold text-white mt-1">{anomalies.length}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Spatiotemporal grid cells</div>
+        <div className="p-4 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-slate-700/70 shadow-xs">
+          <div className="text-xs text-slate-500 dark:text-slate-400">Silenced Sectors Tracked</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{anomalies.length}</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Spatiotemporal grid cells</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#161327] border border-purple-500/30 shadow-sm">
-          <div className="text-xs text-purple-300 font-semibold">Critical Blackouts (&gt;75% Loss)</div>
-          <div className="text-2xl font-bold text-purple-400 mt-1 flex items-center gap-2">
+        <div className="p-4 rounded-xl bg-purple-50/60 dark:bg-[#161327] border border-purple-200 dark:border-purple-500/30 shadow-xs">
+          <div className="text-xs text-purple-700 dark:text-purple-300 font-semibold">Critical Blackouts (&gt;75% Loss)</div>
+          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5" />
             {criticalCount}
           </div>
-          <div className="text-xs text-purple-300/70 mt-0.5">Immediate aerial relay needed</div>
+          <div className="text-xs text-purple-600/80 dark:text-purple-300/70 mt-0.5">Immediate aerial relay needed</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#162036] border border-slate-700/70 shadow-sm">
-          <div className="text-xs text-slate-400">Decaying Sectors (&gt;45% Loss)</div>
-          <div className="text-2xl font-bold text-amber-400 mt-1 flex items-center gap-2">
+        <div className="p-4 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-slate-700/70 shadow-xs">
+          <div className="text-xs text-slate-500 dark:text-slate-400">Decaying Sectors (&gt;45% Loss)</div>
+          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-2">
             <Clock className="w-5 h-5" />
             {warningCount}
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">Early warning decay trajectory</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Early warning decay trajectory</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#162036] border border-slate-700/70 shadow-sm">
-          <div className="text-xs text-slate-400">Est. Cut-off Population</div>
-          <div className="text-2xl font-bold text-purple-300 mt-1 flex items-center gap-2">
+        <div className="p-4 rounded-xl bg-white dark:bg-[#162036] border border-slate-200 dark:border-slate-700/70 shadow-xs">
+          <div className="text-xs text-slate-500 dark:text-slate-400">Est. Cut-off Population</div>
+          <div className="text-2xl font-bold text-purple-700 dark:text-purple-300 mt-1 flex items-center gap-2">
             <Users className="w-5 h-5" />
             ~{totalSilencedPopulation.toLocaleString()}
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">Statistical (Devices != People 2.5x)</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Statistical (Devices != People 2.5x)</div>
         </div>
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-[#162036] p-3.5 rounded-xl border border-slate-700/70">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-[#162036] p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/70 shadow-xs">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -168,16 +168,16 @@ export const CommunicationGapsPage: React.FC = () => {
             placeholder="Search by sector code, action..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#0E1627] border border-slate-700 rounded-lg pl-9 pr-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-400"
+            className="w-full bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3.5 py-2 text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-purple-500"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Severity:</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Severity:</span>
           <select
             value={filterSeverity}
             onChange={(e) => setFilterSeverity(e.target.value)}
-            className="bg-[#0E1627] border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-purple-400"
+            className="bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-purple-500"
           >
             <option value="ALL">All Severities</option>
             <option value="CRITICAL">Critical Only (&gt;75%)</option>
@@ -190,14 +190,14 @@ export const CommunicationGapsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Sector Anomaly Cards */}
         <div className="lg:col-span-5 space-y-3.5">
-          <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
             <span>Detected Silence Sectors ({filteredAnomalies.length})</span>
             <span>Click sector to focus on map</span>
           </div>
 
           {loading ? (
-            <div className="p-12 text-center text-slate-400">
-              <RefreshCw className="w-6 h-6 animate-spin mx-auto text-purple-400 mb-2" />
+            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+              <RefreshCw className="w-6 h-6 animate-spin mx-auto text-purple-500 dark:text-purple-400 mb-2" />
               Scanning for communication black holes...
             </div>
           ) : (
@@ -222,25 +222,25 @@ export const CommunicationGapsPage: React.FC = () => {
 
           {/* Selected Anomaly Tactical Action Dispatch Box */}
           {selectedAnomaly && (
-            <div className="p-5 rounded-xl border border-purple-500/30 bg-[#161327] space-y-3">
+            <div className="p-5 rounded-xl border border-purple-200 dark:border-purple-500/30 bg-white dark:bg-[#161327] shadow-md space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-purple-300 font-mono">SELECTED FOCUS ZONE</span>
-                  <div className="text-base font-bold text-white mt-0.5">
+                  <span className="text-xs text-purple-600 dark:text-purple-300 font-mono font-semibold">SELECTED FOCUS ZONE</span>
+                  <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
                     {selectedAnomaly.sector_id}
                   </div>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30">
                   {selectedAnomaly.severity}
                 </span>
               </div>
 
-              <div className="text-xs text-slate-300 bg-[#0B101E] p-3 rounded-lg border border-slate-800">
-                <div className="font-semibold text-slate-200 mb-1">Autonomous Drone & Relay Dispatch Recommendation:</div>
-                <div className="text-purple-300 font-mono text-[11px]">
+              <div className="text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-[#0B101E] p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="font-semibold text-slate-900 dark:text-slate-200 mb-1">Autonomous Drone & Relay Dispatch Recommendation:</div>
+                <div className="text-purple-700 dark:text-purple-300 font-mono text-[11px]">
                   {selectedAnomaly.recommended_action}
                 </div>
-                <p className="text-slate-400 mt-2">
+                <p className="text-slate-600 dark:text-slate-400 mt-2">
                   This sector experienced a <strong>{selectedAnomaly.drop_percentage.toFixed(1)}% collapse</strong> in active mesh heartbeats over the last 120 minutes. Approximately <strong>{selectedAnomaly.estimated_silenced_people} residents</strong> are cut off from rescue dispatch without cellular or road ingress.
                 </p>
               </div>
@@ -248,7 +248,7 @@ export const CommunicationGapsPage: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-1">
                 <button
                   onClick={() => alert(`Aerial Drone Dispatch Order queued for sector ${selectedAnomaly.sector_id}`)}
-                  className="px-4 py-2 text-xs rounded-lg bg-purple-500 hover:bg-purple-400 font-bold text-white shadow-md transition"
+                  className="px-4 py-2 text-xs rounded-lg bg-purple-600 hover:bg-purple-500 font-bold text-white shadow-md transition"
                 >
                   Dispatch Tactical DTN Relay Drone
                 </button>

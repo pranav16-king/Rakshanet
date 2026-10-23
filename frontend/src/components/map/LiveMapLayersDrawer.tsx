@@ -37,11 +37,11 @@ export const LiveMapLayersDrawer: React.FC<LiveMapLayersDrawerProps> = ({
 
   return (
     <aside
-      className={`w-80 bg-white dark:bg-[#0B1220] border-l border-[#E6DCA8] dark:border-[#26344F] flex flex-col shrink-0 h-full overflow-hidden select-none z-10 ${className}`}
+      className={`w-80 bg-white dark:bg-[#0B1220] border-l border-[#E2E8F0] dark:border-[#26344F] flex flex-col shrink-0 h-full overflow-hidden select-none z-10 ${className}`}
     >
       {/* Top Section: Map Layers */}
-      <div className="p-4 border-b border-[#E6DCA8] dark:border-[#26344F]">
-        <h3 className="text-sm font-bold text-[#16202D] dark:text-[#EEF2F8] font-display mb-3">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#26344F]">
+        <h3 className="text-sm font-bold text-[#0F172A] dark:text-[#EEF2F8] font-display mb-3">
           Map Layers
         </h3>
 
@@ -51,7 +51,7 @@ export const LiveMapLayersDrawer: React.FC<LiveMapLayersDrawerProps> = ({
             return (
               <div
                 key={item.key}
-                className="flex items-center justify-between py-0.5 text-xs font-medium text-[#16202D] dark:text-[#EEF2F8]"
+                className="flex items-center justify-between py-0.5 text-xs font-medium text-[#0F172A] dark:text-[#EEF2F8]"
               >
                 <div className="flex items-center gap-2.5">
                   <span className={`w-2.5 h-2.5 rounded-full ${item.dotColor} shadow-2xs`} />
@@ -83,11 +83,11 @@ export const LiveMapLayersDrawer: React.FC<LiveMapLayersDrawerProps> = ({
       {/* Bottom Section: Live Devices List */}
       <div className="flex-1 flex flex-col min-h-0 p-4">
         <div className="flex items-center justify-between mb-3 shrink-0">
-          <h3 className="text-sm font-bold text-[#16202D] dark:text-[#EEF2F8] font-display">
+          <h3 className="text-sm font-bold text-[#0F172A] dark:text-[#EEF2F8] font-display">
             Live Devices ({totalDevicesCount})
           </h3>
           <Link
-            to="/devices"
+            to="/app/devices"
             className="text-xs font-semibold text-[#0E8A94] dark:text-[#3CC6D0] hover:underline"
           >
             View All
