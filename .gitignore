@@ -70,6 +70,7 @@ Thumbs.db
 
 # Agent internal states
 .gravitas/
+*.xlsx
 
 # Video generation workspace & outputs
 video/
