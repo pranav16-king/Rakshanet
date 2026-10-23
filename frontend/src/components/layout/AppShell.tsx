@@ -9,7 +9,7 @@ export const AppShell: React.FC = () => {
   const { status: connectionStatus } = useWebSocket();
 
   return (
-    <div className="min-h-screen bg-[#FFFCEB] dark:bg-[#0B1220] text-[#16202D] dark:text-[#EEF2F8] transition-colors duration-200">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1220] text-[#0F172A] dark:text-[#EEF2F8] transition-colors duration-200">
       {/* Sidebar Navigation */}
       <Sidebar
         isCollapsed={isCollapsed}

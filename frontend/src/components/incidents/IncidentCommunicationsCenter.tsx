@@ -95,10 +95,10 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
     const q = searchQuery.toLowerCase();
     return list.filter(
       (c) =>
-        c.title.toLowerCase().includes(q) ||
-        c.content.toLowerCase().includes(q) ||
-        c.sender.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q)
+        (c.title || '').toLowerCase().includes(q) ||
+        (c.content || '').toLowerCase().includes(q) ||
+        (c.sender || '').toLowerCase().includes(q) ||
+        (c.category || '').toLowerCase().includes(q)
     );
   }, [communications?.all_communications, searchQuery]);
 

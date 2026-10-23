@@ -2290,6 +2290,168 @@ class GatewayStorage:
             for mp in missing_persons_seed:
                 self.create_missing_person(mp)
 
+        # 6. Seed Operational Telemetry Messages in SQLite if count < 5
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM ingested_packets")
+            packet_count = cursor.fetchone()[0]
+            if packet_count < 5:
+                now_t = int(time.time() * 1000)
+                seed_packets = [
+                    {
+                        "msg_id": "MSG-AMIT-001",
+                        "sender_id": "SR-NODE-A101",
+                        "sender_name": "Amit Kumar (Survivor)",
+                        "conv_id": "INC-FLD-2026-001",
+                        "packet_type": "SOS",
+                        "payload": "Flood in river area, water level rising fast. 5 people trapped on terrace with elderly person.",
+                        "lat": 13.0827,
+                        "lng": 80.2707,
+                        "altitude": 14.2,
+                        "accuracy": 4.5,
+                        "timestamp": now_t - (2 * 60 * 1000),
+                        "hops": 2,
+                        "ttl": 5,
+                        "mule_device_id": "SR-MULE-8F42",
+                        "meta": {
+                            "role": "Survivor",
+                            "priority": "CRITICAL",
+                            "location": "Ward 14 Flood Zone, Chennai",
+                            "incident_id": "INC-FLD-2026-001",
+                            "relay_device_id": "SR-MULE-8F42",
+                            "status": "RELAYED",
+                            "acknowledged": False
+                        }
+                    },
+                    {
+                        "msg_id": "MSG-PRIYA-002",
+                        "sender_id": "SR-NODE-P204",
+                        "sender_name": "Priya Sharma (Survivor)",
+                        "conv_id": "INC-FLD-2026-001",
+                        "packet_type": "SOS",
+                        "payload": "We are safe at school building second floor. Need drinking water and infant supplies.",
+                        "lat": 13.0780,
+                        "lng": 80.2640,
+                        "altitude": 18.0,
+                        "accuracy": 6.0,
+                        "timestamp": now_t - (5 * 60 * 1000),
+                        "hops": 1,
+                        "ttl": 5,
+                        "mule_device_id": "SR-MULE-3D7B",
+                        "meta": {
+                            "role": "Survivor",
+                            "priority": "HIGH",
+                            "location": "Govt High School Sector 4",
+                            "incident_id": "INC-FLD-2026-001",
+                            "relay_device_id": "SR-MULE-3D7B",
+                            "status": "DELIVERED",
+                            "acknowledged": True
+                        }
+                    },
+                    {
+                        "msg_id": "MSG-RAHUL-003",
+                        "sender_id": "SR-NODE-R305",
+                        "sender_name": "Rahul Mehta (Field Responder)",
+                        "conv_id": "INC-LND-2026-003",
+                        "packet_type": "REPORT",
+                        "payload": "Road blocked due to landslide on NH-7 near Milepost 42. Alternative route via Valley bypass cleared for 4WDs.",
+                        "lat": 12.9320,
+                        "lng": 80.1250,
+                        "altitude": 110.5,
+                        "accuracy": 8.0,
+                        "timestamp": now_t - (10 * 60 * 1000),
+                        "hops": 3,
+                        "ttl": 4,
+                        "mule_device_id": "SR-MULE-6E2F",
+                        "meta": {
+                            "role": "Field Responder",
+                            "priority": "HIGH",
+                            "location": "NH-7 Mountain Pass km 42",
+                            "incident_id": "INC-LND-2026-003",
+                            "relay_device_id": "SR-MULE-6E2F",
+                            "status": "DELIVERED",
+                            "acknowledged": True
+                        }
+                    },
+                    {
+                        "msg_id": "MSG-SNEHA-004",
+                        "sender_id": "SR-NODE-S402",
+                        "sender_name": "Dr. Sneha Patel (Medical Staff)",
+                        "conv_id": "INC-FLD-2026-001",
+                        "packet_type": "MEDICAL",
+                        "payload": "Medical triage checkpoint established at community clinic. 3 injured treated; requesting IV saline and tetanus toxoid.",
+                        "lat": 13.0650,
+                        "lng": 80.2520,
+                        "altitude": 15.0,
+                        "accuracy": 5.0,
+                        "timestamp": now_t - (15 * 60 * 1000),
+                        "hops": 2,
+                        "ttl": 5,
+                        "mule_device_id": "SR-MULE-7G9H",
+                        "meta": {
+                            "role": "Medical Staff",
+                            "priority": "CRITICAL",
+                            "location": "South Dispensary Relief Post",
+                            "incident_id": "INC-FLD-2026-001",
+                            "relay_device_id": "SR-MULE-7G9H",
+                            "status": "RELAYED",
+                            "acknowledged": False
+                        }
+                    },
+                    {
+                        "msg_id": "MSG-TEAM-005",
+                        "sender_id": "SR-NODE-T501",
+                        "sender_name": "Volunteer Team Alpha (SDRF Crew)",
+                        "conv_id": "INC-FLD-2026-001",
+                        "packet_type": "TEAM",
+                        "payload": "Zodiac inflatable boat deployed towards Ward 14. 8 residents evacuated so far, returning for second trip.",
+                        "lat": 13.0850,
+                        "lng": 80.2750,
+                        "altitude": 12.0,
+                        "accuracy": 3.0,
+                        "timestamp": now_t - (18 * 60 * 1000),
+                        "hops": 1,
+                        "ttl": 5,
+                        "mule_device_id": "SR-MULE-8F42",
+                        "meta": {
+                            "role": "SDRF Crew",
+                            "priority": "NORMAL",
+                            "location": "Ward 14 Riverbank Dock",
+                            "incident_id": "INC-FLD-2026-001",
+                            "relay_device_id": "SR-MULE-8F42",
+                            "status": "DELIVERED",
+                            "acknowledged": True
+                        }
+                    },
+                    {
+                        "msg_id": "MSG-SYS-006",
+                        "sender_id": "SR-NODE-O601",
+                        "sender_name": "Organizer Node (Command Base)",
+                        "conv_id": "INC-FLD-2026-001",
+                        "packet_type": "SYSTEM",
+                        "payload": "Relief shelter Sector 3 operational. Capacity 150 persons ready with emergency solar generators and Starlink uplink.",
+                        "lat": 13.0700,
+                        "lng": 80.2600,
+                        "altitude": 20.0,
+                        "accuracy": 10.0,
+                        "timestamp": now_t - (25 * 60 * 1000),
+                        "hops": 0,
+                        "ttl": 6,
+                        "mule_device_id": "GATEWAY-ROOT",
+                        "meta": {
+                            "role": "Command Node",
+                            "priority": "NORMAL",
+                            "location": "Sector 3 Community Hall",
+                            "incident_id": "INC-FLD-2026-001",
+                            "relay_device_id": "GATEWAY-ROOT",
+                            "status": "DELIVERED",
+                            "acknowledged": True
+                        }
+                    }
+                ]
+                for p in seed_packets:
+                    self.ingest_packet(p, mule_id=p.get("mule_device_id", "GATEWAY-ROOT"))
+
     def clear(self):
         """Reset storage (for unit test isolation)."""
         self.seen_message_ids.clear()
