@@ -21,7 +21,7 @@ import {
   Flame,
   Globe2,
 } from 'lucide-react';
-import { SignalRescueLogo } from '../components/common/SignalRescueLogo';
+import { RakshaNetLogo } from '../components/common/RakshaNetLogo';
 import GatewayFlow from '@/components/ui/gateway-flow';
 
 export const LandingPage: React.FC = () => {
@@ -70,7 +70,7 @@ export const LandingPage: React.FC = () => {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Logo Brand with Official RakshaNet Logo & SignalRescue AI Emblem */}
+          {/* Logo Brand with Official RakshaNet Logo */}
           <div className="flex items-center gap-3">
             <a
               href="#home"
@@ -79,9 +79,9 @@ export const LandingPage: React.FC = () => {
                 handleNavClick('#home');
               }}
               className="flex items-center gap-3 group focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-lg p-1"
-              aria-label="SignalRescue AI Home"
+              aria-label="RakshaNet Home"
             >
-              {/* Official RakshaNet Crest / SignalRescue Emblem */}
+              {/* Official RakshaNet Crest / Emblem */}
               <div className="relative flex items-center gap-2.5">
                 <img
                   src="/assets/images/rakshanet_logo.png"
@@ -92,14 +92,14 @@ export const LandingPage: React.FC = () => {
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
-                <SignalRescueLogo size={36} />
+                <RakshaNetLogo size={36} />
               </div>
               <div className="flex flex-col">
                 <span className="font-display font-black text-xl tracking-tight text-slate-900 leading-none group-hover:text-amber-600 transition-colors">
-                  SignalRescue AI
+                  RakshaNet
                 </span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                  RakshaNet Network
+                  Disaster Resilience Network
                 </span>
               </div>
             </a>
@@ -132,7 +132,7 @@ export const LandingPage: React.FC = () => {
               type="button"
               onClick={() => navigate('/auth/login')}
               className="h-11 px-6 rounded-full bg-[#FFC400] hover:bg-[#FFD21F] text-[#0B1220] font-bold text-sm tracking-wide shadow-sm hover:shadow-md active:scale-95 transition-all flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-              aria-label="Get Started with SignalRescue AI"
+              aria-label="Get Started with RakshaNet"
             >
               <span>Get Started</span>
               <ArrowRight size={16} className="stroke-[2.5]" />
@@ -295,7 +295,7 @@ export const LandingPage: React.FC = () => {
                   type="button"
                   onClick={() => navigate('/auth/login')}
                   className="min-h-[56px] h-14 px-8 rounded-xl bg-[#FFC400] hover:bg-[#FFD21F] text-[#0B1220] font-black text-base shadow-xl shadow-amber-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-3 focus:outline-none focus:ring-4 focus:ring-amber-500/40"
-                  aria-label="Get Started with RakshaNet SignalRescue"
+                  aria-label="Get Started with RakshaNet"
                 >
                   <span>Get Started</span>
                   <ArrowRight size={20} className="stroke-[2.5]" />
@@ -490,7 +490,7 @@ export const LandingPage: React.FC = () => {
               Architecture & Lifecycle
             </span>
             <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-900 tracking-tight mt-3">
-              How SignalRescue AI Operates
+              How RakshaNet Operates
             </h2>
             <p className="text-slate-600 text-base sm:text-lg mt-3">
               When standard telecom towers go dark, our decentralised mesh turns everyday smartphones and tactical radios into an unbreakable lifeline.
@@ -705,7 +705,7 @@ export const LandingPage: React.FC = () => {
                   className="w-12 h-12 object-contain"
                 />
                 <span className="font-display font-black text-2xl text-slate-900">
-                  RakshaNet • SignalRescue AI
+                  RakshaNet • Disaster Mesh
                 </span>
               </div>
               <h2 className="font-display font-black text-3xl sm:text-4xl text-slate-900 tracking-tight">
@@ -739,11 +739,11 @@ export const LandingPage: React.FC = () => {
             {/* Col 1: Brand Info */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-white">
-                <SignalRescueLogo size={28} />
-                <span className="font-display font-bold text-lg text-white">SignalRescue AI</span>
+                <RakshaNetLogo size={28} />
+                <span className="font-display font-bold text-lg text-white">RakshaNet</span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Offline-first disaster communication platform developed under the RakshaNet resilient infrastructure initiative.
+                Offline-first disaster communication platform engineered for extreme scenarios and human resilience.
               </p>
               <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 pt-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -796,7 +796,7 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
-            <p>© {new Date().getFullYear()} RakshaNet / SignalRescue AI. Engineered for human resilience.</p>
+            <p>© {new Date().getFullYear()} RakshaNet. Engineered for human resilience.</p>
             <div className="flex items-center gap-6">
               <span className="text-slate-400">Strictly adheres to hi-vis beacon design system</span>
             </div>

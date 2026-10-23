@@ -14,7 +14,7 @@ export const apiClient = axios.create({
 // Request interceptor to attach Bearer token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('signalrescue_token') || sessionStorage.getItem('signalrescue_token');
+    const token = localStorage.getItem('rakshanet_token') || sessionStorage.getItem('rakshanet_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -29,10 +29,10 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response && error.response.status === 401) {
       // Clear credentials
-      localStorage.removeItem('signalrescue_token');
-      localStorage.removeItem('signalrescue_user');
-      sessionStorage.removeItem('signalrescue_token');
-      sessionStorage.removeItem('signalrescue_user');
+      localStorage.removeItem('rakshanet_token');
+      localStorage.removeItem('rakshanet_user');
+      sessionStorage.removeItem('rakshanet_token');
+      sessionStorage.removeItem('rakshanet_user');
 
       // Dispatch custom event for authStore to react without circular imports
       window.dispatchEvent(new CustomEvent('auth:unauthorized'));

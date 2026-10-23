@@ -27,7 +27,7 @@ export const ProtectedRoute: React.FC = () => {
           className="text-lg font-bold text-white tracking-wide mb-2"
           style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
         >
-          Connecting to SignalRescue Command Grid...
+          Connecting to RakshaNet Command Grid...
         </h3>
         <p className="text-xs text-[#9FADC2]">
           Verifying security clearance and cryptographic DTN mesh credentials

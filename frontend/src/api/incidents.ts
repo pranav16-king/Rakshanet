@@ -586,7 +586,7 @@ function normalizeIncidentAiExplainability(d: any, people: number): import('../t
     priorityScore: rawAi.priorityScore ?? (d.severity === 'CRITICAL' ? 96 : 84),
     confidencePct,
     confidenceGrade: rawAi.confidenceGrade || (confidencePct >= 90 ? 'VERY_HIGH' : 'HIGH'),
-    modelVersion: rawAi.model_version || rawAi.modelVersion || 'SignalRescue-SpatialTriage-v2.1',
+    modelVersion: rawAi.model_version || rawAi.modelVersion || 'RakshaNet-SpatialTriage-v2.1',
     synthesis:
       rawAi.synthesis ||
       (rawFactorsList.length > 0

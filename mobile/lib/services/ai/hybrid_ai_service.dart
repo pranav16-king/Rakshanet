@@ -146,7 +146,7 @@ class HybridAiService {
     }
 
     final systemPrompt =
-        'You are SignalRescue AI, an advanced emergency disaster-response intelligence and survival copilot. '
+        'You are RakshaNet AI, an advanced emergency disaster-response intelligence and survival copilot. '
         'You provide expert, concise, authoritative, and life-saving guidance for any question asked.$telemetryPrompt\n'
         'Respond in a structured JSON format with three exact keys:\n'
         '1. "title": Short authoritative title or direct answer summary (1-2 sentences).\n'
@@ -181,7 +181,7 @@ class HybridAiService {
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer $_groqApiKey',
-                'User-Agent': 'SignalRescue/1.0',
+                'User-Agent': 'RakshaNet/1.0',
               },
               body: jsonEncode({
                 'model': model,
@@ -202,7 +202,7 @@ class HybridAiService {
             final parsedJson = jsonDecode(contentStr) as Map<String, dynamic>;
 
             final title = parsedJson['title']?.toString() ??
-                'SignalRescue AI Response:';
+                'RakshaNet AI Response:';
             final stepsDynamic = parsedJson['steps'] as List<dynamic>? ?? [];
             final steps = stepsDynamic.map((e) => e.toString()).toList();
             final warning = parsedJson['warning']?.toString();
@@ -242,7 +242,7 @@ class HybridAiService {
         text: 'Mathematical Evaluation & Calculation:',
         steps: mathResult,
         warningNotice:
-            'Calculated directly on-device using SignalRescue arithmetic evaluator.',
+            'Calculated directly on-device using RakshaNet arithmetic evaluator.',
         source: 'Trained On-Device AI Model',
         confidence: 0.99,
         isOnline: false,
@@ -591,12 +591,12 @@ class HybridAiService {
 
   static AiResponse _synthesizeGeneralOfflineResponse(String query, int elapsed) {
     return AiResponse(
-      text: 'SignalRescue AI Offline Intelligence & Guidance:',
+      text: 'RakshaNet AI Offline Intelligence & Guidance:',
       steps: [
         'Query Analysis: "$query" processed via on-device semantic classifier.',
         'Primary Life Safety: In any disaster situation, immediately assess airway, breathing, severe bleeding, and immediate environmental hazards (fire, water, collapse).',
         'Offline Resource Toolkit: You can use the offline bottom navigation tools for Live Maps, First Aid Guides, Emergency Shelters, and Peer-to-Peer Mesh Chat.',
-        'Signal Rescue: If in immediate distress, press and hold the SOS Beacon for 1.5 seconds to broadcast your emergency coordinates across the mesh network.',
+        'Emergency SOS: If in immediate distress, press and hold the SOS Beacon for 1.5 seconds to broadcast your emergency coordinates across the mesh network.',
         'Cloud LLM Availability: Connect to Wi-Fi or cellular networks at any time to automatically activate high-capacity Groq Cloud Llama-3.3 AI for in-depth open-ended research.',
       ],
       warningNotice:

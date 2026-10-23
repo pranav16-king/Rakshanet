@@ -1,5 +1,5 @@
 /**
- * RakshaNet / SignalRescue AI — Design System Tokens
+ * RakshaNet — Design System Tokens
  * Source of Truth: design.md
  * Hi-vis beacon design system for extreme emergency / offline resilience.
  */

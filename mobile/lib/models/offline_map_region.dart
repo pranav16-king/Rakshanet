@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-/// Offline map sector / region model for SignalRescue AI / RakshaNet
+/// Offline map sector / region model for RakshaNet
 class OfflineMapRegion {
   final String id;
   final String name;

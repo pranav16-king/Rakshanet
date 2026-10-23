@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Owns the unique device identity (Mobile IMEI / Hardware Unique ID) used by
-/// the local SignalRescue AI node and session store.
+/// the local RakshaNet node and session store.
 ///
 /// The hardware IMEI ID is ONLY detected and populated when the user explicitly
 /// taps "Detect & Auto-Fill Mobile IMEI ID" and confirms the Privacy & Policy

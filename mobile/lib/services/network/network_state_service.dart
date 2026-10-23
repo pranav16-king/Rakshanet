@@ -68,7 +68,7 @@ class SyncResult {
       'ts: ${timestamp.toIso8601String()})';
 }
 
-/// Network State Monitor & Auto-Recovery Sync Service (SignalRescue AI / RakshaNet).
+/// Network State Monitor & Auto-Recovery Sync Service (RakshaNet).
 ///
 /// Responsibilities:
 /// 1. Tracks 6 distinct radio transport states:

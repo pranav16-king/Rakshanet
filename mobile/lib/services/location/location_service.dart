@@ -244,7 +244,7 @@ class AndroidLocationNotificationConfig {
     this.channelId = defaultChannelId,
     this.channelName = defaultChannelName,
     this.channelDescription = defaultChannelDescription,
-    this.title = 'SignalRescue AI Active Location Tracking',
+    this.title = 'RakshaNet Active Location Tracking',
     this.text = 'Monitoring emergency location in background for disaster mesh rescue',
     this.icon = 'ic_launcher',
   });
@@ -259,7 +259,7 @@ class AndroidLocationNotificationConfig {
       };
 }
 
-/// Reliable Device Location Service for RakshaNet / SignalRescue AI.
+/// Reliable Device Location Service for RakshaNet.
 ///
 /// Implements Spec Section 4 ("Reliable device location") with a rigorous priority hierarchy:
 /// 1. Fresh fused location fix (GPS / network provider, age <= 60s).

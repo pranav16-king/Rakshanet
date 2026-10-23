@@ -1,5 +1,5 @@
 /**
- * RakshaNet / SignalRescue AI — Master Map Container & Viewport
+ * RakshaNet — Master Map Container & Viewport
  * Source: design.md Section 8 and media_1791015140209.jpg
  */
 

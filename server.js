@@ -70,7 +70,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   const url = `http://localhost:${PORT}`;
   console.log('\n========================================================');
-  console.log(' 📡 RakshaNet (SignalRescue AI) — Dev Server Running');
+  console.log(' 📡 RakshaNet — Dev Server Running');
   console.log('========================================================');
   console.log(` 🌐 Local URL:  ${url}`);
   console.log(` 📱 Mobile UI:  ${url}/mobile/preview.html`);

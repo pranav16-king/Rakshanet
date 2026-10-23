@@ -1,5 +1,5 @@
 /**
- * RakshaNet / SignalRescue AI — React-Leaflet Map Components & Layer Definitions
+ * RakshaNet — React-Leaflet Map Components & Layer Definitions
  * Source: design.md Section 2.6 and media_1791015140209.jpg
  */
 

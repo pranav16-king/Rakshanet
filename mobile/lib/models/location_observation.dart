@@ -1,6 +1,6 @@
 /// Models for peer-to-peer location observation and multilateration estimation.
 ///
-/// Used by RakshaNet / SignalRescue AI for probabilistic positioning in GPS-denied
+/// Used by RakshaNet for probabilistic positioning in GPS-denied
 /// or degraded emergency disaster environments.
 library;
 

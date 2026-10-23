@@ -1,6 +1,6 @@
 """
 DBSCAN Spatial Incident Clustering Engine for RakshaNet.
-Feature 15 & Feature 19 from the SignalRescue AI White Paper.
+Feature 15 & Feature 19 from the RakshaNet Architecture Specification.
 
 Merges dozens of scattered raw civilian SOS distress signals within an epsilon
 geographic radius into unified master operational incident tickets.

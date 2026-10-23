@@ -230,7 +230,7 @@ void main() {
         final node = MeshRouterNode(
           deviceId: 'SR-NODE-ME',
           name: 'My Responder Phone',
-          email: 'rescuer@signalrescue.org',
+          email: 'rescuer@rakshanet.org',
           battery: 90,
         );
 
@@ -245,7 +245,7 @@ void main() {
           ttl: 5,
           hops: 2,
           payload: 'High priority casualty location',
-          recipientUserId: 'rescuer@signalrescue.org',
+          recipientUserId: 'rescuer@rakshanet.org',
           recipientDeviceId: 'SR-NODE-ME',
         );
 

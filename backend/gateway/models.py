@@ -89,7 +89,7 @@ class UserCreateRequest(BaseModel):
     role: str = "Responder"
     agency: str = "Disaster Response Force"
     phone: Optional[str] = None
-    password: Optional[str] = "SignalRescue@2026"
+    password: Optional[str] = "RakshaNet@2026"
 
 
 class AssignTeamRequest(BaseModel):

@@ -35,7 +35,7 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleFillDemo = (adminEmail = 'admin@signalrescue.org', adminPass = 'SignalRescue@2026') => {
+  const handleFillDemo = (adminEmail = 'admin@rakshanet.org', adminPass = 'RakshaNet@2026') => {
     setEmail(adminEmail);
     setPassword(adminPass);
     clearError();
@@ -53,7 +53,7 @@ export const LoginPage: React.FC = () => {
             className="flex items-center gap-1.5 text-xs font-bold text-[#566070] dark:text-[#9FADC2] hover:text-[#16202D] dark:hover:text-white transition-colors cursor-pointer"
           >
             <ArrowLeft size={15} />
-            <span>Back to SignalRescue AI</span>
+            <span>Back to RakshaNet</span>
           </button>
           <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/30 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -89,7 +89,7 @@ export const LoginPage: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => handleFillDemo('admin@signalrescue.org', 'SignalRescue@2026')}
+              onClick={() => handleFillDemo('admin@rakshanet.org', 'RakshaNet@2026')}
               className="text-[11px] font-bold text-[#16202D] dark:text-white bg-white dark:bg-[#0B1220] px-2.5 py-1 rounded-md border border-[#E6DCA8] dark:border-[#3A4C70] hover:bg-[#FFEFA6] dark:hover:bg-[#111A2C] transition-colors cursor-pointer shadow-xs active:scale-95"
             >
               Fill Credentials
@@ -112,7 +112,7 @@ export const LoginPage: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@signalrescue.org or your email"
+                  placeholder="admin@rakshanet.org or your email"
                   required
                   className="w-full h-10 pl-9 pr-3 rounded-lg bg-white dark:bg-[#0E1627] border border-[#CBD5E1] dark:border-[#26344F] text-xs text-[#16202D] dark:text-[#EEF2F8] placeholder-[#94A3B8] dark:placeholder-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#FFC400] dark:focus:ring-[#FFD21F] shadow-xs transition-all"
                 />
@@ -162,7 +162,7 @@ export const LoginPage: React.FC = () => {
               </label>
               <button
                 type="button"
-                onClick={() => alert('Default credentials: admin@signalrescue.org / SignalRescue@2026')}
+                onClick={() => alert('Default credentials: admin@rakshanet.org / RakshaNet@2026')}
                 className="font-medium text-[11px] text-[#8A5A00] dark:text-[#FFD21F] hover:underline cursor-pointer"
               >
                 Forgot password?

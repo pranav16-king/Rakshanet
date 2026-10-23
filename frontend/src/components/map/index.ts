@@ -1,5 +1,5 @@
 /**
- * RakshaNet / SignalRescue AI — Interactive Map Assets, Custom GIS Vector Canvas & Leaflet Styles
+ * RakshaNet — Interactive Map Assets, Custom GIS Vector Canvas & Leaflet Styles
  * Source of Truth: design.md Section 2.6 and media_1791015140209.jpg
  */
 

@@ -58,7 +58,7 @@ class MapDownloadProgress {
   }
 }
 
-/// Offline Maps & Tile Manager for RakshaNet / SignalRescue AI
+/// Offline Maps & Tile Manager for RakshaNet
 ///
 /// Implements Spec Sections 2 & 3:
 /// - Offline-first interactive map tile caching

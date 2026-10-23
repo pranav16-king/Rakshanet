@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../theme/emergency_design_tokens.dart';
 
 /// 1. Compact, logo-free App Header (64–72dp height).
+typedef RakshaNetHeader = SignalRescueHeader;
 class SignalRescueHeader extends StatelessWidget {
   final int batteryLevel;
   final bool isMeshActive;
@@ -68,7 +69,7 @@ class SignalRescueHeader extends StatelessWidget {
                   children: [
                     const Flexible(
                       child: Text(
-                        'SignalRescue',
+                        'RakshaNet',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.headerTitle,

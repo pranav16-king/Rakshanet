@@ -24,10 +24,10 @@ export const reportsApi = {
       return response.data;
     } catch {
       return `<?xml version="1.0" encoding="UTF-8"?>
-<alerts xmlns="urn:oasis:names:tc:emergency:cap:1.2" source="RakshaNet-SignalRescue">
+<alerts xmlns="urn:oasis:names:tc:emergency:cap:1.2" source="RakshaNet">
   <alert>
     <identifier>RAKSHANET-CAP-2026-FLOOD-01</identifier>
-    <sender>hq@signalrescue.org</sender>
+    <sender>hq@rakshanet.org</sender>
     <sent>2026-10-03T08:30:00Z</sent>
     <status>Actual</status>
     <msgType>Alert</msgType>

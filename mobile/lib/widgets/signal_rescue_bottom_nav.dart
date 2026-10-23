@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
-/// Centralized Navigation Constants for SignalRescue AI Bottom Dock
+/// Centralized Navigation Constants for RakshaNet Bottom Dock
 class NavConstants {
   NavConstants._();
 
@@ -465,7 +465,8 @@ class NavItem extends StatelessWidget {
   }
 }
 
-/// 5. Complete Floating Rounded Capsule Bottom Navigation Dock for SignalRescue AI.
+/// 5. Complete Floating Rounded Capsule Bottom Navigation Dock for RakshaNet.
+typedef RakshaNetBottomNav = SignalRescueBottomNav;
 class SignalRescueBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTabSelected;

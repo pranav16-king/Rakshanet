@@ -249,7 +249,7 @@ class EncryptedLocationPayload {
     return MessageEnvelope(
       uuid: 'LOC-${DateTime.now().millisecondsSinceEpoch}-${senderDeviceId.hashCode.toRadixString(16)}',
       senderId: senderDeviceId,
-      senderName: senderName ?? 'SignalRescue Node',
+      senderName: senderName ?? 'RakshaNet Node',
       conversationId: conversationId,
       timestamp: timestamp,
       ttl: ttl,

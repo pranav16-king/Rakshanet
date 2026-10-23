@@ -461,10 +461,17 @@ class GatewayStorage:
             return [dict(row) for row in cursor.fetchall()]
 
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        norm_email = email.strip().lower()
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+            cursor.execute("SELECT * FROM users WHERE LOWER(email) = ?", (norm_email,))
             row = cursor.fetchone()
+            if not row and norm_email == "admin@rakshanet.org":
+                cursor.execute("SELECT * FROM users WHERE LOWER(email) = 'admin@signalrescue.org'")
+                row = cursor.fetchone()
+            elif not row and norm_email == "admin@signalrescue.org":
+                cursor.execute("SELECT * FROM users WHERE LOWER(email) = 'admin@rakshanet.org'")
+                row = cursor.fetchone()
             return dict(row) if row else None
 
     def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -477,7 +484,7 @@ class GatewayStorage:
     def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         user_id = user_data.get("id") or f"USR-{secrets.token_hex(4).upper()}"
         now = int(time.time() * 1000)
-        raw_password = user_data.get("password") or "SignalRescue@2026"
+        raw_password = user_data.get("password") or "RakshaNet@2026"
         pw_hash = user_data.get("password_hash") or hash_password(raw_password)
 
         new_user = {
@@ -499,6 +506,8 @@ class GatewayStorage:
                 INSERT INTO users (id, email, password_hash, name, role, agency, phone, status, last_active, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
+                    email = excluded.email,
+                    password_hash = excluded.password_hash,
                     name = excluded.name,
                     role = excluded.role,
                     agency = excluded.agency,
@@ -739,9 +748,411 @@ class GatewayStorage:
             lambda: self.mongo_db.incidents.update_one(
                 {"incident_id": incident_id},
                 {"$set": {"assigned_team": team_name, "status": "ASSIGNED", "updated_at": now}}
-            )
+            ) if self.mongo_db is not None else None
         )
         return self.get_incident(incident_id)
+
+    def update_incident_status(self, incident_id: str, new_status: str) -> Optional[Dict[str, Any]]:
+        now = int(time.time() * 1000)
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE incidents
+                SET status = ?, updated_at = ?
+                WHERE incident_id = ?
+            """, (new_status.upper(), now, incident_id))
+            if cursor.rowcount == 0:
+                cursor.execute("""
+                    UPDATE incidents
+                    SET status = ?, updated_at = ?
+                    WHERE incident_id LIKE ?
+                """, (new_status.upper(), now, f"%{incident_id}%"))
+                if cursor.rowcount == 0:
+                    return None
+            conn.commit()
+
+        # Dual-persist update to MongoDB Atlas
+        self._async_mongo(
+            lambda: self.mongo_db.incidents.update_one(
+                {"incident_id": incident_id},
+                {"$set": {"status": new_status.upper(), "updated_at": now}}
+            ) if self.mongo_db is not None else None
+        )
+        return self.get_incident(incident_id)
+
+    def get_incident_communications(self, incident_id: str) -> Dict[str, Any]:
+        inc = self.get_incident(incident_id)
+        lat = (inc.get("lat") or 13.0425) if inc else 13.0425
+        lng = (inc.get("lng") or 80.2285) if inc else 80.2285
+        assoc_devs = set(inc.get("associated_devices") or []) if inc else set()
+        assigned_team = (inc.get("assigned_team") or "NDRF Zodiac Inflatable Boat 01") if inc else "NDRF Zodiac Inflatable Boat 01"
+        inc_title = inc.get("title", f"Incident {incident_id}") if inc else f"Incident {incident_id}"
+        dev_count = inc.get("devices_count", len(assoc_devs) or 8) if inc else 8
+
+        now = int(time.time() * 1000)
+
+        # 1. SOS Distress Alerts
+        sos_alerts = [
+            {
+                "id": f"SOS-{incident_id}-01",
+                "incident_id": incident_id,
+                "type": "SOS",
+                "priority": "CRITICAL",
+                "sender_id": list(assoc_devs)[0] if assoc_devs else "SR-7B1A",
+                "sender_name": "Rohan & Family (4 People)",
+                "payload": "Water entered ground floor, trapped on terrace with 2 children. Current fast.",
+                "timestamp": now - 180000,
+                "timestamp_display": "3 min ago",
+                "lat": round(lat + 0.0018, 5),
+                "lng": round(lng - 0.0012, 5),
+                "battery_pct": 28,
+                "siren_active": True,
+                "casualties": 4,
+                "hops": 2,
+                "relay_path": [
+                    {"node": "SR-7B1A (Victim Handset)", "rssi": "-54 dBm", "hop": 0, "battery": "28%"},
+                    {"node": "MULE-NODE-04 (Relay Phone)", "rssi": "-76 dBm", "hop": 1, "battery": "65%"},
+                    {"node": "GATEWAY-RELIEF-01", "rssi": "-68 dBm", "hop": 2, "battery": "100%"}
+                ]
+            },
+            {
+                "id": f"SOS-{incident_id}-02",
+                "incident_id": incident_id,
+                "type": "SOS",
+                "priority": "CRITICAL",
+                "sender_id": list(assoc_devs)[1] if len(assoc_devs) > 1 else "SR-3E9C",
+                "sender_name": "Kavitha M. (Elderly Diabetic)",
+                "payload": "Insulin exhausted, water reaching porch stairs. Need urgent medical extraction.",
+                "timestamp": now - 420000,
+                "timestamp_display": "7 min ago",
+                "lat": round(lat - 0.0022, 5),
+                "lng": round(lng + 0.0015, 5),
+                "battery_pct": 42,
+                "siren_active": False,
+                "casualties": 2,
+                "hops": 3,
+                "relay_path": [
+                    {"node": "SR-3E9C (Victim Handset)", "rssi": "-62 dBm", "hop": 0, "battery": "42%"},
+                    {"node": "MULE-DRONE-RECON", "rssi": "-71 dBm", "hop": 1, "battery": "80%"},
+                    {"node": "SR-SDRF-COMMAND", "rssi": "-65 dBm", "hop": 2, "battery": "94%"},
+                    {"node": "GATEWAY-RELIEF-01", "rssi": "-59 dBm", "hop": 3, "battery": "100%"}
+                ]
+            },
+            {
+                "id": f"SOS-{incident_id}-03",
+                "incident_id": incident_id,
+                "type": "SOS",
+                "priority": "HIGH",
+                "sender_id": list(assoc_devs)[2] if len(assoc_devs) > 2 else "SR-9A2F",
+                "sender_name": "School Warden Deshmukh",
+                "payload": "12 primary students moved to 2nd floor science lab. Safe for next 2 hours.",
+                "timestamp": now - 780000,
+                "timestamp_display": "13 min ago",
+                "lat": round(lat + 0.0031, 5),
+                "lng": round(lng + 0.0028, 5),
+                "battery_pct": 74,
+                "siren_active": False,
+                "casualties": 12,
+                "hops": 1,
+                "relay_path": [
+                    {"node": "SR-9A2F (Warden Phone)", "rssi": "-58 dBm", "hop": 0, "battery": "74%"},
+                    {"node": "GATEWAY-RELIEF-01", "rssi": "-64 dBm", "hop": 1, "battery": "100%"}
+                ]
+            }
+        ]
+
+        # 2. Mesh Relay & DTN Hop Topology
+        relay_topology = [
+            {
+                "route_id": f"ROUTE-{incident_id}-A",
+                "origin_device": "SR-7B1A",
+                "target_incident": incident_id,
+                "total_hops": 2,
+                "estimated_latency_ms": 640,
+                "status": "DELIVERED",
+                "hops": [
+                    {"hop_number": 0, "device_id": "SR-7B1A", "role": "Origin Victim Node", "signal_dbm": -54, "delay_ms": 0, "battery": 28},
+                    {"hop_number": 1, "device_id": "MULE-NODE-04", "role": "Store-and-Forward Mesh Mule", "signal_dbm": -76, "delay_ms": 320, "battery": 65},
+                    {"hop_number": 2, "device_id": "GATEWAY-RELIEF-01", "role": "Command Ingestion Node", "signal_dbm": -68, "delay_ms": 640, "battery": 100}
+                ]
+            },
+            {
+                "route_id": f"ROUTE-{incident_id}-B",
+                "origin_device": "SR-3E9C",
+                "target_incident": incident_id,
+                "total_hops": 3,
+                "estimated_latency_ms": 1150,
+                "status": "DELIVERED",
+                "hops": [
+                    {"hop_number": 0, "device_id": "SR-3E9C", "role": "Origin Victim Node", "signal_dbm": -62, "delay_ms": 0, "battery": 42},
+                    {"hop_number": 1, "device_id": "MULE-DRONE-RECON", "role": "Aerial Airborne Relay", "signal_dbm": -71, "delay_ms": 520, "battery": 80},
+                    {"hop_number": 2, "device_id": "SR-SDRF-COMMAND", "role": "Forward Mobile Command", "signal_dbm": -65, "delay_ms": 890, "battery": 94},
+                    {"hop_number": 3, "device_id": "GATEWAY-RELIEF-01", "role": "Command Ingestion Node", "signal_dbm": -59, "delay_ms": 1150, "battery": 100}
+                ]
+            }
+        ]
+
+        # 3. Civilian Field SITREPs
+        field_sitreps = [
+            {
+                "id": f"SITREP-{incident_id}-01",
+                "type": "SITREP",
+                "reporter": "Citizen Mesh Node SR-5K82",
+                "category": "HAZARD_ROAD_BLOCKED",
+                "location": "North Access Bridge Sector 4B",
+                "lat": round(lat - 0.0040, 5),
+                "lng": round(lng - 0.0030, 5),
+                "notes": "Culvert breached by river overflow. Light 4WD vehicles cannot pass. Water depth ~1.4 meters.",
+                "timestamp": now - 900000,
+                "timestamp_display": "15 min ago",
+                "actionable": "Advise rescue units to detour via West Ridge Highway"
+            },
+            {
+                "id": f"SITREP-{incident_id}-02",
+                "type": "SITREP",
+                "reporter": "Volunteer David (SR-2M11)",
+                "category": "INFRASTRUCTURE_SAFE_HAVEN",
+                "location": "St. Marys Parish High Terrace",
+                "lat": round(lat + 0.0035, 5),
+                "lng": round(lng - 0.0025, 5),
+                "notes": "Terrace dry and structurally sound. Can shelter up to 80 evacuees safely. First aid kit available.",
+                "timestamp": now - 1500000,
+                "timestamp_display": "25 min ago",
+                "actionable": "Designate as forward casualty collection point"
+            }
+        ]
+
+        # 4. Rescue Team Communications
+        team_comms = [
+            {
+                "id": f"TEAM-{incident_id}-01",
+                "sender": "Command Center Incident Commander",
+                "recipient": assigned_team,
+                "type": "DISPATCH_ORDER",
+                "message": f"Deploying unit to coordinates [{lat:.4f}, {lng:.4f}]. Target: Sector flash flood rooftop extractions. Primary channel BLE Mesh Cluster #4.",
+                "timestamp": now - 600000,
+                "timestamp_display": "10 min ago",
+                "status": "ACKNOWLEDGED"
+            },
+            {
+                "id": f"TEAM-{incident_id}-02",
+                "sender": assigned_team,
+                "recipient": "Command Center",
+                "type": "TACTICAL_UPDATE",
+                "message": "Boat en route. Entering low-lying riverbank branch. Water velocity 3.5 m/s. ETA to House #42 is 6 minutes.",
+                "timestamp": now - 240000,
+                "timestamp_display": "4 min ago",
+                "status": "IN_TRANSIT"
+            }
+        ]
+
+        # 5. Audio and Voice Transcriptions
+        voice_transcriptions = [
+            {
+                "id": f"VOICE-{incident_id}-01",
+                "speaker": "Rohan (Handset SR-7B1A)",
+                "duration_seconds": 12,
+                "transcription": "Water is entering the first floor rapidly, we have moved the children to the roof terrace, please hurry!",
+                "nlp_extracted_entities": ["Water level critical", "Children present (2)", "Terrace position"],
+                "urgency_score": 0.98,
+                "timestamp": now - 185000
+            },
+            {
+                "id": f"VOICE-{incident_id}-02",
+                "speaker": "Volunteer Paramedic Kavitha",
+                "duration_seconds": 18,
+                "transcription": "Elderly patient has high blood sugar and hypothermia symptoms. Bring warm blankets and oral glucose if possible.",
+                "nlp_extracted_entities": ["Medical emergency", "Hypothermia", "Diabetic supplies"],
+                "urgency_score": 0.89,
+                "timestamp": now - 425000
+            }
+        ]
+
+        all_comms = []
+        for s in sos_alerts:
+            all_comms.append({
+                "id": s["id"],
+                "category": "SOS",
+                "title": f"🚨 SOS Distress: {s['sender_name']}",
+                "content": s["payload"],
+                "sender": s["sender_name"],
+                "sender_id": s["sender_id"],
+                "timestamp": s["timestamp"],
+                "timestamp_display": s["timestamp_display"],
+                "priority": s["priority"],
+                "hops": s["hops"],
+                "lat": s["lat"],
+                "lng": s["lng"],
+                "meta": {"casualties": s["casualties"], "battery": s["battery_pct"], "siren": s["siren_active"]}
+            })
+        for sit in field_sitreps:
+            all_comms.append({
+                "id": sit["id"],
+                "category": "SITREP",
+                "title": f"📋 Field Report: {sit['category'].replace('_', ' ')}",
+                "content": sit["notes"],
+                "sender": sit["reporter"],
+                "sender_id": "CITIZEN-MESH",
+                "timestamp": sit["timestamp"],
+                "timestamp_display": sit["timestamp_display"],
+                "priority": "MEDIUM",
+                "hops": 2,
+                "lat": sit["lat"],
+                "lng": sit["lng"],
+                "meta": {"actionable": sit["actionable"]}
+            })
+        for tc in team_comms:
+            all_comms.append({
+                "id": tc["id"],
+                "category": "RESCUE_COMMS",
+                "title": f"🚒 Team Comms: {tc['sender']}",
+                "content": tc["message"],
+                "sender": tc["sender"],
+                "sender_id": "RESCUE-DISPATCH",
+                "timestamp": tc["timestamp"],
+                "timestamp_display": tc["timestamp_display"],
+                "priority": "HIGH",
+                "hops": 1,
+                "lat": lat,
+                "lng": lng,
+                "meta": {"status": tc["status"]}
+            })
+        for vt in voice_transcriptions:
+            all_comms.append({
+                "id": vt["id"],
+                "category": "VOICE_TRANSCRIPTION",
+                "title": f"🎙️ Audio Memo: {vt['speaker']}",
+                "content": vt["transcription"],
+                "sender": vt["speaker"],
+                "sender_id": "VOICE-REC",
+                "timestamp": vt["timestamp"],
+                "timestamp_display": f"{max(1, int((now - vt['timestamp'])/60000))}m ago",
+                "priority": "HIGH" if vt["urgency_score"] > 0.9 else "MEDIUM",
+                "hops": 1,
+                "lat": lat,
+                "lng": lng,
+                "meta": {"entities": vt["nlp_extracted_entities"], "duration": vt["duration_seconds"]}
+            })
+
+        all_comms.sort(key=lambda x: x["timestamp"], reverse=True)
+
+        return {
+            "incident_id": incident_id,
+            "title": inc_title,
+            "summary": {
+                "total": len(all_comms),
+                "sos_count": len(sos_alerts),
+                "sitreps_count": len(field_sitreps),
+                "team_comms_count": len(team_comms),
+                "voice_count": len(voice_transcriptions),
+                "active_devices": dev_count
+            },
+            "sos_alerts": sos_alerts,
+            "relay_topology": relay_topology,
+            "field_sitreps": field_sitreps,
+            "team_comms": team_comms,
+            "voice_transcriptions": voice_transcriptions,
+            "all_communications": all_comms
+        }
+
+    def get_incident_mesh_topology(self, incident_id: str) -> Dict[str, Any]:
+        inc = self.get_incident(incident_id)
+        lat = (inc.get("lat") or 13.0425) if inc else 13.0425
+        lng = (inc.get("lng") or 80.2285) if inc else 80.2285
+        radius = (inc.get("cluster_radius_meters") or 250.0) if inc else 250.0
+
+        sos_beacons = [
+            {
+                "beacon_id": f"BEACON-{incident_id}-1",
+                "device_id": "SR-7B1A",
+                "name": "Rohan & Family",
+                "lat": round(lat + 0.0018, 5),
+                "lng": round(lng - 0.0012, 5),
+                "status": "CRITICAL_TRAPPED",
+                "casualties": 4,
+                "battery": 28,
+                "last_ping_seconds_ago": 45
+            },
+            {
+                "beacon_id": f"BEACON-{incident_id}-2",
+                "device_id": "SR-3E9C",
+                "name": "Kavitha M. (Diabetic)",
+                "lat": round(lat - 0.0022, 5),
+                "lng": round(lng + 0.0015, 5),
+                "status": "MEDICAL_URGENT",
+                "casualties": 2,
+                "battery": 42,
+                "last_ping_seconds_ago": 110
+            },
+            {
+                "beacon_id": f"BEACON-{incident_id}-3",
+                "device_id": "SR-9A2F",
+                "name": "Primary School Terrace",
+                "lat": round(lat + 0.0031, 5),
+                "lng": round(lng + 0.0028, 5),
+                "status": "SAFE_HAVEN_SIGHTED",
+                "casualties": 12,
+                "battery": 74,
+                "last_ping_seconds_ago": 190
+            }
+        ]
+
+        mesh_relays = [
+            {
+                "relay_id": "MULE-NODE-04",
+                "name": "Relief Worker Phone Relay #4",
+                "lat": round(lat + 0.0008, 5),
+                "lng": round(lng - 0.0004, 5),
+                "hops_to_gateway": 1,
+                "status": "ACTIVE_RELAYING",
+                "battery": 65,
+                "packets_forwarded": 42
+            },
+            {
+                "relay_id": "MULE-DRONE-RECON",
+                "name": "Airborne Tethered Drone Relay",
+                "lat": round(lat - 0.0010, 5),
+                "lng": round(lng + 0.0008, 5),
+                "hops_to_gateway": 1,
+                "status": "AIRBORNE_RELAYING",
+                "battery": 80,
+                "packets_forwarded": 128
+            }
+        ]
+
+        assigned_team = inc.get("assigned_team") if inc else None
+        rescue_units = [
+            {
+                "unit_id": "NDRF-BOAT-01",
+                "name": "NDRF Zodiac Inflatable Boat 01",
+                "type": "BOAT",
+                "lat": round(lat - 0.0030, 5),
+                "lng": round(lng - 0.0020, 5),
+                "status": "EN_ROUTE" if assigned_team else "STANDBY",
+                "eta_minutes": 6 if assigned_team else None
+            },
+            {
+                "unit_id": "108-AMB-05",
+                "name": "Emergency Trauma Paramedic Ambulance 05",
+                "type": "AMBULANCE",
+                "lat": round(lat + 0.0045, 5),
+                "lng": round(lng - 0.0050, 5),
+                "status": "STANDBY",
+                "eta_minutes": 12
+            }
+        ]
+
+        return {
+            "incident_id": incident_id,
+            "title": inc.get("title", f"Incident {incident_id}") if inc else f"Incident {incident_id}",
+            "centroid": {"lat": lat, "lng": lng},
+            "radius_meters": radius,
+            "affected_area": inc.get("affected_area", "Disaster Sector") if inc else "Disaster Sector",
+            "sos_beacons": sos_beacons,
+            "mesh_relays": mesh_relays,
+            "rescue_units": rescue_units
+        }
+
 
     # =========================================================================
     # DEVICES & MESH NETWORK
@@ -1203,9 +1614,9 @@ class GatewayStorage:
         # 1. Seed Authorized Admin User
         admin_user = {
             "id": "USR-ADMIN-01",
-            "email": "admin@signalrescue.org",
+            "email": "admin@rakshanet.org",
             "name": "Chief Commander Sharma",
-            "password_hash": hash_password("SignalRescue@2026"),
+            "password_hash": hash_password("RakshaNet@2026"),
             "role": "Administrator",
             "agency": "Government Operations",
             "phone": "+91-98765-43210",
@@ -1214,11 +1625,18 @@ class GatewayStorage:
         if not self.get_user_by_email(admin_user["email"]):
             self.create_user(admin_user)
 
+        # Also support legacy admin email if requested
+        if not self.get_user_by_email("admin@signalrescue.org"):
+            legacy_admin = dict(admin_user)
+            legacy_admin["id"] = "USR-ADMIN-LEGACY"
+            legacy_admin["email"] = "admin@signalrescue.org"
+            self.create_user(legacy_admin)
+
         # Additional field responders
         additional_users = [
             {
                 "id": "USR-RESP-02",
-                "email": "vikram.ndrf@signalrescue.org",
+                "email": "vikram.ndrf@rakshanet.org",
                 "name": "Capt. Vikram Sengupta",
                 "role": "Field Commander",
                 "agency": "NDRF 4th Battalion",
@@ -1236,7 +1654,7 @@ class GatewayStorage:
             },
             {
                 "id": "USR-RESP-04",
-                "email": "anita.sdrf@signalrescue.org",
+                "email": "anita.sdrf@rakshanet.org",
                 "name": "Insp. Anita Deshmukh",
                 "role": "Rescue Specialist",
                 "agency": "State Disaster Response Force",
@@ -1355,7 +1773,7 @@ class GatewayStorage:
                             "NLP emergency phrase extraction: 'Water entering first floor', 'Children trapped'",
                             "Rapid cellular tower blackout detected in Sector 4B"
                         ],
-                        "model_version": "SignalRescue-SpatialTriage-v2.1",
+                        "model_version": "RakshaNet-SpatialTriage-v2.1",
                         "signal_freshness_seconds": 120
                     },
                     "associated_messages": [
@@ -1392,7 +1810,7 @@ class GatewayStorage:
                             "Repeated distress beacons from basement levels",
                             "Structural integrity sensor telemetry drop"
                         ],
-                        "model_version": "SignalRescue-SpatialTriage-v2.1"
+                        "model_version": "RakshaNet-SpatialTriage-v2.1"
                     },
                     "associated_messages": [
                         "Trapped under collapsed awning",
@@ -1427,7 +1845,7 @@ class GatewayStorage:
                             "Soil saturation threshold exceeded 92%",
                             "Driver distress transmissions"
                         ],
-                        "model_version": "SignalRescue-SpatialTriage-v2.1"
+                        "model_version": "RakshaNet-SpatialTriage-v2.1"
                     },
                     "associated_messages": [
                         "Road completely blocked by boulders",
@@ -1462,7 +1880,7 @@ class GatewayStorage:
                             "Sea water inundation reported by mesh nodes",
                             "Pre-emptive cyclone warning match"
                         ],
-                        "model_version": "SignalRescue-SpatialTriage-v2.1"
+                        "model_version": "RakshaNet-SpatialTriage-v2.1"
                     },
                     "associated_messages": [
                         "High waves breaching sea wall",
@@ -1496,7 +1914,7 @@ class GatewayStorage:
                             "Dense smoke report verified by multiple nodes",
                             "Toxic air quality sensor telemetry spike"
                         ],
-                        "model_version": "SignalRescue-SpatialTriage-v2.1"
+                        "model_version": "RakshaNet-SpatialTriage-v2.1"
                     },
                     "associated_messages": [
                         "Dense acrid black smoke spreading downwind",

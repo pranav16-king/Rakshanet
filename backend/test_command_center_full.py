@@ -1,5 +1,5 @@
 """
-Comprehensive End-to-End Test Suite for SignalRescue AI / RakshaNet Command Center API.
+Comprehensive End-to-End Test Suite for RakshaNet Command Center API.
 Tests:
   - System Health & MongoDB Atlas Connectivity
   - JWT Authentication (Login, Me, Expired/Invalid token handling)
@@ -34,7 +34,7 @@ client = TestClient(app)
 
 def test_command_center_full_suite():
     print("\n========================================================")
-    print(" SignalRescue AI Command Center — E2E Automated Verification")
+    print(" RakshaNet Command Center — E2E Automated Verification")
     print("========================================================\n")
 
     # 1. Health Check & Atlas Connectivity
@@ -48,7 +48,7 @@ def test_command_center_full_suite():
     # 2. Authentication Flow
     res_login = client.post(
         "/api/v1/auth/login",
-        json={"email": "admin@signalrescue.org", "password": "SignalRescue@2026"}
+        json={"email": "admin@rakshanet.org", "password": "RakshaNet@2026"}
     )
     assert res_login.status_code == 200, f"Login failed: {res_login.text}"
     auth_data = res_login.json()
@@ -62,7 +62,7 @@ def test_command_center_full_suite():
     res_me = client.get("/api/v1/auth/me", headers=headers)
     assert res_me.status_code == 200
     user_me = res_me.json()
-    assert user_me.get("email") == "admin@signalrescue.org"
+    assert user_me.get("email") == "admin@rakshanet.org"
     print(f"[PASS] 3. Auth Me: authenticated as '{user_me.get('name')}' ({user_me.get('agency')})")
 
     # 4. Dashboard Overview KPIs

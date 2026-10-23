@@ -1,4 +1,4 @@
-# RakshaNet (SignalRescue AI)
+# RakshaNet
 
 > **Offline-first disaster communication, multi-hop mesh networking, and AI-driven rescue intelligence platform.**
 
@@ -14,7 +14,7 @@
 
 ## 📌 Overview
 
-**RakshaNet (SignalRescue AI)** is an offline-first disaster communication, localization, and rescue-intelligence system engineered for extreme scenarios where cellular towers, power grids, and internet backhauls collapse.
+**RakshaNet** is an offline-first disaster communication, localization, and rescue-intelligence system engineered for extreme scenarios where cellular towers, power grids, and internet backhauls collapse.
 
 During flash floods, glacial lake outburst floods (GLOF), landslides, and cyclones, physical communications fail exactly when danger peaks. Civilian victims are cut off, and emergency agencies operate blind—unaware of who survived, where victims are clustered, or which silent hamlets need immediate deployment.
 

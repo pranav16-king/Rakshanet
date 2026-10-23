@@ -205,7 +205,7 @@ export interface AnomalousMatterHeroProps {
 }
 
 export function AnomalousMatterHero({
-  title = "SIGNALRESCUE AI • RESILIENCE MESH",
+  title = "RAKSHANET • RESILIENCE MESH",
   subtitle = "Stay Connected. Save Lives Anywhere.",
   description = "An offline-first disaster communication platform that connects people, devices and rescue teams when cellular networks and power grids fail.",
   badge = "No Internet • Still Connected",

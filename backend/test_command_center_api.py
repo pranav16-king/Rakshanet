@@ -1,5 +1,5 @@
 """
-Verification and Test Suite for RakshaNet / SignalRescue AI Command Center API.
+Verification and Test Suite for RakshaNet Command Center API.
 Tests all endpoints, JWT authentication, dual-persistence, KPIs, incident triage,
 user management, devices, messages, resources, and settings.
 """
@@ -44,15 +44,15 @@ def test_command_center_api_suite():
     # -------------------------------------------------------------------------
     print("\n[2/14] Testing JWT Authentication Flow...")
     login_payload = {
-        "email": "admin@signalrescue.org",
-        "password": "SignalRescue@2026"
+        "email": "admin@rakshanet.org",
+        "password": "RakshaNet@2026"
     }
     res = client.post("/api/v1/auth/login", json=login_payload)
     assert res.status_code == 200, f"Login failed: {res.text}"
     auth_data = res.json()
     assert "access_token" in auth_data
     assert auth_data["token_type"].lower() == "bearer"
-    assert auth_data["user"]["email"] == "admin@signalrescue.org"
+    assert auth_data["user"]["email"] == "admin@rakshanet.org"
     assert auth_data["user"]["role"] == "Administrator"
     access_token = auth_data["access_token"]
     print(f"  [OK] POST /api/v1/auth/login -> 200 OK (Token: {access_token[:20]}...)")
@@ -62,7 +62,7 @@ def test_command_center_api_suite():
     res = client.get("/api/v1/auth/me", headers=headers)
     assert res.status_code == 200, f"Auth me failed: {res.text}"
     me_data = res.json()
-    assert me_data["email"] == "admin@signalrescue.org"
+    assert me_data["email"] == "admin@rakshanet.org"
     print(f"  [OK] GET /api/v1/auth/me -> 200 OK (Verified identity: {me_data['email']})")
 
     res = client.post("/api/v1/auth/logout")
@@ -145,7 +145,7 @@ def test_command_center_api_suite():
 
     # Create new field user
     new_user_payload = {
-        "email": f"paramedic.test.{int(time.time())}@signalrescue.org",
+        "email": f"paramedic.test.{int(time.time())}@rakshanet.org",
         "name": "Officer Rahul Deshmukh",
         "role": "Field Responder",
         "agency": "State Disaster Response Force",

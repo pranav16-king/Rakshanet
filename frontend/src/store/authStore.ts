@@ -15,8 +15,8 @@ interface AuthStoreState {
   clearError: () => void;
 }
 
-const TOKEN_KEY = 'signalrescue_token';
-const USER_KEY = 'signalrescue_user';
+const TOKEN_KEY = 'rakshanet_token';
+const USER_KEY = 'rakshanet_user';
 
 export const useAuthStore = create<AuthStoreState>((set) => {
   // Listen for 401 unauthorized events dispatched by apiClient

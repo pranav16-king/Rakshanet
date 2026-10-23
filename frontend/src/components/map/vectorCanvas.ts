@@ -1,5 +1,5 @@
 /**
- * RakshaNet / SignalRescue AI — Custom GIS Vector Canvas & Polygon Styles
+ * RakshaNet — Custom GIS Vector Canvas & Polygon Styles
  * Source: design.md Section 2.6 and media_1791015140209.jpg
  */
 

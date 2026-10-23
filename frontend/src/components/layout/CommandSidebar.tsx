@@ -45,7 +45,7 @@ export const CommandSidebar: React.FC = () => {
         </div>
         <div className="flex flex-col">
           <span className="font-bold font-display text-base tracking-wide text-white">
-            SignalRescue AI
+            RakshaNet
           </span>
           <span className="text-[10px] text-[#9FADC2] tracking-wider uppercase font-semibold">
             Command Center

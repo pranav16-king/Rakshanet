@@ -135,7 +135,7 @@ class GeospatialDistanceResult {
       'GeospatialDistanceResult($summaryLabel, freshness: $freshnessStatus)';
 }
 
-/// Great-circle Haversine Distance Calculator for SignalRescue AI / RakshaNet.
+/// Great-circle Haversine Distance Calculator for RakshaNet.
 ///
 /// Employs Earth's volumetric mean spherical radius R = 6,371,000 meters.
 /// Strict emergency rescue rule: Never hallucinate or extrapolate missing coordinates.

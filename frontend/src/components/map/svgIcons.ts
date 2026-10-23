@@ -1,5 +1,5 @@
 /**
- * RakshaNet / SignalRescue AI — SVG Icon Generators
+ * RakshaNet — SVG Icon Generators
  * Adheres to Lucide style (2px stroke, round caps) from design.md Section 4.4
  */
 

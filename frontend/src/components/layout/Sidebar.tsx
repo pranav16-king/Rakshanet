@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && (
             <div className="flex flex-col whitespace-nowrap">
               <span className="font-bold text-white text-base tracking-tight" style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}>
-                SignalRescue <span className="text-[#FFD21F]">AI</span>
+                RakshaNet <span className="text-[#FFD21F]">AI</span>
               </span>
               <span className="text-[10px] text-[#9FADC2] font-semibold tracking-wider uppercase">
                 Command Center

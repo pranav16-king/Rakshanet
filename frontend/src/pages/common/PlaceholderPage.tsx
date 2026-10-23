@@ -15,7 +15,7 @@ export const PlaceholderPage: React.FC = () => {
         {title} Command Module
       </h2>
       <p className="text-sm text-[#566070] dark:text-[#9FADC2] max-w-md mb-6">
-        This view is part of the SignalRescue AI command subsystem. Switch to the Overview Dashboard or Live Map for active operations.
+        This view is part of the RakshaNet command subsystem. Switch to the Overview Dashboard or Live Map for active operations.
       </p>
       <div className="flex gap-3">
         <Link

@@ -7,7 +7,7 @@ interface ThemeStoreState {
   toggleTheme: () => void;
 }
 
-const STORAGE_KEY = 'signalrescue_theme';
+const STORAGE_KEY = 'rakshanet_theme';
 
 const getInitialTheme = (): ThemeMode => {
   if (typeof window === 'undefined') return 'dark';

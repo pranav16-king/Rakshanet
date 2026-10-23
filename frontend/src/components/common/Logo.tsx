@@ -55,7 +55,7 @@ export const Logo: React.FC<LogoProps> = ({
           className={`font-bold tracking-tight text-[#16202D] dark:text-[#EEF2F8] ${textSizes[size]}`}
           style={{ fontFamily: '"Barlow Semi Condensed", sans-serif' }}
         >
-          SignalRescue <span className="text-[#8A5A00] dark:text-[#FFD21F]">AI</span>
+          RakshaNet <span className="text-[#8A5A00] dark:text-[#FFD21F]">AI</span>
         </span>
         {showSubtitle && (
           <span className="text-xs font-medium text-[#566070] dark:text-[#9FADC2] tracking-wider uppercase">

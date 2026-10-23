@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface SignalRescueLogoProps {
+export interface RakshaNetLogoProps {
   size?: number;
   className?: string;
   showText?: boolean;
@@ -8,7 +8,9 @@ interface SignalRescueLogoProps {
   subtitle?: string;
 }
 
-export const SignalRescueLogo: React.FC<SignalRescueLogoProps> = ({
+export type SignalRescueLogoProps = RakshaNetLogoProps;
+
+export const RakshaNetLogo: React.FC<RakshaNetLogoProps> = ({
   size = 40,
   className = '',
   showText = false,
@@ -56,7 +58,7 @@ export const SignalRescueLogo: React.FC<SignalRescueLogoProps> = ({
       {showText && (
         <div className="flex flex-col">
           <span className={`font-display font-extrabold tracking-tight text-xl leading-none ${textClassName}`}>
-            SignalRescue AI
+            RakshaNet
           </span>
           {subtitle && (
             <span className="text-[11px] font-bold tracking-widest uppercase text-slate-500 dark:text-slate-400 mt-1">
@@ -68,3 +70,5 @@ export const SignalRescueLogo: React.FC<SignalRescueLogoProps> = ({
     </div>
   );
 };
+
+export const SignalRescueLogo = RakshaNetLogo;

@@ -67,7 +67,7 @@ const GATEWAY_FLOW_DEFAULTS = {
   brightness: 1,
 } as const;
 
-// SignalRescue pale hi-vis light paper tint per design.md Section 8
+// RakshaNet pale hi-vis light paper tint per design.md Section 8
 const LIGHT_PAPER = "#FFFCEB";
 const DARK_NAVY = "#0B1220";
 
@@ -141,7 +141,7 @@ const gatewayFlowSource = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SignalRescue AI — Mesh Telemetry Gateway</title>
+    <title>RakshaNet — Mesh Telemetry Gateway</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -290,7 +290,7 @@ const gatewayFlowSource = `<!DOCTYPE html>
 </html>`;
 
 const GATEWAY_FLOW_DEFINITION: EffectDefinition = {
-  title: "SignalRescue Gateway Flow",
+  title: "RakshaNet Gateway Flow",
   source: gatewayFlowSource,
   supportsMode: true,
   background: (mode) => (mode === "light" ? LIGHT_PAPER : mode === "oled" ? "#000000" : DARK_NAVY),

@@ -681,7 +681,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   iconBg: iconBgColor,
                   iconColor: iconColor,
                   title: 'About',
-                  subtitle: 'SignalRescue AI v1.0',
+                  subtitle: 'RakshaNet v1.0',
                   textColor: textColor,
                   textMutedColor: textMutedColor,
                   borderColor: borderColor,
@@ -1048,7 +1048,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: TextStyle(color: themeProvider.text, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'SignalRescue AI uses cryptographic peer-to-peer security with Ed25519 signatures. '
+          'RakshaNet uses cryptographic peer-to-peer security with Ed25519 signatures. '
           'All communication remains anonymous across mesh relays until reaching authorized '
           'emergency responders. Zero telemetry or external tracking is enabled.',
           style: TextStyle(
@@ -1083,7 +1083,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           side: BorderSide(color: themeProvider.border),
         ),
         title: Text(
-          'SignalRescue AI (RakshaNet)',
+          'RakshaNet',
           style: TextStyle(color: themeProvider.text, fontWeight: FontWeight.bold),
         ),
         content: Text(

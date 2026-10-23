@@ -84,7 +84,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(width: 10),
             Flexible(
               child: Text(
-                'SignalRescue AI',
+                'RakshaNet',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(

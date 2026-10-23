@@ -35,7 +35,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   final List<_ChatMessage> _messages = [
     // Welcome message
     _ChatMessage(
-      text: 'SignalRescue Hybrid AI Assistant initialized and ready.',
+      text: 'RakshaNet Hybrid AI Assistant initialized and ready.',
       isUser: false,
       timestamp: 'Just now',
       source: 'System Engine',
@@ -208,7 +208,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       if (!mounted) return;
       setState(() {
         _messages.add(_ChatMessage(
-          text: 'SignalRescue Emergency Guidance:',
+          text: 'RakshaNet Emergency Guidance:',
           isUser: false,
           timestamp: timeStr,
           steps: [
@@ -287,7 +287,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'SignalRescue AI operates a Dual-Engine intelligent pipeline:',
+              'RakshaNet AI operates a Dual-Engine intelligent pipeline:',
               style: TextStyle(color: theme.text, fontSize: 13.5, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 10),

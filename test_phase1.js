@@ -116,7 +116,7 @@ function assert(condition, testName, details = '') {
 }
 
 console.log('\n================================================================');
-console.log('  📡 RAKSHANET (SIGNALRESCUE AI) — PHASE 1 VERIFICATION SUITE');
+console.log('  📡 RAKSHANET — PHASE 1 VERIFICATION SUITE');
 console.log('================================================================\n');
 
 // TC-01: Direct BLE Delivery (A -> B)

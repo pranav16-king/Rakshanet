@@ -1,6 +1,6 @@
 """
 Search Isochrones & Rescue Resource Dispatch Optimization Engine for RakshaNet.
-Features 18 & 20 from the SignalRescue AI White Paper.
+Features 18 & 20 from the RakshaNet Architecture Specification.
 
 1. Probabilistic Isochrone Search Zones:
    Computes kinematic drift and expanding probability envelopes (68% core, 95% boundary)

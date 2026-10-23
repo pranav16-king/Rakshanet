@@ -178,7 +178,7 @@ void main() {
 
       expect(config.channelId, equals('rakshanet_location_tracking'));
       expect(config.channelName, equals('Emergency Location Tracking'));
-      expect(config.title, contains('SignalRescue AI'));
+      expect(config.title, contains('RakshaNet'));
 
       final map = config.toMap();
       expect(map['channelId'], equals('rakshanet_location_tracking'));

@@ -1,6 +1,6 @@
 """
 Communication-Gap & Black Hole Anomaly Detector for RakshaNet.
-Feature 16 from the SignalRescue AI White Paper.
+Feature 16 from the RakshaNet Architecture Specification.
 
 Monitors spatial grid sectors over time-series windows to detect sudden drops
 in active peer heartbeats (e.g. 500 -> 150 -> 20 nodes). Identifies isolated

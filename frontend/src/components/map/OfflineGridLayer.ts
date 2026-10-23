@@ -1,5 +1,5 @@
 /**
- * RakshaNet / SignalRescue AI — Offline Fallback Vector Canvas Grid Layer
+ * RakshaNet — Offline Fallback Vector Canvas Grid Layer
  * Renders tactical GIS coordinates and disconnected grid lines when operating
  * with zero cellular/satellite connectivity in disaster zones.
  * Adheres to design.md Section 1. Principles (Work offline, bundled).

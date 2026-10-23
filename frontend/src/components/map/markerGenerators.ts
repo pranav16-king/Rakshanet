@@ -1,5 +1,5 @@
 /**
- * RakshaNet / SignalRescue AI — Custom SVG & HTML Marker Generators
+ * RakshaNet — Custom SVG & HTML Marker Generators
  * Generates Leaflet L.DivIcon instances adhering to design.md Section 2.6 and media_1791015140209.jpg
  */
 

@@ -44,7 +44,7 @@ typedef ChunkTransportSender = Future<bool> Function(
 );
 typedef ChunkTransportRelayer = Future<int> Function(ImageChunk chunk);
 
-/// Encrypted Chunked Image Transfer with Resumption Service for RakshaNet / SignalRescue AI.
+/// Encrypted Chunked Image Transfer with Resumption Service for RakshaNet.
 ///
 /// Responsibilities:
 /// 1. Prepares images by compressing, encrypting (X25519 Diffie-Hellman + AES-256-GCM),

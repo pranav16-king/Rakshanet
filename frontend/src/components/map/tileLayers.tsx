@@ -1,5 +1,5 @@
 /**
- * RakshaNet / SignalRescue AI — Leaflet Tile Layer Configurations & Offline Fallbacks
+ * RakshaNet — Leaflet Tile Layer Configurations & Offline Fallbacks
  * Source: design.md and media_1791015140209.jpg
  */
 

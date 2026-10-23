@@ -76,7 +76,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
   const priorityScore = explainability?.priorityScore ?? 96;
   const confidencePct = explainability?.confidencePct ?? 94;
   const confidenceGrade = explainability?.confidenceGrade ?? (confidencePct >= 90 ? 'VERY_HIGH' : 'HIGH');
-  const modelVersion = explainability?.modelVersion || explainability?.model_version || 'SignalRescue-SpatialTriage-v2.1';
+  const modelVersion = explainability?.modelVersion || explainability?.model_version || 'RakshaNet-SpatialTriage-v2.1';
   const synthesis = explainability?.synthesis ||
     (detectedSignals.length > 0
       ? `AI Spatial Triage: ${detectedSignals.join('. ')}`
@@ -145,7 +145,7 @@ export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ ex
               AI Analysis & Deep Explainability
             </h3>
             <p className="text-[11px] opacity-70">
-              Deterministic factor breakdown per SignalRescue Design Rule 5 & 11
+              Deterministic factor breakdown per RakshaNet Design Rule 5 & 11
             </p>
           </div>
         </div>

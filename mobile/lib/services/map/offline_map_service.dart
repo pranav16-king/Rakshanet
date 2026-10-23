@@ -26,7 +26,7 @@ class TileDownloadProgress {
   });
 }
 
-/// Offline Map Service for SignalRescue AI / RakshaNet
+/// Offline Map Service for RakshaNet
 ///
 /// Features:
 /// 1. Local disk tile caching in app storage (`offline_map_tiles/{z}/{x}/{y}.png`)

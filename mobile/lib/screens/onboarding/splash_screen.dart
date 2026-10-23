@@ -289,7 +289,7 @@ class _SplashScreenState extends State<SplashScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        'SignalRescue ',
+                        'RakshaNet ',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 30,
@@ -409,12 +409,12 @@ class _SplashScreenState extends State<SplashScreen>
               children: [
                 const SizedBox(height: 16),
 
-                // Top Brand Title: SignalRescue AI
+                // Top Brand Title: RakshaNet AI
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'SignalRescue ',
+                      'RakshaNet ',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 32,

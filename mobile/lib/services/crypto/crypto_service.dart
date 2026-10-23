@@ -26,7 +26,7 @@ class CryptoDecryptionException implements Exception {
   String toString() => 'CryptoDecryptionException: $message';
 }
 
-/// End-to-End Encryption (E2EE) & Device Keypair Service for SignalRescue AI / RakshaNet.
+/// End-to-End Encryption (E2EE) & Device Keypair Service for RakshaNet.
 ///
 /// Implements a complete zero-trust cryptographic engine:
 /// - Asymmetric Keypairs: X25519 for ECDH key agreements, Ed25519 for identity signing.
