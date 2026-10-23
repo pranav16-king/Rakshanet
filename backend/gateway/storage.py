@@ -75,7 +75,7 @@ class GatewayStorage:
         # Initialize SQLite tables
         self._init_sqlite()
         self._warm_cache()
-        self._seed_initial_data()
+        logger.info("Operational data seeding is disabled; gateway starts with observed records only.")
 
     def _init_mongo(self):
         """Safely connect to MongoDB Atlas cluster."""
@@ -334,10 +334,14 @@ class GatewayStorage:
             lng = meta.get("lng")
 
         now = int(time.time() * 1000)
-        sender_id = packet_data.get("sender_id", "SR-UNKNOWN")
-        sender_name = packet_data.get("sender_name", "Anonymous")
-        conv_id = packet_data.get("conv_id", "CONV_COMMUNITY")
-        packet_type = packet_data.get("type", "TEXT")
+        sender_id = str(packet_data.get("sender_id") or "").strip()
+        if not sender_id:
+            logger.warning("[GatewayStorage] Dropped %s: sender_id is required", msg_id)
+            return False
+        sender_name = packet_data.get("sender_name")
+        sender_name = str(sender_name).strip() if sender_name else None
+        conv_id = packet_data.get("conv_id")
+        packet_type = packet_data.get("type") or "UNKNOWN"
         payload = packet_data.get("payload", "")
         timestamp = packet_data.get("ts", now)
         hops = packet_data.get("hops", 0)
@@ -369,6 +373,24 @@ class GatewayStorage:
                             total_packets_carried = total_packets_carried + 1
                     """, (mule_id, now))
                     conn.commit()
+
+                    # A device row is created only from an observed packet.
+                    # Unknown values stay null/explicitly unknown rather than
+                    # becoming a fabricated battery, name, or coordinate.
+                    battery = meta.get("battery_percent")
+                    self.upsert_device({
+                        "device_id": sender_id,
+                        "name": sender_name or sender_id,
+                        "device_type": meta.get("device_type") or "Unknown",
+                        "owner_name": sender_name,
+                        "battery_pct": battery if isinstance(battery, (int, float)) else None,
+                        "status": "Reported",
+                        "hops_away": hops if isinstance(hops, int) else None,
+                        "lat": lat,
+                        "lng": lng,
+                        "last_seen": timestamp,
+                        "packets_forwarded": 1,
+                    })
 
                     # Auto-ingest missing person mesh bulletins if transmitted via packet
                     if packet_type == "MISSING_PERSON":
@@ -1271,12 +1293,13 @@ class GatewayStorage:
                     lat = excluded.lat,
                     lng = excluded.lng,
                     last_seen = excluded.last_seen,
-                    packets_forwarded = excluded.packets_forwarded
+                    packets_forwarded = devices.packets_forwarded + excluded.packets_forwarded
             """, (
-                device["device_id"], device["name"], device.get("device_type", "Phone"),
-                device.get("owner_name", ""), device.get("battery_pct", 100),
-                device.get("status", "Online"), device.get("hops_away", 0),
-                device.get("lat"), device.get("lng"), device.get("last_seen", now),
+                device["device_id"], device.get("name") or device["device_id"],
+                device.get("device_type") or "Unknown",
+                device.get("owner_name"), device.get("battery_pct"),
+                device.get("status") or "Reported", device.get("hops_away"),
+                device.get("lat"), device.get("lng"), device.get("last_seen") or now,
                 device.get("packets_forwarded", 0)
             ))
             conn.commit()

@@ -14,14 +14,14 @@ class LocationPayload(BaseModel):
     lng: float = Field(..., description="Longitude in decimal degrees")
     altitude: Optional[float] = Field(None, description="Altitude in meters")
     accuracy: Optional[float] = Field(None, description="Horizontal accuracy radius in meters")
-    fix_type: str = Field(default="LIVE_GPS", description="LIVE_GPS, LAST_KNOWN, or ESTIMATED_ZONE")
+    fix_type: Optional[str] = Field(None, description="Reported location source, when known")
 
 
 class PacketPayload(BaseModel):
     ver: int = Field(default=1, description="Protocol version")
     msg_id: str = Field(..., description="Globally unique message identifier")
     sender_id: str = Field(..., description="Anonymous device pseudonym (e.g. SR-8F42)")
-    sender_name: str = Field(default="Anonymous Survivor", description="Author display name")
+    sender_name: Optional[str] = Field(None, description="Author display name, when shared")
     conv_id: str = Field(default="CONV_COMMUNITY", description="Target channel or conversation")
     ts: int = Field(..., description="Device timestamp in milliseconds since epoch")
     ttl: int = Field(default=5, description="Remaining Time-To-Live hops")
@@ -189,6 +189,8 @@ class IncidentBroadcastMessage(BaseModel):
     message: str = Field(..., description="Message content to broadcast to the incident mesh area")
     priority: str = Field(default="HIGH", description="CRITICAL, HIGH, MEDIUM, LOW")
     channel: str = Field(default="ALL_CHANNELS", description="BLE_MESH, SATELLITE, LORA")
+    recipient_device_id: Optional[str] = Field(None, description="Required for a targeted field instruction")
+    recipient_encryption_key: Optional[str] = Field(None, description="Recipient's verified public encryption key")
 
 
 class AiChatRequest(BaseModel):
