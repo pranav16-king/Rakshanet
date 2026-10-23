@@ -512,12 +512,12 @@ class _AppTextFieldState extends State<AppTextField> {
                   ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
 
-            // Input Box (54px minimum height)
+            // Input Box (48px minimum height)
             AnimatedContainer(
               duration: const Duration(milliseconds: 160),
-              constraints: const BoxConstraints(minHeight: 54),
+              constraints: const BoxConstraints(minHeight: 48),
               decoration: BoxDecoration(
                 color: _isFocused
                     ? AppColors.elevatedSurface
@@ -530,17 +530,17 @@ class _AppTextFieldState extends State<AppTextField> {
               ),
               child: Row(
                 children: [
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Icon(
                     widget.icon,
-                    size: 20,
+                    size: 19,
                     color: hasError
                         ? AppColors.danger
                         : _isFocused
                             ? AppColors.cyan
                             : AppColors.textSecondary,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       controller: widget.controller,
@@ -563,7 +563,7 @@ class _AppTextFieldState extends State<AppTextField> {
                         focusedBorder: InputBorder.none,
                         errorBorder: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
-                          vertical: 15,
+                          vertical: 13,
                         ),
                         hintText: widget.placeholder,
                         hintStyle: AppTypography.placeholder,
