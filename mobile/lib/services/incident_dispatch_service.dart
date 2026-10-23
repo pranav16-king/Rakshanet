@@ -159,7 +159,7 @@ class IncidentDispatchService {
       'origin': {
         'device_id': deviceId,
         'identifier_kind': identifierKind,
-        'display_name': ?senderName,
+        'display_name': senderName,
       },
       'crypto': _crypto.isInitialized
           ? {

@@ -49,6 +49,7 @@ class AppDatabase {
     'delivery_receipts': [],
     'offline_map_regions': [],
     'location_history': [],
+    'sos_events': [],
     'mesh_photo_queries': [],
     'call_history': [],
   };
@@ -390,6 +391,36 @@ class AppDatabase {
       ''');
     } catch (_) {}
 
+    // SOS upload events and the location upload columns used by the recovery
+    // sync service belong to the core schema. Keeping them here means an SOS
+    // can be safely saved before network monitoring has started.
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sos_events (
+          id TEXT PRIMARY KEY,
+          message_id TEXT NOT NULL,
+          sender_device_id TEXT NOT NULL,
+          sender_name TEXT,
+          latitude REAL,
+          longitude REAL,
+          urgency TEXT DEFAULT 'CRITICAL',
+          status TEXT NOT NULL DEFAULT 'QUEUED',
+          synced_to_server INTEGER DEFAULT 0,
+          created_at INTEGER NOT NULL
+        )
+      ''');
+    } catch (_) {}
+    for (final col in [
+      'message_id TEXT',
+      'device_id TEXT',
+      "status TEXT NOT NULL DEFAULT 'QUEUED'",
+      'synced_to_server INTEGER DEFAULT 0',
+    ]) {
+      try {
+        await db.execute('ALTER TABLE location_history ADD COLUMN $col');
+      } catch (_) {}
+    }
+
     // Version 7: Offline DTN mesh photo queries
     try {
       await db.execute('''
@@ -713,6 +744,8 @@ class AppDatabase {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS location_history (
         id TEXT PRIMARY KEY,
+        message_id TEXT,
+        device_id TEXT,
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
         horizontal_accuracy REAL NOT NULL,
@@ -721,8 +754,26 @@ class AppDatabase {
         bearing REAL,
         timestamp INTEGER NOT NULL,
         source TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'QUEUED',
+        synced_to_server INTEGER DEFAULT 0,
         is_live INTEGER DEFAULT 1,
         is_stale INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 18. Durable SOS records awaiting a verified internet gateway.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sos_events (
+        id TEXT PRIMARY KEY,
+        message_id TEXT NOT NULL,
+        sender_device_id TEXT NOT NULL,
+        sender_name TEXT,
+        latitude REAL,
+        longitude REAL,
+        urgency TEXT DEFAULT 'CRITICAL',
+        status TEXT NOT NULL DEFAULT 'QUEUED',
+        synced_to_server INTEGER DEFAULT 0,
+        created_at INTEGER NOT NULL
       )
     ''');
 
