@@ -3,14 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
-import '../../database/app_database.dart';
-import '../../models/emergency_report.dart';
-import '../../models/message_envelope.dart';
 import '../../providers/sos_provider.dart';
 import '../../providers/theme_provider.dart';
-import '../../services/database_service.dart';
+import '../../services/incident_dispatch_service.dart';
 import '../../services/location/location_service.dart';
-import '../../services/mesh_engine.dart';
 import '../../services/sos_alert_service.dart';
 import '../../theme/app_tokens.dart';
 import '../../utils/haversine_distance.dart';
@@ -85,85 +81,43 @@ class _SosScreenState extends State<SosScreen>
   }
 
   Future<void> _handleSosTriggered(DeviceLocationFix? fix) async {
-    final now = DateTime.now();
-    final messageId = 'SOS-BEACON-${now.millisecondsSinceEpoch}';
-    final lat = fix?.latitude;
-    final lng = fix?.longitude;
-    final accuracy = fix?.horizontalAccuracyMeters;
-    const notes = 'Emergency SOS beacon triggered from SOS Screen';
-
-    // 1. Save to SQLite via AppDatabase for immediate offline persistence
     try {
-      final realReport = EmergencyReport.create(
-        id: messageId,
-        category: 'GENERAL_EMERGENCY',
-        description: notes,
+      final result = await IncidentDispatchService().dispatchSos(
+        category: 'Other',
         peopleCount: 1,
+      );
+      final lat = result.locationFix?.latitude ?? fix?.latitude;
+      final lng = result.locationFix?.longitude ?? fix?.longitude;
+      SosProvider.instance.triggerLocalSos(
+        category: result.report.type.label,
+        peopleCount: result.report.peopleCount,
         latitude: lat,
         longitude: lng,
-        location: (lat != null && lng != null)
-            ? '$lat, $lng'
-            : 'GPS fix pending',
-        status: 'ACTIVE_DISTRESS',
-        timestamp: now,
-        syncPending: true,
-        severity: 'CRITICAL',
+        messageId: result.report.id,
       );
-      await AppDatabase.instance.saveEmergencyReport(realReport);
-    } catch (e) {
-      debugPrint('[SosScreen] Error saving local emergency report: $e');
-    }
 
-    // 2. Broadcast SOS packet via SosProvider (activates local siren & alert state)
-    SosProvider.instance.triggerLocalSos(
-      category: 'GENERAL_EMERGENCY',
-      peopleCount: 1,
-      latitude: lat,
-      longitude: lng,
-      notes: notes,
-      messageId: messageId,
-    );
-
-    // 3. Broadcast SOS packet over mesh network via MeshEngine outbox
-    try {
-      final envelope = MessageEnvelope(
-        uuid: messageId,
-        senderId: DatabaseService.myDeviceId,
-        senderName: DatabaseService.myDisplayName,
-        conversationId: 'CONV_COMMUNITY',
-        timestamp: now.millisecondsSinceEpoch,
-        ttl: 7,
-        hops: 0,
-        type: 'SOS',
-        payload: 'EMERGENCY SOS: Distress beacon activated from SOS Screen.',
-        metadata: {
-          'category': 'GENERAL_EMERGENCY',
-          'peopleCount': 1,
-          'latitude': lat,
-          'longitude': lng,
-          'accuracy_m': accuracy,
-          'urgency': 'CRITICAL',
-        },
-      );
-      MeshEngine().queueOutboxMessage(envelope);
-    } catch (e) {
-      debugPrint('[SosScreen] Error queuing mesh outbox SOS: $e');
-    }
-
-    // 4. Immediately navigate to LiveMapScreen with distress beacon active,
-    // showing all connected nearby peers!
-    if (mounted) {
-      final targetLoc = (lat != null && lng != null) ? LatLng(lat, lng) : null;
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => LiveMapScreen(
-            initialCenter: targetLoc,
-            initialZoom: 16.5,
-            initialNavTarget: targetLoc,
-            initialNavTargetName: 'Your Distress Beacon',
+      if (mounted) {
+        final targetLoc = (lat != null && lng != null)
+            ? LatLng(lat, lng)
+            : null;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => LiveMapScreen(
+              initialCenter: targetLoc,
+              initialZoom: 16.5,
+              initialNavTarget: targetLoc,
+              initialNavTargetName: 'Your SOS location',
+            ),
           ),
-        ),
-      );
+        );
+      }
+    } catch (error) {
+      debugPrint('[SosScreen] SOS dispatch failed: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('SOS could not be saved: $error')),
+        );
+      }
     }
   }
 

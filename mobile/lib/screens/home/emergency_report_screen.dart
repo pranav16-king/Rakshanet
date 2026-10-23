@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
-import 'package:permission_handler/permission_handler.dart';
 
-import '../../database/repositories/report_repository.dart';
-import '../../models/chat_message.dart';
-import '../../models/emergency_report.dart';
 import '../../providers/emergency_report_provider.dart';
 import '../../providers/mesh_provider.dart';
 import '../../providers/sos_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
-import '../../services/platform_telemetry_service.dart';
+import '../../services/incident_dispatch_service.dart';
 import '../../theme/app_tokens.dart';
 
 class EmergencyReportScreen extends StatefulWidget {
@@ -88,68 +83,27 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
 
     HapticFeedback.heavyImpact();
 
-    // SOS must still be saved when location is denied, but when the user has
-    // approved it we attach a real GPS fix and its uncertainty. We never put
-    // placeholder coordinates on the emergency map.
-    final locationPermission = await Permission.location.request();
-    final telemetry = locationPermission.isGranted
-        ? await PlatformTelemetryService().getTelemetry()
-        : TelemetryReading.empty;
-    final latitude = telemetry.hasGpsFix ? telemetry.latitude : null;
-    final longitude = telemetry.hasGpsFix ? telemetry.longitude : null;
-    final accuracy = telemetry.hasGpsFix ? telemetry.accuracy : null;
-
-    final reportId = const Uuid().v4();
-    final realReport = EmergencyReport.create(
-      id: reportId,
-      category: _selectedCategory,
-      description: _notesController.text.trim().isNotEmpty
-          ? _notesController.text.trim()
-          : null,
-      peopleCount: _peopleCount,
-      latitude: latitude,
-      longitude: longitude,
-      location: latitude != null && longitude != null
-          ? 'GPS fix (accuracy ${accuracy?.round() ?? 'unknown'} m)'
-          : 'Location unavailable',
-      status: 'QUEUED',
-      timestamp: DateTime.now(),
-      syncPending: true,
-    );
-
-    // 1. Create a real EmergencyReport in SQLite via ReportRepository (Source of truth)
-    final reportRepo = ReportRepository();
-    await reportRepo.saveReport(realReport);
-
-    // 2. Queue the SOS through the same durable chat outbox as every mesh
-    // message. The report and message share an ID for acknowledgement status.
-    final location = latitude != null && longitude != null
-        ? LocationPreview(
-            title: 'GPS location',
-            distance: 'Accuracy about ${accuracy?.round() ?? 'unknown'} m',
-            latitude: latitude,
-            longitude: longitude,
-          )
-        : null;
-    final sosContent =
-        'EMERGENCY [${_selectedCategory.toUpperCase()}]: $_peopleCount individual(s) affected.${_notesController.text.trim().isNotEmpty ? ' Notes: ${_notesController.text.trim()}' : ''}';
-    await chatService.sendMessage(
-      messageId: realReport.id,
-      content: sosContent,
-      conversationId: 'CONV_COMMUNITY',
-      messageType: 'SOS',
-      category: _selectedCategory,
-      recipientTarget: 'BROADCAST',
-      location: location,
-      metadata: {
-        'category': _selectedCategory,
-        'peopleCount': _peopleCount,
-        'latitude': latitude,
-        'longitude': longitude,
-        'accuracy_m': accuracy,
-        'location_method': latitude != null ? 'GPS' : 'UNAVAILABLE',
-      },
-    );
+    late final IncidentDispatchResult result;
+    try {
+      result = await IncidentDispatchService(
+        chatService: chatService,
+      ).dispatchSos(
+        category: _selectedCategory,
+        peopleCount: _peopleCount,
+        notes: _notesController.text,
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _isSending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('SOS could not be saved: $error')),
+        );
+      }
+      return;
+    }
+    final report = result.report;
+    final latitude = result.locationFix?.latitude;
+    final longitude = result.locationFix?.longitude;
 
     // 3. Trigger global local SOS alert confirmation & siren feedback
     SosProvider.instance.triggerLocalSos(
@@ -160,7 +114,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
       notes: _notesController.text.trim().isNotEmpty
           ? _notesController.text.trim()
           : null,
-      messageId: realReport.id,
+      messageId: report.id,
     );
 
     // 4. Update in-memory emergency report provider if active
@@ -212,7 +166,9 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'SOS Broadcast Live!',
+                result.wasQueuedForMesh
+                    ? 'SOS queued for nearby mesh'
+                    : 'SOS saved on this phone',
                 style: TextStyle(
                   color: theme.text,
                   fontSize: 22,
@@ -222,8 +178,8 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
               const SizedBox(height: 8),
               Text(
                 peerCount > 0
-                    ? 'Saved to SQLite (ID: ${realReport.id.substring(0, 8)}). Broadcasting $_selectedCategory emergency to $peerCount nearby mesh devices.'
-                    : 'Saved to SQLite (ID: ${realReport.id.substring(0, 8)}). Broadcasting $_selectedCategory emergency beacon. Will relay once peers connect.',
+                    ? 'Saved locally (ID: ${report.id.substring(0, 8)}). ${result.wasQueuedForMesh ? 'Queued for $peerCount nearby mesh device${peerCount == 1 ? '' : 's'}.' : 'The radio outbox will retry when it is ready.'}'
+                    : 'Saved locally (ID: ${report.id.substring(0, 8)}). ${result.wasQueuedForMesh ? 'Waiting for a nearby mesh device.' : 'The radio outbox will retry when it is ready.'}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: theme.textMuted,
@@ -252,7 +208,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Save-Before-Send: Persisted via ReportRepository',
+                      'Local incident record persisted',
                       style: TextStyle(
                         color: theme.isLightMode
                             ? AppTokens.beaconTeal
@@ -576,7 +532,7 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Saved to SQLite via ReportRepository • Queued for BLE Mesh relay',
+                    'Saved locally • Queued for mesh relay when a peer is reachable',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: theme.textMuted,
