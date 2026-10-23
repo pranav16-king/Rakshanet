@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-import '../config/app_config.dart';
 import '../database/app_database.dart';
 import '../models/chat_message.dart';
 import '../models/delivery_receipt.dart';
@@ -16,6 +14,7 @@ import '../models/missing_person.dart';
 import '../models/peer_capability.dart';
 import 'bluetooth_radio_service.dart';
 import 'database_service.dart';
+import 'network/network_state_service.dart';
 import 'sos_alert_service.dart';
 import 'user_auth_service.dart';
 
@@ -77,7 +76,7 @@ class BloomFilter {
 /// - Deduplication Bloom filter + SQLite verification
 /// - Dynamic routing scoring (battery, known route, internet gateway)
 /// - Cryptographically signed delivery ACK generation & receipts
-/// - Automated Internet Gateway upload to FastAPI backend (http://localhost:8000/api/v1/packets)
+/// - Gateway upload only after this device verifies its own HTTPS/HTTP route
 class MeshEngine extends ChangeNotifier {
   static final MeshEngine _instance = MeshEngine._internal();
   factory MeshEngine() => _instance;
@@ -168,7 +167,7 @@ class MeshEngine extends ChangeNotifier {
 
       if (peers.isNotEmpty) {
         syncAllPendingMessages();
-        uploadQueuedPacketsToGateway();
+        unawaited(uploadQueuedPacketsToGateway());
       }
     });
 
@@ -218,7 +217,7 @@ class MeshEngine extends ChangeNotifier {
     _gatewaySyncTimer?.cancel();
     if (_enablePeriodicSync) {
       _gatewaySyncTimer = Timer.periodic(const Duration(seconds: 20), (_) {
-        uploadQueuedPacketsToGateway();
+        unawaited(uploadQueuedPacketsToGateway());
       });
     }
 
@@ -323,6 +322,7 @@ class MeshEngine extends ChangeNotifier {
           expiresAt: envelope.timestamp + 86400000,
         ),
       );
+      unawaited(uploadQueuedPacketsToGateway());
 
       if (envelope.type == 'SOS') {
         await _persistIncomingSos(envelope);
@@ -397,6 +397,7 @@ class MeshEngine extends ChangeNotifier {
           expiresAt: envelope.timestamp + 86400000,
         ),
       );
+      unawaited(uploadQueuedPacketsToGateway());
 
       if (envelope.type == 'SOS') {
         await _persistIncomingSos(envelope);
@@ -691,6 +692,7 @@ class MeshEngine extends ChangeNotifier {
           ),
         )
         .ignore();
+    unawaited(uploadQueuedPacketsToGateway());
 
     if (_queuedMessageIds.contains(envelope.uuid)) return;
     _queuedMessageIds.add(envelope.uuid);
@@ -764,7 +766,7 @@ class MeshEngine extends ChangeNotifier {
         }
 
         // Step 3: Opportunistic push to FastAPI gateway if internet connectivity exists
-        uploadQueuedPacketsToGateway().ignore();
+        unawaited(uploadQueuedPacketsToGateway());
       } catch (e) {
         debugPrint(
           '[MeshEngine] Outbox processing error for ${envelope.uuid}: $e',
@@ -1024,74 +1026,18 @@ class MeshEngine extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Automatically push queued mesh packets to FastAPI backend (AppConfig.packetsUrl).
-  /// On successful upload, updates status to syncedToServer.
-  Future<int> uploadQueuedPacketsToGateway({
-    String endpoint = AppConfig.packetsUrl,
-  }) async {
-    final hasInternet = await hasInternetConnectivity();
-    if (!hasInternet) return 0;
-
-    final queuedPackets = await AppDatabase.instance.getQueuedMeshPackets();
-    if (queuedPackets.isEmpty) return 0;
-
-    int syncedCount = 0;
-    try {
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 4);
-
-      final payload = {
-        'device_id': DatabaseService.myDeviceId,
-        'packets': queuedPackets.map((p) => p.toMap()).toList(),
-      };
-
-      final request = await client.postUrl(Uri.parse(endpoint));
-      request.headers.contentType = ContentType.json;
-      request.write(jsonEncode(payload));
-      final response = await request.close();
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        for (final pkt in queuedPackets) {
-          await AppDatabase.instance.updateMeshPacketStatus(
-            pkt.messageId,
-            MeshDeliveryState.syncedToServer,
-          );
-          await _dbService.updateMessageStatus(
-            messageId: pkt.messageId,
-            status: 'SYNCED',
-          );
-          final msg = await _dbService.getMessageById(pkt.messageId);
-          if (msg != null) {
-            _statusUpdateController.add(
-              msg.copyWith(status: MessageDeliveryStatus.delivered),
-            );
-          }
-          syncedCount++;
-        }
-        notifyListeners();
-        debugPrint(
-          '[MeshEngine] Uploaded $syncedCount queued packets to Gateway ($endpoint), marked syncedToServer',
-        );
-      }
-      client.close();
-    } catch (e) {
-      debugPrint('[MeshEngine] Internet Gateway sync error: $e');
-    }
-    return syncedCount;
+  /// Requests the shared recovery synchronizer to upload the local durable
+  /// outbox. It never treats a peer's advertised gateway capability or a
+  /// localhost DNS result as proof of internet access.
+  Future<int> uploadQueuedPacketsToGateway() async {
+    final result = await NetworkStateService.instance.syncIfInternetAvailable();
+    return result.success ? result.syncedMeshPackets : 0;
   }
 
-  /// Checks if this device or any connected peer has internet connectivity
+  /// Reports only this device's verified gateway connectivity.
   Future<bool> hasInternetConnectivity() async {
-    try {
-      final peers = await AppDatabase.instance.getPeerCapabilities();
-      if (peers.any((p) => p.isInternetGateway)) return true;
-
-      final result = await InternetAddress.lookup('localhost')
-          .timeout(const Duration(seconds: 2));
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } catch (_) {
-      return false;
-    }
+    return (await NetworkStateService.instance.evaluateTransportState()) ==
+        TransportState.internetAvailable;
   }
 
   /// Multi-hop simulation method: simulateRelay(message, intermediateNodeIds)
