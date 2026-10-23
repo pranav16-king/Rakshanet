@@ -403,6 +403,12 @@ class AppDatabase {
           sender_name TEXT,
           latitude REAL,
           longitude REAL,
+          category TEXT,
+          people_count INTEGER,
+          notes TEXT,
+          location_accuracy REAL,
+          location_source TEXT,
+          location_is_stale INTEGER DEFAULT 0,
           urgency TEXT DEFAULT 'CRITICAL',
           status TEXT NOT NULL DEFAULT 'QUEUED',
           synced_to_server INTEGER DEFAULT 0,
@@ -418,6 +424,18 @@ class AppDatabase {
     ]) {
       try {
         await db.execute('ALTER TABLE location_history ADD COLUMN $col');
+      } catch (_) {}
+    }
+    for (final col in [
+      'category TEXT',
+      'people_count INTEGER',
+      'notes TEXT',
+      'location_accuracy REAL',
+      'location_source TEXT',
+      'location_is_stale INTEGER DEFAULT 0',
+    ]) {
+      try {
+        await db.execute('ALTER TABLE sos_events ADD COLUMN $col');
       } catch (_) {}
     }
 
@@ -770,6 +788,12 @@ class AppDatabase {
         sender_name TEXT,
         latitude REAL,
         longitude REAL,
+        category TEXT,
+        people_count INTEGER,
+        notes TEXT,
+        location_accuracy REAL,
+        location_source TEXT,
+        location_is_stale INTEGER DEFAULT 0,
         urgency TEXT DEFAULT 'CRITICAL',
         status TEXT NOT NULL DEFAULT 'QUEUED',
         synced_to_server INTEGER DEFAULT 0,

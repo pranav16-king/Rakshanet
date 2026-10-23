@@ -157,8 +157,11 @@ class NetworkStateService extends ChangeNotifier {
   /// Starts periodic state polling and auto-recovery monitoring.
   void startMonitoring({Duration interval = const Duration(seconds: 15)}) {
     _monitorTimer?.cancel();
-    evaluateTransportState();
-    _monitorTimer = Timer.periodic(interval, (_) => evaluateTransportState());
+    unawaited(syncIfInternetAvailable());
+    _monitorTimer = Timer.periodic(
+      interval,
+      (_) => unawaited(syncIfInternetAvailable()),
+    );
   }
 
   /// Stops periodic state polling.
@@ -226,6 +229,29 @@ class NetworkStateService extends ChangeNotifier {
 
     _applyStateTransition(detectedState, previousState: previousState);
     return detectedState;
+  }
+
+  /// Uploads only from this phone after it has itself verified gateway access.
+  /// A nearby peer advertising an internet capability is not treated as proof
+  /// that this device can reach the cloud; it must first receive the packet
+  /// over the mesh and run this method on its own connection.
+  Future<SyncResult> syncIfInternetAvailable() async {
+    final state = await evaluateTransportState();
+    if (state != TransportState.internetAvailable) {
+      return SyncResult(
+        success: false,
+        errorMessage: 'No verified gateway connection on this device',
+        timestamp: DateTime.now(),
+      );
+    }
+    if (_isSyncing) {
+      return SyncResult(
+        success: false,
+        errorMessage: 'Sync cycle already in progress',
+        timestamp: DateTime.now(),
+      );
+    }
+    return triggerAutoRecoverySync();
   }
 
   /// Performs verified HTTP ping to FastAPI gateway or 8.8.8.8.
@@ -350,58 +376,104 @@ class NetworkStateService extends ChangeNotifier {
       final packetIds = <String>[];
       final sosIds = <String>[];
       final locationIds = <String>[];
+      final uploadedMessageIds = <String>{};
 
       for (final p in unsyncedPackets) {
         final id = (p['message_id'] ?? p['messageId'] ?? '').toString();
         if (id.isEmpty) continue;
         packetIds.add(id);
-        payloadList.add({
+        uploadedMessageIds.add(id);
+        Map<String, dynamic> routing = const {};
+        final storedRouting = p['routing_header_json']?.toString();
+        if (storedRouting != null && storedRouting.isNotEmpty) {
+          try {
+            final decoded = jsonDecode(storedRouting);
+            if (decoded is Map) routing = Map<String, dynamic>.from(decoded);
+          } catch (_) {}
+        }
+        final meta = <String, dynamic>{
+          if (routing['metadata'] is Map)
+            ...Map<String, dynamic>.from(routing['metadata'] as Map),
+          'synced_via': 'auto_recovery',
+        };
+        final packet = <String, dynamic>{
           'ver': 1,
           'msg_id': id,
           'message_id': id,
-          'sender_id': p['sender_device_id'] ?? myDeviceId,
-          'conv_id': 'CONV_COMMUNITY',
-          'ts': p['created_at'] ?? DateTime.now().millisecondsSinceEpoch,
-          'ttl': p['ttl'] ?? 5,
-          'hops': p['hop_count'] ?? 0,
-          'type': 'ENCRYPTED_MESH',
+          'sender_id': routing['senderId'] ?? p['sender_device_id'] ?? myDeviceId,
+          'conv_id': routing['conversationId'] ?? 'CONV_COMMUNITY',
+          'ts': routing['timestamp'] ?? p['created_at'] ?? DateTime.now().millisecondsSinceEpoch,
+          'ttl': routing['ttl'] ?? p['ttl'] ?? 5,
+          'hops': routing['hops'] ?? p['hop_count'] ?? 0,
+          'type': routing['type'] ?? 'MESH_PACKET',
           'payload': p['encrypted_payload_json'] ?? p['routing_header_json'] ?? '',
-          'meta': {'synced_via': 'auto_recovery'},
-        });
+          'meta': meta,
+        };
+        final senderName = routing['senderName']?.toString().trim() ?? '';
+        if (senderName.isNotEmpty) packet['sender_name'] = senderName;
+        final location = <String, dynamic>{
+          if (meta['latitude'] != null) 'lat': meta['latitude'],
+          if (meta['longitude'] != null) 'lng': meta['longitude'],
+          if (meta['accuracy_m'] != null) 'accuracy': meta['accuracy_m'],
+          if (meta['location_source'] != null) 'fix_type': meta['location_source'],
+        };
+        if (location.containsKey('lat') && location.containsKey('lng')) {
+          packet['location'] = location;
+        }
+        payloadList.add(packet);
       }
 
       for (final s in unsyncedSos) {
         final id = (s['message_id'] ?? s['id'] ?? '').toString();
         if (id.isEmpty) continue;
         sosIds.add(id);
-        payloadList.add({
+        if (uploadedMessageIds.contains(id)) continue;
+        uploadedMessageIds.add(id);
+        final packet = <String, dynamic>{
           'ver': 1,
           'msg_id': id,
           'message_id': id,
           'sender_id': s['sender_device_id'] ?? myDeviceId,
-          'sender_name': s['sender_name'] ?? 'Survivor',
           'conv_id': 'CONV_COMMUNITY',
           'ts': s['created_at'] ?? DateTime.now().millisecondsSinceEpoch,
           'ttl': 5,
           'hops': 0,
           'type': 'SOS',
-          'payload': 'Emergency SOS Alert',
-          'location': {
-            'lat': s['latitude'],
-            'lng': s['longitude'],
-            'fix_type': 'LIVE_GPS',
-          },
+          'payload': jsonEncode({
+            'category': s['category'],
+            'people_count': s['people_count'],
+            'notes': s['notes'],
+          }),
           'meta': {
-            'urgency': s['urgency'] ?? 'CRITICAL',
+            'urgency': s['urgency'],
+            'category': s['category'],
+            'peopleCount': s['people_count'],
+            'location_source': s['location_source'],
+            'location_is_stale': s['location_is_stale'] == 1,
             'synced_via': 'auto_recovery',
           },
-        });
+        };
+        final senderName = s['sender_name']?.toString().trim() ?? '';
+        if (senderName.isNotEmpty) packet['sender_name'] = senderName;
+        if (s['latitude'] != null && s['longitude'] != null) {
+          packet['location'] = {
+            'lat': s['latitude'],
+            'lng': s['longitude'],
+            if (s['location_accuracy'] != null)
+              'accuracy': s['location_accuracy'],
+            if (s['location_source'] != null)
+              'fix_type': s['location_source'],
+          };
+        }
+        payloadList.add(packet);
       }
 
       for (final l in unsyncedLocations) {
         final id = (l['message_id'] ?? l['id'] ?? '').toString();
         if (id.isEmpty) continue;
         locationIds.add(id);
+        if (uploadedMessageIds.contains(id)) continue;
+        uploadedMessageIds.add(id);
         payloadList.add({
           'ver': 1,
           'msg_id': id,
@@ -648,6 +720,12 @@ class NetworkStateService extends ChangeNotifier {
         {'status': 'syncedToServer', 'synced_to_server': 1},
         where: 'message_id = ? OR id = ?',
         whereArgs: [id, id],
+      );
+      await _db.update(
+        'emergency_reports',
+        {'status': 'SYNCED'},
+        where: 'id = ?',
+        whereArgs: [id],
       );
     }
 
