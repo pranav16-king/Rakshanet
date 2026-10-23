@@ -357,6 +357,7 @@ class MeshEngine extends ChangeNotifier {
     final bool isBroadcast =
         envelope.conversationId == 'CONV_COMMUNITY' ||
         envelope.conversationId.startsWith('CONV_GRP-') ||
+        envelope.conversationId.startsWith('GRP-') ||
         (envelope.recipientUserId == null &&
             envelope.recipientDeviceId == null);
 

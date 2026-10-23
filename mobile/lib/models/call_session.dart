@@ -12,6 +12,18 @@ enum NearbyCallState {
 
 enum CallDirection { outgoing, incoming }
 
+/// A recording can only become active on the phone that requested it after
+/// the other participant approves in the active call.
+enum CallRecordingState {
+  none,
+  requestingConsent,
+  consentRequested,
+  active,
+  recorded,
+  declined,
+  unavailable,
+}
+
 enum CallFinalStatus {
   completed,
   rejected,
@@ -38,6 +50,10 @@ class NearbyCallSession {
     this.finalStatus,
     this.isMuted = false,
     this.isSpeakerOn = false,
+    this.recordingState = CallRecordingState.none,
+    this.isPeerRecording = false,
+    this.recordingLocalPath,
+    this.recordingRemotePath,
     this.message,
   });
 
@@ -54,6 +70,10 @@ class NearbyCallSession {
   final CallFinalStatus? finalStatus;
   final bool isMuted;
   final bool isSpeakerOn;
+  final CallRecordingState recordingState;
+  final bool isPeerRecording;
+  final String? recordingLocalPath;
+  final String? recordingRemotePath;
   final String? message;
 
   bool get isTerminal =>
@@ -68,6 +88,10 @@ class NearbyCallSession {
     CallFinalStatus? finalStatus,
     bool? isMuted,
     bool? isSpeakerOn,
+    CallRecordingState? recordingState,
+    bool? isPeerRecording,
+    String? recordingLocalPath,
+    String? recordingRemotePath,
     String? message,
   }) {
     return NearbyCallSession(
@@ -84,6 +108,10 @@ class NearbyCallSession {
       finalStatus: finalStatus ?? this.finalStatus,
       isMuted: isMuted ?? this.isMuted,
       isSpeakerOn: isSpeakerOn ?? this.isSpeakerOn,
+      recordingState: recordingState ?? this.recordingState,
+      isPeerRecording: isPeerRecording ?? this.isPeerRecording,
+      recordingLocalPath: recordingLocalPath ?? this.recordingLocalPath,
+      recordingRemotePath: recordingRemotePath ?? this.recordingRemotePath,
       message: message ?? this.message,
     );
   }
@@ -134,6 +162,9 @@ class CallHistoryEntry {
     required this.createdAt,
     required this.endedAt,
     required this.durationSeconds,
+    this.recordingState = CallRecordingState.none,
+    this.recordingLocalPath,
+    this.recordingRemotePath,
   });
 
   final String id;
@@ -145,6 +176,9 @@ class CallHistoryEntry {
   final DateTime createdAt;
   final DateTime endedAt;
   final int durationSeconds;
+  final CallRecordingState recordingState;
+  final String? recordingLocalPath;
+  final String? recordingRemotePath;
 
   Map<String, dynamic> toMap() => {
     'id': id,
@@ -157,6 +191,9 @@ class CallHistoryEntry {
     'created_at': createdAt.millisecondsSinceEpoch,
     'ended_at': endedAt.millisecondsSinceEpoch,
     'duration_seconds': durationSeconds,
+    'recording_state': recordingState.name,
+    'recording_local_path': recordingLocalPath,
+    'recording_remote_path': recordingRemotePath,
   };
 
   factory CallHistoryEntry.fromMap(Map<String, dynamic> map) =>
@@ -172,5 +209,10 @@ class CallHistoryEntry {
         ),
         endedAt: DateTime.fromMillisecondsSinceEpoch(map['ended_at'] as int),
         durationSeconds: map['duration_seconds'] as int,
+        recordingState: CallRecordingState.values.byName(
+          map['recording_state']?.toString() ?? CallRecordingState.none.name,
+        ),
+        recordingLocalPath: map['recording_local_path']?.toString(),
+        recordingRemotePath: map['recording_remote_path']?.toString(),
       );
 }

@@ -63,6 +63,7 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
   NearbyCallSession? _session;
   bool _captureActive = false;
   bool _sendingFrame = false;
+  Uint8List? _latestCapturedFrame;
 
   NearbyCallSession? get session => _session;
   bool get hasVisibleCall => _session != null;
@@ -243,6 +244,69 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Ask the active call participant before this phone writes either side of
+  /// the conversation to its app-private storage.
+  Future<void> requestOrStopRecording() async {
+    final active = _session;
+    if (active == null || active.isTerminal || !active.hasConnectedMedia) {
+      return;
+    }
+    if (active.recordingState == CallRecordingState.active) {
+      await _stopLocalRecording(notifyPeer: true);
+      return;
+    }
+    if (active.recordingState == CallRecordingState.requestingConsent ||
+        active.recordingState == CallRecordingState.recorded) {
+      return;
+    }
+    _session = active.copyWith(
+      recordingState: CallRecordingState.requestingConsent,
+      message: 'Waiting for ${active.peerName} to approve recording.',
+    );
+    notifyListeners();
+    if (!await _sendControl('recording_request')) {
+      final current = _session;
+      if (current != null && !current.isTerminal) {
+        _session = current.copyWith(
+          recordingState: CallRecordingState.unavailable,
+          message: 'Recording request could not reach the nearby device.',
+        );
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> approveRecordingRequest() async {
+    final active = _session;
+    if (active == null ||
+        active.isTerminal ||
+        active.recordingState != CallRecordingState.consentRequested) {
+      return;
+    }
+    _session = active.copyWith(
+      recordingState: CallRecordingState.none,
+      message:
+          'Approval sent. Recording starts only on ${active.peerName}\'s phone.',
+    );
+    notifyListeners();
+    await _sendControl('recording_approved');
+  }
+
+  Future<void> declineRecordingRequest() async {
+    final active = _session;
+    if (active == null ||
+        active.isTerminal ||
+        active.recordingState != CallRecordingState.consentRequested) {
+      return;
+    }
+    _session = active.copyWith(
+      recordingState: CallRecordingState.none,
+      message: 'Recording was not approved.',
+    );
+    notifyListeners();
+    await _sendControl('recording_declined');
+  }
+
   void dismissTerminalCall() {
     if (_session == null || !_session!.isTerminal) return;
     _session = null;
@@ -352,6 +416,48 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
                 'Connected over nearby ${_transportLabel(active.endpointId)}',
           );
         }
+      case 'recording_request':
+        if (active.state == NearbyCallState.active &&
+            active.recordingState != CallRecordingState.active) {
+          _session = active.copyWith(
+            recordingState: CallRecordingState.consentRequested,
+            message:
+                '${active.peerName} requests to record this call on their phone.',
+          );
+          notifyListeners();
+        }
+      case 'recording_approved':
+        if (active.recordingState == CallRecordingState.requestingConsent) {
+          unawaited(_startApprovedRecording());
+        }
+      case 'recording_declined':
+        if (active.recordingState == CallRecordingState.requestingConsent) {
+          _session = active.copyWith(
+            recordingState: CallRecordingState.declined,
+            message: '${active.peerName} did not approve recording.',
+          );
+          notifyListeners();
+        }
+      case 'recording_started':
+        if (active.state == NearbyCallState.active) {
+          _session = active.copyWith(
+            isPeerRecording: true,
+            message:
+                '${active.peerName} is recording this call on their phone.',
+          );
+          notifyListeners();
+        }
+      case 'recording_stopped':
+      case 'recording_unavailable':
+        if (active.isPeerRecording) {
+          _session = active.copyWith(
+            isPeerRecording: false,
+            message: action == 'recording_stopped'
+                ? '${active.peerName} stopped recording.'
+                : '${active.peerName} could not start recording.',
+          );
+          notifyListeners();
+        }
     }
   }
 
@@ -433,7 +539,7 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
             active.state != NearbyCallState.active) {
       return;
     }
-    unawaited(_audio.playFrame(frame.pcm));
+    unawaited(_audio.playFrame(frame.pcm, codec: frame.codec.nativeCodec));
     if (active.state == NearbyCallState.connecting) {
       _transition(
         NearbyCallState.active,
@@ -450,15 +556,88 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
         active.isMuted ||
         (active.state != NearbyCallState.connecting &&
             active.state != NearbyCallState.active) ||
-        _sendingFrame) {
+        frame.isEmpty) {
       return;
     }
+    // Keep only the newest captured frame while Nearby accepts a previous
+    // payload. Sending old speech later is worse than dropping it.
+    _latestCapturedFrame = frame;
+    if (_sendingFrame) return;
+    unawaited(_drainCapturedFrames());
+  }
+
+  Future<void> _drainCapturedFrames() async {
+    if (_sendingFrame) return;
     _sendingFrame = true;
-    _radio.sendCallAudio(active.endpointId, active.callId, frame).whenComplete(
-      () {
-        _sendingFrame = false;
-      },
+    try {
+      while (true) {
+        final active = _session;
+        final frame = _latestCapturedFrame;
+        _latestCapturedFrame = null;
+        if (active == null ||
+            frame == null ||
+            active.isTerminal ||
+            !_captureActive ||
+            active.isMuted ||
+            (active.state != NearbyCallState.connecting &&
+                active.state != NearbyCallState.active)) {
+          return;
+        }
+        await _radio.sendCallAudio(active.endpointId, active.callId, frame);
+      }
+    } finally {
+      _sendingFrame = false;
+      if (_latestCapturedFrame != null) {
+        unawaited(_drainCapturedFrames());
+      }
+    }
+  }
+
+  Future<void> _startApprovedRecording() async {
+    final active = _session;
+    if (active == null ||
+        active.isTerminal ||
+        active.recordingState != CallRecordingState.requestingConsent) {
+      return;
+    }
+    final files = await _audio.startCallRecording(active.callId);
+    final current = _session;
+    if (current == null || current.isTerminal) return;
+    if (files == null || !files.hasFiles) {
+      _session = current.copyWith(
+        recordingState: CallRecordingState.unavailable,
+        message: 'This phone could not start local recording.',
+      );
+      notifyListeners();
+      await _sendControl('recording_unavailable');
+      return;
+    }
+    _session = current.copyWith(
+      recordingState: CallRecordingState.active,
+      recordingLocalPath: files.localPath,
+      recordingRemotePath: files.remotePath,
+      message: 'Recording locally on this phone. ${current.peerName} approved.',
     );
+    notifyListeners();
+    await _sendControl('recording_started');
+  }
+
+  Future<void> _stopLocalRecording({required bool notifyPeer}) async {
+    final active = _session;
+    if (active == null || active.recordingState != CallRecordingState.active) {
+      return;
+    }
+    final files = await _audio.stopCallRecording();
+    final current = _session;
+    if (current == null) return;
+    _session = current.copyWith(
+      recordingState: CallRecordingState.recorded,
+      recordingLocalPath: files?.localPath,
+      recordingRemotePath: files?.remotePath,
+      message: 'Recording saved only on this phone.',
+    );
+    notifyListeners();
+    if (notifyPeer) await _sendControl('recording_stopped');
   }
 
   void _transition(NearbyCallState next, {String? message}) {
@@ -492,9 +671,12 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _finish(CallFinalStatus status, String message) async {
-    final active = _session;
+    var active = _session;
     if (active == null || active.isTerminal) return;
     _timeoutTimer?.cancel();
+    await _stopLocalRecording(notifyPeer: true);
+    active = _session ?? active;
+    _latestCapturedFrame = null;
     _captureActive = false;
     await _audio.stop();
     final finalState = status == CallFinalStatus.failed

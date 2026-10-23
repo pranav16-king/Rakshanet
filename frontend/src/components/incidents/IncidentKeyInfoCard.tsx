@@ -15,28 +15,68 @@ const reported = (value: unknown): string =>
       ? String(value)
       : 'Not reported';
 
+const formatReportedTime = (value: unknown): string => {
+  if (!value) return 'Not reported';
+  let epoch: number | null = null;
+  if (typeof value === 'number' && Number.isFinite(value) && value > 1000000000) {
+    epoch = value;
+  } else if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === 'Not reported') return 'Not reported';
+    const num = Number(trimmed);
+    if (!isNaN(num) && num > 1000000000) {
+      epoch = num;
+    } else {
+      return trimmed;
+    }
+  }
+  if (epoch) {
+    try {
+      return new Date(epoch).toLocaleString(undefined, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    } catch {
+      return String(value);
+    }
+  }
+  return 'Not reported';
+};
+
 export const IncidentKeyInfoCard: React.FC<IncidentKeyInfoCardProps> = ({ incident }) => {
   const { isDark } = useTheme();
   const hasCoordinates =
     typeof incident.coordinates?.lat === 'number' && Number.isFinite(incident.coordinates.lat) &&
     typeof incident.coordinates?.lng === 'number' && Number.isFinite(incident.coordinates.lng);
-  const area = typeof incident.affectedAreaKm2 === 'number' && Number.isFinite(incident.affectedAreaKm2)
+
+  const area = typeof incident.affectedAreaKm2 === 'number' && Number.isFinite(incident.affectedAreaKm2) && incident.affectedAreaKm2 > 0
     ? `${incident.affectedAreaKm2} km²`
+    : hasCoordinates
+      ? `Sector ±${incident.clusterRadiusMeters || 250} m radius`
+      : (typeof incident.affected_area === 'string' && incident.affected_area.trim() ? incident.affected_area : 'Not reported');
+
+  const peopleCount = incident.affectedPeople ?? incident.people_count;
+  const peopleDisplay = typeof peopleCount === 'number' && peopleCount > 0
+    ? `${peopleCount} soul${peopleCount === 1 ? '' : 's'} reported`
     : 'Not reported';
+
+  const locationDisplay = hasCoordinates
+    ? `${incident.coordinates!.lat.toFixed(4)}° N, ${incident.coordinates!.lng.toFixed(4)}° E`
+    : (typeof incident.location === 'string' && incident.location !== 'Location unavailable' && incident.location.trim()
+        ? incident.location
+        : 'Not reported');
 
   const rows = [
     { label: 'Incident ID', value: incident.id || 'Not reported', icon: AlertOctagon },
     { label: 'Affected area', value: area, icon: Map },
-    { label: 'People reported', value: reported(incident.affectedPeople), icon: Users },
-    {
-      label: 'Reported location',
-      value: hasCoordinates
-        ? `${incident.coordinates.lat.toFixed(4)}, ${incident.coordinates.lng.toFixed(4)}`
-        : 'Not reported',
-      icon: MapPin,
-    },
-    { label: 'First reported', value: reported(incident.firstReported ?? incident.firstReportedTimestamp), icon: Clock },
-    { label: 'Last updated', value: reported(incident.lastUpdate ?? incident.lastUpdateTimestamp), icon: Clock },
+    { label: 'People reported', value: peopleDisplay, icon: Users },
+    { label: 'Reported location', value: locationDisplay, icon: MapPin },
+    { label: 'First reported', value: formatReportedTime(incident.firstReported ?? incident.firstReportedTimestamp), icon: Clock },
+    { label: 'Last updated', value: formatReportedTime(incident.lastUpdate ?? incident.lastUpdateTimestamp), icon: Clock },
   ];
 
   return (

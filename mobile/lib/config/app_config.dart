@@ -26,4 +26,18 @@ class AppConfig {
 
   /// User profile sync endpoint
   static const String usersUrl = '$backendUrl/api/v1/users';
+
+  /// Cloud data fetch by IMEI endpoint
+  static String cloudDataUrl(String imei) => '$backendUrl/api/v1/cloud-data/$imei';
+
+  /// Messages endpoint
+  static const String messagesUrl = '$backendUrl/api/v1/messages';
+
+  /// Mesh groups endpoints
+  static const String groupsUrl = '$backendUrl/api/v1/groups';
+  static String groupByIdUrl(String groupId) => '$backendUrl/api/v1/groups/$groupId';
+  static String groupJoinUrl(String groupId) => '$backendUrl/api/v1/groups/$groupId/join';
+
+  /// User profile by IMEI endpoint
+  static String userByImeiUrl(String imei) => '$backendUrl/api/v1/users/imei/$imei';
 }

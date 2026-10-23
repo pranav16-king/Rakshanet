@@ -1613,7 +1613,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      '${grp.name} (${grp.id})',
+                      grp.name.contains(grp.id)
+                          ? grp.name
+                          : '${grp.name} (${grp.id})',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

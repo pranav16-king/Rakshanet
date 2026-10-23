@@ -63,7 +63,10 @@ from .models import (
     IncidentStatusUpdate,
     IncidentBroadcastMessage,
     AiChatRequest,
-    AiChatResponse
+    AiChatResponse,
+    MeshGroupCreate,
+    MeshGroupJoinRequest,
+    MeshGroupResponse
 )
 from .storage import (
     gateway_storage,
@@ -737,20 +740,27 @@ def _normalize_incident_dict(inc: Dict[str, Any]) -> Dict[str, Any]:
     inc_id = str(inc.get("incident_id") or inc.get("id") or "")
     category = inc.get("disaster_type") or inc.get("category") or inc.get("type")
     category_text = str(category).strip() if category is not None else "UNSPECIFIED"
+    associated_devices = inc.get("associated_devices") or inc.get("device_ids") or []
     title = inc.get("title")
     title = str(title).strip() if title is not None and str(title).strip() else None
+    if not title or title == inc_id or len(title) == 36 and "-" in title:
+        dev_label = associated_devices[0][:8] if associated_devices else "Distress Node"
+        title = f"Distress Beacon · {category_text} ({dev_label})"
+
     lat = finite_number(inc.get("lat") if inc.get("lat") is not None else inc.get("centroid_lat"))
     lng = finite_number(inc.get("lng") if inc.get("lng") is not None else inc.get("centroid_lng"))
     radius = finite_number(inc.get("cluster_radius_meters") if inc.get("cluster_radius_meters") is not None else inc.get("radius_meters"))
     people = optional_count(inc.get("people_count"), inc.get("casualty_estimate"), inc.get("estimated_casualties"), inc.get("affectedPeople"))
+    if (people is None or people < 1) and category_text in ("SOS", "EMERGENCY_SOS", "DISTRESS"):
+        people = 1
     devices = optional_count(inc.get("devices_count"), inc.get("total_devices"), inc.get("devicesCount"))
-    associated_devices = inc.get("associated_devices") or inc.get("device_ids") or []
     if devices is None and isinstance(associated_devices, list):
         devices = len(associated_devices)
     severity = str(inc.get("severity") or inc.get("urgency") or "UNKNOWN").upper()
     status_str = str(inc.get("status") or "UNCLASSIFIED").upper()
     resources = inc.get("resourcesNeeded") or inc.get("resources_needed") or []
     coordinates = {"lat": lat, "lng": lng} if lat is not None and lng is not None else None
+    affected_area = inc.get("affected_area") or (f"{lat:.4f}° N, {lng:.4f}° E" if lat is not None and lng is not None else None)
 
     return {
         "id": inc_id,
@@ -764,7 +774,7 @@ def _normalize_incident_dict(inc: Dict[str, Any]) -> Dict[str, Any]:
         "lat": lat,
         "lng": lng,
         "coordinates": coordinates,
-        "affected_area": inc.get("affected_area"),
+        "affected_area": affected_area,
         "affectedAreaKm2": finite_number(inc.get("affectedAreaKm2") if inc.get("affectedAreaKm2") is not None else inc.get("affected_area_km2")),
         "clusterRadiusMeters": radius,
         "cluster_radius_meters": radius,
@@ -1130,6 +1140,76 @@ def get_users(role: Optional[str] = None, search: Optional[str] = None):
     return gateway_storage.get_users(role=role, search=search)
 
 
+@app.get("/api/v1/users/imei/{imei}")
+@app.get("/api/v1/users/{user_id}")
+def get_user_by_imei_or_id(user_id: Optional[str] = None, imei: Optional[str] = None):
+    """Retrieve user profile keyed by IMEI / hardware unique device ID."""
+    key = imei or user_id
+    if not key:
+        raise HTTPException(status_code=400, detail="IMEI or User ID is required")
+
+    user = gateway_storage.get_user_by_id(key)
+    if not user:
+        user = gateway_storage.get_user_by_email(key)
+    if not user:
+        matched = gateway_storage.get_users(search=key)
+        if matched:
+            user = matched[0]
+
+    if not user:
+        # Fallback profile skeleton for registered IMEI
+        return {
+            "id": key,
+            "deviceId": key,
+            "name": f"User {key[-4:] if len(key) >= 4 else key}",
+            "email": f"{key.lower()}@rakshanet.mesh",
+            "role": "Field User",
+            "status": "Active",
+            "isRegistered": True,
+            "source": "imei_cloud_store"
+        }
+    return user
+
+
+@app.get("/api/v1/cloud-data/{imei}")
+def get_cloud_available_data(imei: str):
+    """
+    Opportunistic cloud data fetch keyed by unique device IMEI.
+    Returns backend & database available records: user profile, active incidents,
+    missing persons, and recent telemetry packets for local SQLite sync & usage.
+    """
+    clean_imei = imei.strip()
+    user = gateway_storage.get_user_by_id(clean_imei) or gateway_storage.get_user_by_email(clean_imei)
+    if not user:
+        matched = gateway_storage.get_users(search=clean_imei)
+        if matched:
+            user = matched[0]
+        else:
+            user = {
+                "id": clean_imei,
+                "deviceId": clean_imei,
+                "name": f"User {clean_imei[-4:] if len(clean_imei) >= 4 else clean_imei}",
+                "email": f"{clean_imei.lower()}@rakshanet.mesh",
+                "role": "Field User",
+                "status": "Active",
+                "isRegistered": True
+            }
+
+    incidents = gateway_storage.get_incidents()
+    missing_persons = gateway_storage.get_missing_persons()
+    recent_packets = gateway_storage.get_packets(limit=50)
+
+    return {
+        "status": "SUCCESS",
+        "imei": clean_imei,
+        "user_profile": user,
+        "incidents": incidents,
+        "missing_persons": missing_persons,
+        "recent_packets": recent_packets,
+        "timestamp": int(time.time() * 1000)
+    }
+
+
 @app.post("/api/v1/users")
 @app.post("/api/v1/people")
 @app.post("/people")
@@ -1168,12 +1248,17 @@ def get_devices_stats():
 # =============================================================================
 
 @app.get("/api/v1/messages")
-def get_messages(type: Optional[str] = "ALL", limit: int = 100):
+def get_messages(
+    type: Optional[str] = "ALL",
+    limit: int = 100,
+    since: Optional[int] = None,
+    conv_id: Optional[str] = None
+):
     """
-    Retrieve telemetry messages with optional filter by packet type:
-    ALL, SOS, REPORT, TEAM, SYSTEM.
+    Retrieve telemetry messages with optional filter by packet type,
+    since timestamp, or conversation ID.
     """
-    return gateway_storage.get_messages(msg_type=type, limit=limit)
+    return gateway_storage.get_messages(msg_type=type, limit=limit, since=since, conv_id=conv_id)
 
 
 @app.post("/api/v1/messages/broadcast")
@@ -1254,6 +1339,60 @@ async def acknowledge_message(msg_id: str):
         cursor.execute("UPDATE ingested_packets SET meta_json = ? WHERE msg_id = ?", (json.dumps(meta), msg_id))
         conn.commit()
     return {"status": "SUCCESS", "msg_id": msg_id, "acknowledged": True}
+
+
+# =============================================================================
+# MESH GROUPS & CHAT CHANNELS
+# =============================================================================
+
+@app.post("/api/v1/groups")
+def create_or_sync_group(group: MeshGroupCreate):
+    """
+    Register or sync a mesh coordination group.
+    Persists group code, display name, creator identity, and member list.
+    """
+    data = group.model_dump()
+    if not data.get("members"):
+        data["members"] = [{
+            "device_id": group.creator_id,
+            "name": group.creator_id,
+            "role": "admin",
+            "status": "ACCEPTED"
+        }]
+    return gateway_storage.upsert_group(data)
+
+
+@app.get("/api/v1/groups")
+def list_mesh_groups():
+    """Retrieve all active mesh groups known to the gateway."""
+    return gateway_storage.get_groups()
+
+
+@app.get("/api/v1/groups/{group_id}")
+def get_mesh_group(group_id: str):
+    """
+    Fetch mesh group details by its group code (e.g. GRP-2D53EAB).
+    If not in primary table, attempts recovery from ingested welcome telemetry.
+    """
+    group = gateway_storage.get_group(group_id)
+    if not group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Mesh group '{group_id}' not found."
+        )
+    return group
+
+
+@app.post("/api/v1/groups/{group_id}/join")
+def join_mesh_group(group_id: str, join_req: MeshGroupJoinRequest):
+    """Register a member device joining a mesh group."""
+    updated = gateway_storage.add_group_member(group_id, join_req.model_dump())
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Mesh group '{group_id}' not found."
+        )
+    return updated
 
 
 # =============================================================================
@@ -1811,9 +1950,28 @@ async def sync_telemetry_batch(batch: SyncBatchRequest):
     accepted_ids = []
     duplicate_count = 0
 
+    batch_loc = batch.location if isinstance(batch.location, dict) else {}
+    mule_lat = batch.lat if batch.lat is not None else (batch_loc.get("lat") or batch_loc.get("latitude"))
+    mule_lng = batch.lng if batch.lng is not None else (batch_loc.get("lng") or batch_loc.get("longitude"))
+    mule_acc = batch.accuracy if batch.accuracy is not None else batch_loc.get("accuracy")
+
+    if mule_lat is not None and mule_lng is not None:
+        gateway_storage.upsert_device({
+            "device_id": batch.device_id,
+            "lat": mule_lat,
+            "lng": mule_lng,
+            "last_seen": int(time.time() * 1000),
+            "status": "Online",
+        })
+
     for packet in batch.packets:
         packet_dict = packet.model_dump()
-        is_new = gateway_storage.ingest_packet(packet_dict, mule_id=batch.device_id)
+        is_new = gateway_storage.ingest_packet(
+            packet_dict,
+            mule_id=batch.device_id,
+            mule_lat=mule_lat,
+            mule_lng=mule_lng,
+        )
 
         if is_new:
             accepted_ids.append(packet.msg_id)

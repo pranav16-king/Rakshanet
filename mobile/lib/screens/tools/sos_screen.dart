@@ -80,12 +80,17 @@ class _SosScreenState extends State<SosScreen>
 
   Future<void> _handleSosTriggered(DeviceLocationFix? fix) async {
     try {
+      final effectiveFix = fix ??
+          LocationService.instance.currentLocation ??
+          LocationService.instance.currentFix ??
+          LocationService.instance.lastKnownPosition;
       final result = await IncidentDispatchService().dispatchSos(
         category: 'Other',
         peopleCount: 1,
+        initialFix: effectiveFix,
       );
-      final lat = result.locationFix?.latitude ?? fix?.latitude;
-      final lng = result.locationFix?.longitude ?? fix?.longitude;
+      final lat = result.locationFix?.latitude ?? effectiveFix?.latitude;
+      final lng = result.locationFix?.longitude ?? effectiveFix?.longitude;
       SosProvider.instance.triggerLocalSos(
         category: result.report.type.label,
         peopleCount: result.report.peopleCount,

@@ -48,7 +48,7 @@ void main() {
     });
   });
 
-  test('history persists metadata but carries no audio field', () {
+  test('history persists local recording metadata but never audio bytes', () {
     final entry = CallHistoryEntry(
       id: 'record-1',
       callId: '159c2efb-9523-43ce-b954-4df0245f4c8f',
@@ -59,11 +59,34 @@ void main() {
       createdAt: DateTime(2026, 1, 1, 12),
       endedAt: DateTime(2026, 1, 1, 12, 1),
       durationSeconds: 60,
+      recordingState: CallRecordingState.recorded,
+      recordingLocalPath: '/app-private/call_microphone.wav',
+      recordingRemotePath: '/app-private/call_nearby.wav',
     );
 
     final map = entry.toMap();
     expect(map['transport'], 'nearby_connections');
     expect(map.containsKey('audio'), isFalse);
-    expect(map.containsKey('recording'), isFalse);
+    expect(map['recording_state'], 'recorded');
+    expect(map['recording_local_path'], '/app-private/call_microphone.wav');
+    expect(map['recording_remote_path'], '/app-private/call_nearby.wav');
+  });
+
+  test('legacy history without recording metadata remains readable', () {
+    final entry = CallHistoryEntry.fromMap({
+      'id': 'legacy-1',
+      'call_id': '159c2efb-9523-43ce-b954-4df0245f4c8f',
+      'peer_device_id': 'peer-1',
+      'peer_name': 'Nearby person',
+      'direction': 'incoming',
+      'status': 'completed',
+      'created_at': DateTime(2026, 1, 1, 12).millisecondsSinceEpoch,
+      'ended_at': DateTime(2026, 1, 1, 12, 1).millisecondsSinceEpoch,
+      'duration_seconds': 60,
+    });
+
+    expect(entry.recordingState, CallRecordingState.none);
+    expect(entry.recordingLocalPath, isNull);
+    expect(entry.recordingRemotePath, isNull);
   });
 }

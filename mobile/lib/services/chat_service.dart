@@ -289,11 +289,19 @@ class ChatService extends ChangeNotifier {
     } else if (_activeFilter == 'Group') {
       if (_activeGroupConversationId != null &&
           _activeGroupConversationId!.isNotEmpty) {
+        final activeNorm = _activeGroupConversationId!.startsWith('CONV_')
+            ? _activeGroupConversationId!.substring(5)
+            : _activeGroupConversationId!;
         filtered = _messages
             .where(
-              (m) =>
-                  !_blockedUserIds.contains(m.senderId) &&
-                  m.conversationId == _activeGroupConversationId,
+              (m) {
+                if (_blockedUserIds.contains(m.senderId)) return false;
+                final mNorm = m.conversationId.startsWith('CONV_')
+                    ? m.conversationId.substring(5)
+                    : m.conversationId;
+                return m.conversationId == _activeGroupConversationId ||
+                    mNorm == activeNorm;
+              },
             )
             .toList();
       } else {
@@ -302,6 +310,7 @@ class ChatService extends ChangeNotifier {
               (m) =>
                   !_blockedUserIds.contains(m.senderId) &&
                   (m.conversationId.startsWith('CONV_GRP-') ||
+                      m.conversationId.startsWith('GRP-') ||
                       m.category == 'Group' ||
                       m.messageType == 'GROUP'),
             )
@@ -424,11 +433,12 @@ class ChatService extends ChangeNotifier {
     final isDirect = resolvedConversationId.startsWith('DIRECT_');
     final directPeer = isDirect ? resolvedConversationId.substring(7) : null;
     final resolvedRecipientTarget = recipientTarget ?? directPeer;
-    final resolvedCategory =
-        category ??
+    final isGroup = resolvedConversationId.startsWith('CONV_GRP-') ||
+        resolvedConversationId.startsWith('GRP-');
+    final resolvedCategory = category ??
         (isDirect
             ? 'Nearby'
-            : (resolvedConversationId.startsWith('CONV_GRP-')
+            : (isGroup
                 ? 'Group'
                 : _activeFilter));
 

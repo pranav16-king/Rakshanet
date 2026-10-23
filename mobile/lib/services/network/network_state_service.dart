@@ -5,13 +5,24 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:sqflite/sqflite.dart';
 
 import '../../config/app_config.dart';
 import '../../database/app_database.dart';
+import '../../models/chat_message.dart';
+import '../../models/delivery_state.dart';
+import '../../models/emergency_report.dart';
+import '../../models/encrypted_mesh_packet.dart';
+import '../../models/missing_person.dart';
+import '../../models/user_profile.dart';
+import '../chat_service.dart';
+import '../database_service.dart';
 import '../device_identity_service.dart';
+import '../group_service.dart';
 import '../location/location_service.dart';
 import '../mesh_engine.dart';
 import '../transport/transport_manager.dart';
+import '../user_auth_service.dart';
 
 /// The 6 distinct physical and operational transport states recognized by RakshaNet.
 enum TransportState {
@@ -436,28 +447,47 @@ class NetworkStateService extends ChangeNotifier {
         final meta = <String, dynamic>{
           if (routing['metadata'] is Map)
             ...Map<String, dynamic>.from(routing['metadata'] as Map),
+          if (routing['meta'] is Map)
+            ...Map<String, dynamic>.from(routing['meta'] as Map),
           'synced_via': 'auto_recovery',
         };
+        final rawConvId = routing['conv_id'] ?? routing['conversationId'];
+        final convId = (rawConvId != null && rawConvId.toString().isNotEmpty)
+            ? rawConvId.toString()
+            : 'CONV_COMMUNITY';
+        final senderId = routing['sender_id'] ??
+            routing['senderId'] ??
+            p['sender_device_id'] ??
+            myDeviceId;
+        final senderName = (routing['sender_name'] ??
+                routing['senderName'] ??
+                p['sender_name'])
+            ?.toString()
+            .trim();
+        final ts = routing['ts'] ??
+            routing['timestamp'] ??
+            p['created_at'] ??
+            DateTime.now().millisecondsSinceEpoch;
+        final payloadContent = routing['payload'] ??
+            p['encrypted_payload_json'] ??
+            p['routing_header_json'] ??
+            '';
         final packet = <String, dynamic>{
           'ver': 1,
           'msg_id': id,
           'message_id': id,
-          'sender_id':
-              routing['senderId'] ?? p['sender_device_id'] ?? myDeviceId,
-          'conv_id': routing['conversationId'] ?? 'CONV_COMMUNITY',
-          'ts':
-              routing['timestamp'] ??
-              p['created_at'] ??
-              DateTime.now().millisecondsSinceEpoch,
+          'sender_id': senderId,
+          'conv_id': convId,
+          'ts': ts,
           'ttl': routing['ttl'] ?? p['ttl'] ?? 5,
           'hops': routing['hops'] ?? p['hop_count'] ?? 0,
           'type': routing['type'] ?? 'MESH_PACKET',
-          'payload':
-              p['encrypted_payload_json'] ?? p['routing_header_json'] ?? '',
+          'payload': payloadContent,
           'meta': meta,
         };
-        final senderName = routing['senderName']?.toString().trim() ?? '';
-        if (senderName.isNotEmpty) packet['sender_name'] = senderName;
+        if (senderName != null && senderName.isNotEmpty) {
+          packet['sender_name'] = senderName;
+        }
         final location = <String, dynamic>{
           if (meta['latitude'] != null) 'lat': meta['latitude'],
           if (meta['longitude'] != null) 'lng': meta['longitude'],
@@ -722,7 +752,21 @@ class NetworkStateService extends ChangeNotifier {
         uploadedMessageIds,
       );
 
-      // 5. Emit lastSyncTimestamp
+      // 5. Fetch cloud available data using IMEI as primary key and synchronize into SQLite
+      if (!testModeNoDelays) {
+        try {
+          await fetchAndSyncCloudDataByImei(client: _httpClient);
+        } catch (e) {
+          debugPrint('[NetworkStateService] Notice on cloud data fetch: $e');
+        }
+        try {
+          await syncIncomingMessagesFromGateway(client: _httpClient);
+        } catch (e) {
+          debugPrint('[NetworkStateService] Notice on incoming messages sync: $e');
+        }
+      }
+
+      // 6. Emit lastSyncTimestamp
       _lastSyncTimestamp = DateTime.now();
       _lastSyncTimestampController.add(_lastSyncTimestamp!);
       _isSyncing = false;
@@ -776,6 +820,362 @@ class NetworkStateService extends ChangeNotifier {
         1.0 + (_random.nextDouble() * 2.0 - 1.0) * jitterFactor;
     final delayMs = (clampedMs * jitterMultiplier).round();
     return Duration(milliseconds: math.max(50, delayMs));
+  }
+
+  /// Fetches cloud-available data from the backend using the device's IMEI / Unique ID as primary key.
+  /// Synchronizes user profile, emergency reports/incidents, and missing persons into SQLite
+  /// and updates in-memory stores so the application can immediately use all cloud data.
+  Future<bool> fetchAndSyncCloudDataByImei({
+    String? imei,
+    http.Client? client,
+  }) async {
+    // Strict Offline Resilience Guard:
+    if (!testModeNoDelays && !isInternetAvailable) {
+      debugPrint('[NetworkStateService] Offline: skipping cloud fetch by IMEI');
+      return false;
+    }
+
+    final targetImei = (imei != null && imei.trim().isNotEmpty)
+        ? imei.trim()
+        : DeviceIdentityService.instance.uniqueImeiId;
+
+    if (targetImei.isEmpty) {
+      debugPrint(
+        '[NetworkStateService] No valid IMEI or unique ID available for cloud fetch',
+      );
+      return false;
+    }
+
+    final httpClient = client ?? _httpClient;
+
+    try {
+      final cloudDataUri = Uri.parse(AppConfig.cloudDataUrl(targetImei));
+      final response = await httpClient
+          .get(cloudDataUri)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map<String, dynamic>) return false;
+        final data = decoded;
+
+        // 1. Sync and apply User Profile
+        if (data['user_profile'] is Map) {
+          final profileMap = Map<String, dynamic>.from(
+            data['user_profile'] as Map,
+          );
+          final userProfile = UserProfile(
+            id: targetImei,
+            deviceId: targetImei,
+            email: profileMap['email']?.toString() ?? '',
+            name: profileMap['name']?.toString() ?? 'User $targetImei',
+            bloodGroup:
+                profileMap['bloodGroup']?.toString() ??
+                profileMap['blood_group']?.toString() ??
+                '',
+            emergencyContact:
+                profileMap['phone']?.toString() ??
+                profileMap['emergencyContact']?.toString() ??
+                '',
+            medicalNotes:
+                profileMap['medicalNotes']?.toString() ??
+                profileMap['medical_notes']?.toString() ??
+                '',
+            language: profileMap['language']?.toString() ?? 'English',
+            isRegistered: true,
+            createdAt: profileMap['created_at'] is int
+                ? profileMap['created_at'] as int
+                : DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now().millisecondsSinceEpoch,
+          );
+
+          await AppDatabase.instance.saveUserProfile(userProfile);
+          await UserAuthService.instance.markOfflineLoginAvailable(
+            targetImei,
+            email: userProfile.email,
+            name: userProfile.name,
+          );
+        }
+
+        // 2. Sync and apply Emergency Reports / Incidents into SQLite
+        if (data['incidents'] is List) {
+          final incidents = data['incidents'] as List;
+          for (final inc in incidents) {
+            if (inc is Map) {
+              final id = (inc['id'] ?? inc['incident_id'] ?? '').toString();
+              if (id.isEmpty) continue;
+              final report = EmergencyReport.create(
+                id: id,
+                category:
+                    inc['category']?.toString() ??
+                    inc['type']?.toString() ??
+                    'Other',
+                peopleCount:
+                    (inc['people_affected'] ?? inc['casualties'] ?? 1) as int,
+                notes:
+                    inc['description']?.toString() ??
+                    inc['notes']?.toString() ??
+                    '',
+                latitude: (inc['lat'] ?? inc['latitude']) is num
+                    ? ((inc['lat'] ?? inc['latitude']) as num).toDouble()
+                    : null,
+                longitude: (inc['lng'] ?? inc['longitude']) is num
+                    ? ((inc['lng'] ?? inc['longitude']) as num).toDouble()
+                    : null,
+                location: inc['location']?.toString(),
+                status: 'SYNCED',
+                timestamp:
+                    inc['created_at'] ??
+                    inc['timestamp'] ??
+                    DateTime.now().millisecondsSinceEpoch,
+                severity:
+                    inc['severity']?.toString() ??
+                    inc['urgency']?.toString() ??
+                    'HIGH',
+              );
+              await AppDatabase.instance.saveEmergencyReport(report);
+            }
+          }
+        }
+
+        // 3. Sync and apply Missing Persons into SQLite
+        if (data['missing_persons'] is List) {
+          final missingList = data['missing_persons'] as List;
+          for (final m in missingList) {
+            if (m is Map) {
+              final id = (m['id'] ?? '').toString();
+              if (id.isEmpty) continue;
+              final person = MissingPerson.fromMap(
+                Map<String, dynamic>.from(m),
+              );
+              await AppDatabase.instance.saveMissingPerson(person);
+            }
+          }
+        }
+
+        // 4. Sync and apply recent telemetry packets and messages into SQLite
+        if (data['recent_packets'] is List) {
+          await _ingestPacketsBatch(data['recent_packets'] as List);
+        }
+
+        debugPrint(
+          '[NetworkStateService] Successfully fetched and synchronized cloud data for IMEI $targetImei',
+        );
+        return true;
+      } else {
+        debugPrint(
+          '[NetworkStateService] Cloud data fetch for IMEI $targetImei returned ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[NetworkStateService] Cloud data fetch by IMEI notice: $e');
+    }
+
+    return false;
+  }
+
+  /// Downloads incoming mesh and group chat messages from the FastAPI gateway
+  /// and persists them into local SQLite tables so all nodes stay in sync.
+  Future<int> syncIncomingMessagesFromGateway({http.Client? client}) async {
+    if (!testModeNoDelays && !isInternetAvailable) return 0;
+    final httpClient = client ?? _httpClient;
+    int syncedCount = 0;
+
+    try {
+      final uri = Uri.parse('${AppConfig.messagesUrl}?limit=100');
+      final res =
+          await httpClient.get(uri).timeout(const Duration(seconds: 10));
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final decoded = jsonDecode(res.body);
+        final List<dynamic> messageList = decoded is List
+            ? decoded
+            : (decoded['messages'] ?? decoded['packets'] ?? []);
+        syncedCount = await _ingestPacketsBatch(messageList);
+      }
+    } catch (e) {
+      debugPrint('[NetworkStateService] Notice on syncIncomingMessagesFromGateway: $e');
+    }
+    return syncedCount;
+  }
+
+  /// Batch ingests external messages/packets into local SQLite tables
+  Future<int> _ingestPacketsBatch(List<dynamic> packetList) async {
+    final myDeviceId = DeviceIdentityService.instance.deviceId;
+    final dbService = DatabaseService();
+    int newCount = 0;
+
+    for (final m in packetList) {
+      if (m is! Map) continue;
+      final msgId =
+          (m['id'] ?? m['msg_id'] ?? m['message_id'] ?? '').toString();
+      if (msgId.isEmpty) continue;
+      final senderId = (m['sender_id'] ?? m['senderId'] ?? '').toString();
+      if (senderId == myDeviceId) continue; // Skip self-authored messages
+
+      final exists = await dbService.messageExists(msgId);
+      if (exists) continue;
+
+      final rawConv = (m['conv_id'] ?? m['conversationId'] ?? 'CONV_COMMUNITY').toString();
+      final convId = rawConv.isNotEmpty ? rawConv : 'CONV_COMMUNITY';
+      final senderName =
+          (m['sender_name'] ?? m['senderName'] ?? 'Mesh Peer').toString();
+      final content = (m['payload'] ?? m['content'] ?? '').toString();
+      final ts = (m['timestamp'] ?? m['ts'] ?? DateTime.now().millisecondsSinceEpoch) as int;
+      final type = (m['type'] ?? m['packet_type'] ?? 'TEXT').toString();
+      final hops = ((m['hops'] ?? 0) as num).toInt();
+      final ttl = ((m['ttl'] ?? 5) as num).toInt();
+
+      final isGroupMsg = convId.startsWith('CONV_GRP-') || convId.startsWith('GRP-');
+      final category = isGroupMsg ? 'Group' : (type == 'SOS' ? 'Rescue' : 'Nearby');
+
+      // If group message, ensure group and conversation exist locally
+      if (isGroupMsg) {
+        final groupId = convId.startsWith('CONV_') ? convId.substring(5) : convId;
+        await _ensureGroupExistsLocally(groupId, senderId, senderName, content);
+      }
+
+      final chatMsg = ChatMessage(
+        messageId: msgId,
+        conversationId: convId,
+        senderId: senderId,
+        senderName: senderName,
+        isMine: false,
+        content: content,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(ts),
+        status: MessageDeliveryStatus.syncedToServer,
+        hopCount: hops,
+        ttl: ttl,
+        messageType: type,
+        category: category,
+      );
+
+      await dbService.insertMessage(chatMsg.toDbMap());
+      await AppDatabase.instance.saveEncryptedMeshPacket(
+        EncryptedMeshPacket(
+          messageId: msgId,
+          senderDeviceId: senderId,
+          routingHeaderJson: jsonEncode(m),
+          encryptedPayloadJson: content,
+          status: MeshDeliveryState.deliveredToRecipient,
+          hopCount: hops,
+          ttl: ttl,
+          createdAt: ts,
+          expiresAt: ts + 86400000,
+        ),
+      );
+      newCount++;
+    }
+
+    if (newCount > 0) {
+      debugPrint('[NetworkStateService] Ingested $newCount new cloud messages');
+      await ChatService().reloadMessages();
+      await GroupService().loadGroups();
+    }
+    return newCount;
+  }
+
+  Future<void> _ensureGroupExistsLocally(
+    String groupId,
+    String senderId,
+    String senderName,
+    String messageContent,
+  ) async {
+    try {
+      final existing = await AppDatabase.instance.query(
+        'groups',
+        where: 'id = ?',
+        whereArgs: [groupId],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) return;
+
+      // Try fetching group metadata from gateway
+      String groupName = 'Mesh Group ($groupId)';
+      String? groupDesc;
+      try {
+        final res = await _httpClient
+            .get(Uri.parse(AppConfig.groupByIdUrl(groupId)))
+            .timeout(const Duration(seconds: 4));
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          final gData = jsonDecode(res.body);
+          if (gData is Map && gData['name'] != null) {
+            groupName = gData['name'].toString();
+            groupDesc = gData['description']?.toString();
+          }
+        }
+      } catch (_) {}
+
+      // Fallback: check if message content is a welcome message containing the group name
+      if (groupName.startsWith('Mesh Group (GRP-')) {
+        final match = RegExp(r'Created mesh group "([^"]+)"').firstMatch(messageContent);
+        if (match != null && match.group(1) != null) {
+          groupName = match.group(1)!;
+        }
+      }
+
+      final now = DateTime.now();
+      await AppDatabase.instance.insert(
+        'groups',
+        {
+          'id': groupId,
+          'name': groupName,
+          'description': groupDesc ?? 'Mesh coordination group',
+          'creator_id': senderId,
+          'created_at': now.millisecondsSinceEpoch,
+          'updated_at': now.millisecondsSinceEpoch,
+          'conversation_id': 'CONV_$groupId',
+          'member_count': 2,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      await AppDatabase.instance.insert(
+        'group_members',
+        {
+          'id': 'MEM-${groupId}_$senderId',
+          'group_id': groupId,
+          'member_device_id': senderId,
+          'member_name': senderName,
+          'status': 'ACCEPTED',
+          'joined_at': now.millisecondsSinceEpoch,
+          'invited_at': now.millisecondsSinceEpoch,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      final myDeviceId = DeviceIdentityService.instance.deviceId;
+      final myName = DatabaseService.myDisplayName;
+      await AppDatabase.instance.insert(
+        'group_members',
+        {
+          'id': 'MEM-${groupId}_SELF',
+          'group_id': groupId,
+          'member_device_id': myDeviceId,
+          'member_name': '$myName (You)',
+          'status': 'ACCEPTED',
+          'joined_at': now.millisecondsSinceEpoch,
+          'invited_at': now.millisecondsSinceEpoch,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      await AppDatabase.instance.insert(
+        'conversations',
+        {
+          'id': 'conv_$groupId',
+          'conversation_id': 'CONV_$groupId',
+          'type': 'GROUP',
+          'title': groupName,
+          'created_at': now.millisecondsSinceEpoch,
+          'updated_at': now.millisecondsSinceEpoch,
+          'last_message': 'Group channel synced from gateway',
+          'unread_count': 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e) {
+      debugPrint('[NetworkStateService] Error ensuring group exists locally: $e');
+    }
   }
 
   // ---------------------------------------------------------------------------

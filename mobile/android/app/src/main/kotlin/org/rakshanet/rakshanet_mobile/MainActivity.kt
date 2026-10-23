@@ -26,6 +26,9 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
+import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import java.security.MessageDigest
 import java.util.concurrent.ArrayBlockingQueue
 
@@ -33,8 +36,10 @@ class MainActivity : FlutterActivity(), LocationListener {
     private val channelName = "org.rakshanet/telemetry"
     private val offlineAudioChannelName = "org.rakshanet/offline_audio"
     private val offlineAudioCaptureChannelName = "org.rakshanet/offline_audio_capture"
-    private val pcmSampleRate = 16_000
-    private val pcmFrameBytes = 640 // 20ms, mono, 16-bit PCM at 16kHz
+    // Eight-kilohertz speech plus G.711 u-law keeps the direct Nearby stream
+    // at 64 kbps instead of raw 16 kHz PCM's 256 kbps.
+    private val pcmSampleRate = 8_000
+    private val pcmFrameBytes = 640 // 40 ms, mono, 16-bit PCM at 8 kHz
     private var locationManager: LocationManager? = null
     private var lastGpsLocation: Location? = null
     private var isListeningToLocation = false
@@ -47,7 +52,15 @@ class MainActivity : FlutterActivity(), LocationListener {
     @Volatile private var playbackRunning = false
     private var captureEventSink: EventChannel.EventSink? = null
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val playbackFrames = ArrayBlockingQueue<ByteArray>(12)
+    // A short bounded jitter buffer prevents stale radio packets from turning
+    // into multi-second speech delay. Oldest frames are discarded on overflow.
+    private val playbackFrames = ArrayBlockingQueue<ByteArray>(3)
+    private val recordingLock = Any()
+    private var recordingCallId: String? = null
+    private var localRecordingFile: File? = null
+    private var remoteRecordingFile: File? = null
+    private var localRecordingOutput: FileOutputStream? = null
+    private var remoteRecordingOutput: FileOutputStream? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -99,14 +112,34 @@ class MainActivity : FlutterActivity(), LocationListener {
                     }
                     "startPlayback" -> result.success(startOfflinePlayback())
                     "playFrame" -> {
-                        val pcm = call.arguments as? ByteArray
+                        val arguments = call.arguments as? Map<*, *>
+                        val audio = arguments?.get("audio") as? ByteArray
+                        val codec = arguments?.get("codec") as? String
+                        val pcm = when (codec) {
+                            "g711_ulaw_8khz" -> audio?.let(::muLawToPcm16)
+                            // Old clients can continue a call during a rolling
+                            // update. Downsample their 16 kHz raw PCM locally.
+                            "pcm16_16khz" -> audio?.let(::downsamplePcm16From16k)
+                            else -> null
+                        }
                         if (pcm == null || pcm.isEmpty()) {
-                            result.error("invalid_pcm", "A PCM frame is required.", null)
+                            result.error("invalid_call_audio", "A supported call audio frame is required.", null)
                         } else {
                             enqueuePlaybackFrame(pcm)
+                            writeRemoteRecordingPcm(pcm)
                             result.success(null)
                         }
                     }
+                    "startCallRecording" -> {
+                        val callId = call.arguments as? String
+                        val paths = startCallRecording(callId)
+                        if (paths == null) {
+                            result.error("recording_unavailable", "Local call recording could not start.", null)
+                        } else {
+                            result.success(paths)
+                        }
+                    }
+                    "stopCallRecording" -> result.success(stopCallRecording())
                     "setSpeakerphone" -> {
                         val enabled = call.arguments as? Boolean
                         if (enabled == null) {
@@ -154,7 +187,7 @@ class MainActivity : FlutterActivity(), LocationListener {
                 pcmSampleRate,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
-                maxOf(minBuffer, pcmFrameBytes * 10)
+                maxOf(minBuffer, pcmFrameBytes * 3)
             )
             if (recorder.state != AudioRecord.STATE_INITIALIZED) {
                 recorder.release()
@@ -168,7 +201,8 @@ class MainActivity : FlutterActivity(), LocationListener {
                 while (captureRunning) {
                     val read = recorder.read(frame, 0, frame.size, AudioRecord.READ_BLOCKING)
                     if (read > 0 && captureRunning) {
-                        val outbound = frame.copyOf(read)
+                        writeLocalRecordingPcm(frame, read)
+                        val outbound = pcm16ToMuLaw(frame, read)
                         mainHandler.post { captureEventSink?.success(outbound) }
                     }
                 }
@@ -221,9 +255,9 @@ class MainActivity : FlutterActivity(), LocationListener {
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build()
                 )
-                // A 240ms queue absorbs ordinary Nearby packet jitter. Excess
-                // frames are dropped rather than extending call latency.
-                .setBufferSizeInBytes(maxOf(minBuffer, pcmFrameBytes * 12))
+                // Keep the local queue short. Excess frames are dropped rather
+                // than extending end-to-end delay.
+                .setBufferSizeInBytes(maxOf(minBuffer, pcmFrameBytes * 3))
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
             if (track.state != AudioTrack.STATE_INITIALIZED) {
@@ -296,6 +330,7 @@ class MainActivity : FlutterActivity(), LocationListener {
 
     @Suppress("DEPRECATION")
     private fun stopOfflineAudio() {
+        stopCallRecording()
         stopOfflineCapture()
         stopOfflinePlayback()
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -305,6 +340,180 @@ class MainActivity : FlutterActivity(), LocationListener {
             audioManager?.abandonAudioFocus(null)
         } catch (_: Exception) {
         }
+    }
+
+    /**
+     * Creates two app-private WAV tracks after the remote peer has accepted a
+     * Flutter-side recording request. Files are not exposed to MediaStore and
+     * never leave this device through Nearby or the network.
+     */
+    private fun startCallRecording(callId: String?): Map<String, String>? {
+        if (callId == null || !Regex("^[0-9a-fA-F-]{36}$").matches(callId)) {
+            return null
+        }
+        synchronized(recordingLock) {
+            if (recordingCallId != null) return null
+            val directory = File(filesDir, "call_recordings")
+            if (!directory.exists() && !directory.mkdirs()) return null
+            val timestamp = System.currentTimeMillis()
+            val local = File(directory, "call_${callId}_${timestamp}_microphone.wav")
+            val remote = File(directory, "call_${callId}_${timestamp}_nearby.wav")
+            var localOutput: FileOutputStream? = null
+            var remoteOutput: FileOutputStream? = null
+            return try {
+                localOutput = FileOutputStream(local)
+                remoteOutput = FileOutputStream(remote)
+                localOutput.write(ByteArray(44))
+                remoteOutput.write(ByteArray(44))
+                recordingCallId = callId
+                localRecordingFile = local
+                remoteRecordingFile = remote
+                localRecordingOutput = localOutput
+                remoteRecordingOutput = remoteOutput
+                hashMapOf(
+                    "local_path" to local.absolutePath,
+                    "remote_path" to remote.absolutePath,
+                )
+            } catch (_: Exception) {
+                try { localOutput?.close() } catch (_: Exception) {}
+                try { remoteOutput?.close() } catch (_: Exception) {}
+                local.delete()
+                remote.delete()
+                localRecordingOutput = null
+                remoteRecordingOutput = null
+                null
+            }
+        }
+    }
+
+    private fun stopCallRecording(): Map<String, String>? {
+        synchronized(recordingLock) {
+            val local = localRecordingFile ?: return null
+            val remote = remoteRecordingFile ?: return null
+            try { localRecordingOutput?.close() } catch (_: Exception) {}
+            try { remoteRecordingOutput?.close() } catch (_: Exception) {}
+            try { writeWavHeader(local) } catch (_: Exception) {}
+            try { writeWavHeader(remote) } catch (_: Exception) {}
+            recordingCallId = null
+            localRecordingFile = null
+            remoteRecordingFile = null
+            localRecordingOutput = null
+            remoteRecordingOutput = null
+            return hashMapOf(
+                "local_path" to local.absolutePath,
+                "remote_path" to remote.absolutePath,
+            )
+        }
+    }
+
+    private fun writeLocalRecordingPcm(pcm: ByteArray, byteCount: Int) {
+        writeRecordingPcm(localRecordingOutput, pcm, byteCount)
+    }
+
+    private fun writeRemoteRecordingPcm(pcm: ByteArray) {
+        writeRecordingPcm(remoteRecordingOutput, pcm, pcm.size)
+    }
+
+    private fun writeRecordingPcm(output: FileOutputStream?, pcm: ByteArray, byteCount: Int) {
+        if (output == null || byteCount <= 0) return
+        synchronized(recordingLock) {
+            try {
+                output.write(pcm, 0, byteCount)
+            } catch (_: Exception) {
+                // Recording remains optional; call audio must continue if the
+                // device runs out of local storage.
+            }
+        }
+    }
+
+    private fun writeWavHeader(file: File) {
+        val dataBytes = (file.length() - 44L).coerceAtLeast(0L)
+            .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        RandomAccessFile(file, "rw").use { output ->
+            output.seek(0)
+            output.write("RIFF".toByteArray(Charsets.US_ASCII))
+            writeLeInt(output, 36 + dataBytes)
+            output.write("WAVE".toByteArray(Charsets.US_ASCII))
+            output.write("fmt ".toByteArray(Charsets.US_ASCII))
+            writeLeInt(output, 16)
+            writeLeShort(output, 1)
+            writeLeShort(output, 1)
+            writeLeInt(output, pcmSampleRate)
+            writeLeInt(output, pcmSampleRate * 2)
+            writeLeShort(output, 2)
+            writeLeShort(output, 16)
+            output.write("data".toByteArray(Charsets.US_ASCII))
+            writeLeInt(output, dataBytes)
+        }
+    }
+
+    private fun writeLeInt(output: RandomAccessFile, value: Int) {
+        output.write(value and 0xff)
+        output.write((value ushr 8) and 0xff)
+        output.write((value ushr 16) and 0xff)
+        output.write((value ushr 24) and 0xff)
+    }
+
+    private fun writeLeShort(output: RandomAccessFile, value: Int) {
+        output.write(value and 0xff)
+        output.write((value ushr 8) and 0xff)
+    }
+
+    private fun pcm16ToMuLaw(pcm: ByteArray, byteCount: Int): ByteArray {
+        val usableBytes = byteCount - (byteCount % 2)
+        val encoded = ByteArray(usableBytes / 2)
+        var source = 0
+        var destination = 0
+        while (source < usableBytes) {
+            val sample = (pcm[source].toInt() and 0xff) or (pcm[source + 1].toInt() shl 8)
+            encoded[destination++] = linearToMuLaw(sample)
+            source += 2
+        }
+        return encoded
+    }
+
+    private fun muLawToPcm16(encoded: ByteArray): ByteArray {
+        val pcm = ByteArray(encoded.size * 2)
+        for (index in encoded.indices) {
+            val sample = muLawToLinear(encoded[index].toInt() and 0xff).toInt()
+            pcm[index * 2] = (sample and 0xff).toByte()
+            pcm[index * 2 + 1] = (sample shr 8).toByte()
+        }
+        return pcm
+    }
+
+    private fun downsamplePcm16From16k(pcm16Khz: ByteArray): ByteArray {
+        val usableBytes = pcm16Khz.size - (pcm16Khz.size % 4)
+        val downsampled = ByteArray(usableBytes / 2)
+        var source = 0
+        var destination = 0
+        while (source < usableBytes) {
+            downsampled[destination++] = pcm16Khz[source]
+            downsampled[destination++] = pcm16Khz[source + 1]
+            source += 4
+        }
+        return downsampled
+    }
+
+    private fun linearToMuLaw(sample16: Int): Byte {
+        var magnitude = if (sample16 < 0) -sample16 else sample16
+        magnitude = minOf(magnitude, 32635) + 0x84
+        var exponent = 7
+        var mask = 0x4000
+        while (exponent > 0 && (magnitude and mask) == 0) {
+            exponent--
+            mask = mask shr 1
+        }
+        val mantissa = (magnitude shr (exponent + 3)) and 0x0f
+        val signMask = if (sample16 < 0) 0x7f else 0xff
+        return (signMask xor (exponent shl 4) xor mantissa).toByte()
+    }
+
+    private fun muLawToLinear(encoded: Int): Short {
+        val value = encoded.inv() and 0xff
+        var sample = ((value and 0x0f) shl 3) + 0x84
+        sample = sample shl ((value and 0x70) shr 4)
+        return (if ((value and 0x80) != 0) 0x84 - sample else sample - 0x84).toShort()
     }
 
     override fun onPause() {
@@ -441,12 +650,32 @@ class MainActivity : FlutterActivity(), LocationListener {
         } catch (_: Exception) {
         }
 
+        val prefs = getSharedPreferences("rakshanet_location", Context.MODE_PRIVATE)
         if (bestLocation != null) {
+            prefs.edit()
+                .putFloat("lat", bestLocation.latitude.toFloat())
+                .putFloat("lng", bestLocation.longitude.toFloat())
+                .putFloat("acc", bestLocation.accuracy)
+                .putLong("time", bestLocation.time)
+                .apply()
             return mapOf(
                 "hasGpsFix" to true,
                 "latitude" to bestLocation.latitude,
                 "longitude" to bestLocation.longitude,
                 "accuracy" to bestLocation.accuracy.toDouble()
+            )
+        }
+
+        if (prefs.contains("lat") && prefs.contains("lng")) {
+            val cachedLat = prefs.getFloat("lat", 0f).toDouble()
+            val cachedLng = prefs.getFloat("lng", 0f).toDouble()
+            val cachedAcc = prefs.getFloat("acc", 30f).toDouble()
+            return mapOf(
+                "hasGpsFix" to true,
+                "latitude" to cachedLat,
+                "longitude" to cachedLng,
+                "accuracy" to cachedAcc,
+                "isStale" to true
             )
         }
 

@@ -75,19 +75,50 @@ class SosProvider extends ChangeNotifier {
       messageId: messageId,
     );
 
-    // Acquire GPS fix if missing
-    DeviceLocationFix? fix = LocationService.instance.currentLocation;
+    // Acquire GPS fix if missing with multi-tier fallback
+    DeviceLocationFix? fix = LocationService.instance.currentLocation ??
+        LocationService.instance.currentFix ??
+        LocationService.instance.lastKnownPosition;
     double? lat = latitude ?? fix?.latitude;
     double? lng = longitude ?? fix?.longitude;
     double? acc = accuracy ?? fix?.horizontalAccuracyMeters;
     if (lat == null || lng == null) {
       try {
         fix = await LocationService.instance
-            .refreshLocation()
-            .timeout(const Duration(milliseconds: 1500));
+            .refreshLocation(forceFresh: true)
+            .timeout(const Duration(milliseconds: 2000), onTimeout: () => null);
         lat ??= fix?.latitude;
         lng ??= fix?.longitude;
         acc ??= fix?.horizontalAccuracyMeters;
+      } catch (_) {}
+    }
+    if (lat == null || lng == null) {
+      try {
+        final recentLocs = await AppDatabase.instance.query(
+          'location_history',
+          orderBy: 'timestamp DESC',
+          limit: 1,
+        );
+        if (recentLocs.isNotEmpty) {
+          lat = (recentLocs.first['latitude'] as num?)?.toDouble();
+          lng = (recentLocs.first['longitude'] as num?)?.toDouble();
+          acc = (recentLocs.first['horizontal_accuracy'] as num?)?.toDouble() ?? 30.0;
+        }
+      } catch (_) {}
+    }
+    if (lat == null || lng == null) {
+      try {
+        final recentSos = await AppDatabase.instance.query(
+          'sos_events',
+          where: 'latitude IS NOT NULL AND longitude IS NOT NULL',
+          orderBy: 'created_at DESC',
+          limit: 1,
+        );
+        if (recentSos.isNotEmpty) {
+          lat = (recentSos.first['latitude'] as num?)?.toDouble();
+          lng = (recentSos.first['longitude'] as num?)?.toDouble();
+          acc = (recentSos.first['location_accuracy'] as num?)?.toDouble() ?? 50.0;
+        }
       } catch (_) {}
     }
 

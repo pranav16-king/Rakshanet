@@ -40,18 +40,32 @@ class NearbyCallControlFrame {
   final Map<String, dynamic> payload;
 }
 
-/// A short PCM audio frame. The frame is carried only on the established
-/// direct Nearby connection and is never forwarded over the mesh.
+enum NearbyAudioCodec {
+  /// Original raw 16 kHz PCM framing, retained only for rolling updates.
+  pcm16Khz,
+
+  /// 8 kHz G.711 u-law: four times less RF payload than the old raw stream.
+  g711Ulaw8Khz;
+
+  String get nativeCodec => switch (this) {
+    NearbyAudioCodec.pcm16Khz => 'pcm16_16khz',
+    NearbyAudioCodec.g711Ulaw8Khz => 'g711_ulaw_8khz',
+  };
+}
+
+/// A short direct-call audio frame. It is never forwarded over the mesh.
 class NearbyAudioFrame {
   const NearbyAudioFrame({
     required this.endpointId,
     required this.callId,
     required this.pcm,
+    required this.codec,
   });
 
   final String endpointId;
   final String callId;
   final Uint8List pcm;
+  final NearbyAudioCodec codec;
 }
 
 /// BluetoothRadioService: Hardware-Level Peer-to-Peer Radio Controller
@@ -122,8 +136,11 @@ class BluetoothRadioService extends ChangeNotifier {
   Stream<NearbyAudioFrame> get incomingAudioFrameStream =>
       _audioFrameController.stream;
 
-  static final Uint8List _audioPrefix = Uint8List.fromList(
+  static final Uint8List _legacyAudioPrefix = Uint8List.fromList(
     ascii.encode('RKAUD1|'),
+  );
+  static final Uint8List _compressedAudioPrefix = Uint8List.fromList(
+    ascii.encode('RKAUD2|'),
   );
 
   final StreamController<List<MeshDevice>> _peerUpdateController =
@@ -506,6 +523,10 @@ class BluetoothRadioService extends ChangeNotifier {
   void _handlePayloadReceived(String endpointId, Payload payload) {
     if (payload.type == PayloadType.BYTES && payload.bytes != null) {
       final rawBytes = payload.bytes!;
+
+      // Audio is the hot path. Recognise it before logging, UTF-8 conversion,
+      // or JSON parsing so frames do not create UI work or decode failures.
+      if (_consumeAudioFrame(endpointId, rawBytes)) return;
       _logStatus(
         'Received RF packet (${rawBytes.length} bytes) from $endpointId',
       );
@@ -548,7 +569,6 @@ class BluetoothRadioService extends ChangeNotifier {
         );
       }
 
-      if (_consumeAudioFrame(endpointId, rawBytes)) return;
       if (_consumeMediaManifest(endpointId, rawBytes)) return;
       if (_consumeCallControl(endpointId, rawBytes)) return;
 
@@ -618,9 +638,12 @@ class BluetoothRadioService extends ChangeNotifier {
     const callIdLength = 36;
     final headerLength = 7 + callIdLength + 1;
     if (rawBytes.length <= headerLength) return false;
-    for (var index = 0; index < _audioPrefix.length; index++) {
-      if (rawBytes[index] != _audioPrefix[index]) return false;
-    }
+    final codec = _matchesPrefix(rawBytes, _compressedAudioPrefix)
+        ? NearbyAudioCodec.g711Ulaw8Khz
+        : _matchesPrefix(rawBytes, _legacyAudioPrefix)
+        ? NearbyAudioCodec.pcm16Khz
+        : null;
+    if (codec == null) return false;
     if (rawBytes[headerLength - 1] != 0x7c) return false; // | delimiter
     final callId = ascii.decode(rawBytes.sublist(7, 7 + callIdLength));
     if (!RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(callId)) return false;
@@ -629,8 +652,17 @@ class BluetoothRadioService extends ChangeNotifier {
         endpointId: endpointId,
         callId: callId,
         pcm: Uint8List.fromList(rawBytes.sublist(headerLength)),
+        codec: codec,
       ),
     );
+    return true;
+  }
+
+  bool _matchesPrefix(Uint8List bytes, Uint8List prefix) {
+    if (bytes.length < prefix.length) return false;
+    for (var index = 0; index < prefix.length; index++) {
+      if (bytes[index] != prefix[index]) return false;
+    }
     return true;
   }
 
@@ -688,10 +720,16 @@ class BluetoothRadioService extends ChangeNotifier {
   Future<int> broadcastBytes(Uint8List bytes) => broadcastPayload(bytes);
 
   /// Send raw bytes to a specific connected peer endpoint
-  Future<bool> sendBytesToEndpoint(String endpointId, Uint8List bytes) async {
+  Future<bool> sendBytesToEndpoint(
+    String endpointId,
+    Uint8List bytes, {
+    bool logPacket = true,
+  }) async {
     try {
       await _nearby.sendBytesPayload(endpointId, bytes);
-      _logStatus('Sent chunk packet (${bytes.length} bytes) -> $endpointId');
+      if (logPacket) {
+        _logStatus('Sent chunk packet (${bytes.length} bytes) -> $endpointId');
+      }
       return true;
     } catch (e) {
       debugPrint(
@@ -732,26 +770,31 @@ class BluetoothRadioService extends ChangeNotifier {
     );
   }
 
-  /// Send one bounded PCM frame for an active direct call. Nearby Connections
-  /// selects Bluetooth or Wi-Fi transport; this method does not use internet
-  /// routing and intentionally drops oversized frames rather than blocking
-  /// the radio queue.
-  Future<bool> sendCallAudio(String endpointId, String callId, Uint8List pcm) {
+  /// Send one compact bounded frame over the direct call endpoint. Nearby
+  /// Connections selects Bluetooth or Wi-Fi; this path never uses internet.
+  Future<bool> sendCallAudio(
+    String endpointId,
+    String callId,
+    Uint8List audio, {
+    NearbyAudioCodec codec = NearbyAudioCodec.g711Ulaw8Khz,
+  }) {
     if (!isEndpointConnected(endpointId) ||
         !RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(callId) ||
-        pcm.isEmpty ||
-        pcm.length > 2048) {
+        audio.isEmpty ||
+        audio.length > 1024) {
       return Future.value(false);
     }
     final header = Uint8List.fromList(<int>[
-      ..._audioPrefix,
+      ...(codec == NearbyAudioCodec.g711Ulaw8Khz
+          ? _compressedAudioPrefix
+          : _legacyAudioPrefix),
       ...ascii.encode(callId),
       0x7c,
     ]);
-    final frame = Uint8List(header.length + pcm.length)
+    final frame = Uint8List(header.length + audio.length)
       ..setRange(0, header.length, header)
-      ..setRange(header.length, header.length + pcm.length, pcm);
-    return sendBytesToEndpoint(endpointId, frame);
+      ..setRange(header.length, header.length + audio.length, audio);
+    return sendBytesToEndpoint(endpointId, frame, logPacket: false);
   }
 
   /// Alias for broadcastPayload (send to all connected radio peers)

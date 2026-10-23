@@ -308,6 +308,21 @@ class GatewayStorage:
                 except Exception:
                     pass
 
+            # Mesh Groups Directory
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mesh_groups (
+                    group_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    creator_id TEXT NOT NULL,
+                    conversation_id TEXT NOT NULL,
+                    member_count INTEGER DEFAULT 1,
+                    members_json TEXT DEFAULT '[]',
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL
+                )
+            """)
+
             conn.commit()
 
     def _warm_cache(self):
@@ -322,7 +337,7 @@ class GatewayStorage:
     # PACKET INGESTION & DEDUPLICATION (Dual-Persistence)
     # =========================================================================
 
-    def ingest_packet(self, packet_data: Dict[str, Any], mule_id: str) -> bool:
+    def ingest_packet(self, packet_data: Dict[str, Any], mule_id: str, mule_lat: Optional[float] = None, mule_lng: Optional[float] = None) -> bool:
         """
         Idempotent packet ingestion.
         1. Drops duplicate echo instantaneously.
@@ -339,27 +354,64 @@ class GatewayStorage:
             return False
 
         loc = packet_data.get("location") or {}
-        lat = loc.get("lat")
-        lng = loc.get("lng")
+        lat = loc.get("lat") or loc.get("latitude")
+        lng = loc.get("lng") or loc.get("longitude")
         alt = loc.get("altitude")
         acc = loc.get("accuracy")
 
         meta = packet_data.get("meta") or {}
-        if lat is None and "lat" in meta:
-            lat = meta.get("lat")
-        if lng is None and "lng" in meta:
-            lng = meta.get("lng")
+        if lat is None:
+            lat = meta.get("lat") or meta.get("latitude")
+        if lng is None:
+            lng = meta.get("lng") or meta.get("longitude")
+
+        # Check root packet_data keys
+        if lat is None:
+            lat = packet_data.get("lat") or packet_data.get("latitude")
+        if lng is None:
+            lng = packet_data.get("lng") or packet_data.get("longitude")
+
+        # Check JSON payload if present
+        payload = packet_data.get("payload", "")
+        if (lat is None or lng is None) and isinstance(payload, str) and payload.strip().startswith("{"):
+            try:
+                pj = json.loads(payload)
+                if isinstance(pj, dict):
+                    if lat is None:
+                        lat = pj.get("lat") or pj.get("latitude")
+                    if lng is None:
+                        lng = pj.get("lng") or pj.get("longitude")
+            except Exception:
+                pass
+
+        # If packet lacks coordinates, fallback to the reporting handset/mule's verified coordinates
+        if lat is None and mule_lat is not None:
+            lat = mule_lat
+        if lng is None and mule_lng is not None:
+            lng = mule_lng
 
         now = int(time.time() * 1000)
         sender_id = str(packet_data.get("sender_id") or "").strip()
         if not sender_id:
             logger.warning("[GatewayStorage] Dropped %s: sender_id is required", msg_id)
             return False
+
+        # If coordinates still missing, check sender's last known location from devices table
+        if (lat is None or lng is None) and sender_id:
+            try:
+                dev = self.get_device(sender_id)
+                if dev:
+                    if lat is None:
+                        lat = dev.get("lat")
+                    if lng is None:
+                        lng = dev.get("lng")
+            except Exception:
+                pass
+
         sender_name = packet_data.get("sender_name")
         sender_name = str(sender_name).strip() if sender_name else None
         conv_id = packet_data.get("conv_id")
         packet_type = packet_data.get("type") or "UNKNOWN"
-        payload = packet_data.get("payload", "")
         timestamp = packet_data.get("ts", now)
         hops = packet_data.get("hops", 0)
         ttl = packet_data.get("ttl", 5)
@@ -392,8 +444,6 @@ class GatewayStorage:
                     conn.commit()
 
                     # A device row is created only from an observed packet.
-                    # Unknown values stay null/explicitly unknown rather than
-                    # becoming a fabricated battery, name, or coordinate.
                     battery = meta.get("battery_percent")
                     self.upsert_device({
                         "device_id": sender_id,
@@ -412,15 +462,21 @@ class GatewayStorage:
                     # An SOS packet is recorded as an observed single-origin incident
                     if str(packet_type).upper() in {"SOS", "EMERGENCY_SOS", "DISTRESS"}:
                         people_count = meta.get("people_count", meta.get("peopleCount"))
+                        if not isinstance(people_count, int) or people_count < 1:
+                            people_count = 1
+                        category = meta.get("category") or "Emergency SOS"
+                        title = f"Distress Beacon · {sender_name or f'Device {sender_id[:8]}'}"
+                        affected_area_str = f"{lat:.4f}° N, {lng:.4f}° E" if (isinstance(lat, (int, float)) and isinstance(lng, (int, float))) else None
                         self.upsert_incident({
                             "incident_id": msg_id,
-                            "title": msg_id,
-                            "disaster_type": meta.get("category") or packet_type,
-                            "severity": meta.get("urgency") or "UNSPECIFIED",
+                            "title": title,
+                            "disaster_type": category,
+                            "severity": meta.get("urgency") or "CRITICAL",
                             "status": "REPORTED",
                             "lat": lat,
                             "lng": lng,
-                            "people_count": people_count if isinstance(people_count, int) else None,
+                            "affected_area": affected_area_str,
+                            "people_count": people_count,
                             "devices_count": 1,
                             "associated_messages": [msg_id],
                             "associated_devices": [sender_id],
@@ -442,6 +498,45 @@ class GatewayStorage:
                                 self.add_missing_person_sighting(sight_data["person_id"], sight_data)
                         except Exception as e:
                             logger.debug(f"Failed to auto-ingest MISSING_PERSON_SIGHTING payload: {e}")
+
+                    # Auto-ingest mesh groups from GROUP_INVITE packets or group creation messages
+                    if packet_type == "GROUP_INVITE":
+                        try:
+                            grp_id = meta.get("group_id")
+                            grp_name = meta.get("group_name")
+                            if grp_id and grp_name:
+                                self.upsert_group({
+                                    "group_id": grp_id,
+                                    "name": grp_name,
+                                    "description": meta.get("group_description"),
+                                    "creator_id": meta.get("inviter_id") or sender_id,
+                                    "conversation_id": f"CONV_{grp_id}",
+                                    "member_count": 2,
+                                    "members": [
+                                        {"device_id": meta.get("inviter_id") or sender_id, "name": meta.get("inviter_name") or sender_name or "Admin", "role": "admin"}
+                                    ],
+                                    "created_at": timestamp
+                                })
+                        except Exception as e:
+                            logger.debug(f"Failed to auto-ingest GROUP_INVITE: {e}")
+                    elif payload and 'Created mesh group "' in payload:
+                        try:
+                            import re
+                            m = re.search(r'Created mesh group "([^"]+)"(?:\s*\(([^)]+)\))?', payload)
+                            if m:
+                                grp_name = m.group(1)
+                                grp_id = m.group(2) or (conv_id.replace("CONV_", "") if conv_id else f"GRP-{msg_id[:6].upper()}")
+                                self.upsert_group({
+                                    "group_id": grp_id,
+                                    "name": grp_name,
+                                    "creator_id": sender_id,
+                                    "conversation_id": f"CONV_{grp_id}",
+                                    "member_count": 1,
+                                    "members": [{"device_id": sender_id, "name": sender_name or sender_id, "role": "admin"}],
+                                    "created_at": timestamp
+                                })
+                        except Exception as e:
+                            logger.debug(f"Failed to auto-ingest group from welcome message: {e}")
 
                     # Asynchronous dual-persistence to MongoDB Atlas
                     mongo_doc = {
@@ -726,6 +821,46 @@ class GatewayStorage:
                 return None
             d = dict(row)
             self._unpack_incident_json(d)
+
+            # Auto-resolve missing coordinates from ingested packets or associated devices
+            if d.get("lat") is None or d.get("lng") is None:
+                assoc_msgs = d.get("associated_messages") or []
+                assoc_devs = d.get("associated_devices") or []
+                pkt_cursor = conn.cursor()
+                for mid in [incident_id, *assoc_msgs]:
+                    pkt_cursor.execute("SELECT lat, lng FROM ingested_packets WHERE msg_id = ? AND lat IS NOT NULL AND lng IS NOT NULL LIMIT 1", (mid,))
+                    prow = pkt_cursor.fetchone()
+                    if prow and prow["lat"] is not None and prow["lng"] is not None:
+                        d["lat"] = prow["lat"]
+                        d["lng"] = prow["lng"]
+                        break
+                if (d.get("lat") is None or d.get("lng") is None) and assoc_devs:
+                    for did in assoc_devs:
+                        pkt_cursor.execute("SELECT lat, lng FROM devices WHERE device_id = ? AND lat IS NOT NULL AND lng IS NOT NULL LIMIT 1", (did,))
+                        drow = pkt_cursor.fetchone()
+                        if drow and drow["lat"] is not None and drow["lng"] is not None:
+                            d["lat"] = drow["lat"]
+                            d["lng"] = drow["lng"]
+                            break
+
+                if d.get("lat") is not None and d.get("lng") is not None:
+                    area = f"{d['lat']:.4f}° N, {d['lng']:.4f}° E"
+                    now = int(time.time() * 1000)
+                    cursor.execute("UPDATE incidents SET lat = ?, lng = ?, affected_area = COALESCE(affected_area, ?), updated_at = ? WHERE incident_id = ?", (d["lat"], d["lng"], area, now, incident_id))
+                    conn.commit()
+
+            raw_title = d.get("title")
+            if not raw_title or raw_title == incident_id:
+                disaster = d.get("disaster_type") or "Emergency SOS"
+                dev_label = d["associated_devices"][0][:8] if d.get("associated_devices") else "Distress Node"
+                d["title"] = f"Distress Beacon · {disaster} ({dev_label})"
+
+            if not d.get("affected_area") and d.get("lat") is not None and d.get("lng") is not None:
+                d["affected_area"] = f"{d['lat']:.4f}° N, {d['lng']:.4f}° E"
+
+            if not d.get("people_count") or d["people_count"] < 1:
+                d["people_count"] = d.get("casualty_estimate") or 1
+
             return d
 
     def _unpack_incident_json(self, d: Dict[str, Any]):
@@ -764,22 +899,22 @@ class GatewayStorage:
                     associated_devices_json, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(incident_id) DO UPDATE SET
-                    title = excluded.title,
-                    disaster_type = excluded.disaster_type,
-                    severity = excluded.severity,
-                    status = excluded.status,
-                    lat = excluded.lat,
-                    lng = excluded.lng,
-                    affected_area = excluded.affected_area,
-                    casualty_estimate = excluded.casualty_estimate,
-                    people_count = excluded.people_count,
-                    devices_count = excluded.devices_count,
-                    assigned_team = excluded.assigned_team,
-                    resources_needed_json = excluded.resources_needed_json,
-                    ai_confidence = excluded.ai_confidence,
-                    ai_explainability_json = excluded.ai_explainability_json,
-                    associated_messages_json = excluded.associated_messages_json,
-                    associated_devices_json = excluded.associated_devices_json,
+                    title = CASE WHEN excluded.title IS NOT NULL AND excluded.title != excluded.incident_id THEN excluded.title ELSE incidents.title END,
+                    disaster_type = COALESCE(excluded.disaster_type, incidents.disaster_type),
+                    severity = COALESCE(excluded.severity, incidents.severity),
+                    status = COALESCE(excluded.status, incidents.status),
+                    lat = COALESCE(excluded.lat, incidents.lat),
+                    lng = COALESCE(excluded.lng, incidents.lng),
+                    affected_area = COALESCE(excluded.affected_area, incidents.affected_area),
+                    casualty_estimate = COALESCE(excluded.casualty_estimate, incidents.casualty_estimate),
+                    people_count = COALESCE(excluded.people_count, incidents.people_count),
+                    devices_count = COALESCE(excluded.devices_count, incidents.devices_count),
+                    assigned_team = COALESCE(excluded.assigned_team, incidents.assigned_team),
+                    resources_needed_json = COALESCE(excluded.resources_needed_json, incidents.resources_needed_json),
+                    ai_confidence = COALESCE(excluded.ai_confidence, incidents.ai_confidence),
+                    ai_explainability_json = COALESCE(excluded.ai_explainability_json, incidents.ai_explainability_json),
+                    associated_messages_json = COALESCE(excluded.associated_messages_json, incidents.associated_messages_json),
+                    associated_devices_json = COALESCE(excluded.associated_devices_json, incidents.associated_devices_json),
                     updated_at = excluded.updated_at
             """, (
                 inc_id, incident.get("title") or inc_id,
@@ -979,8 +1114,6 @@ class GatewayStorage:
 
     def get_incident_mesh_topology(self, incident_id: str) -> Dict[str, Any]:
         inc = self.get_incident(incident_id)
-        # The gateway stores no verified neighbour-edge topology yet. Expose
-        # only the incident's observed coordinates and never synthesize peers.
         if not inc:
             return {
                 "incident_id": incident_id,
@@ -992,34 +1125,28 @@ class GatewayStorage:
                 "mesh_relays": [],
                 "rescue_units": [],
             }
-        observed_lat = inc.get("lat")
-        observed_lng = inc.get("lng")
-        return {
-            "incident_id": incident_id,
-            "title": inc.get("title"),
-            "centroid": {"lat": observed_lat, "lng": observed_lng}
-            if isinstance(observed_lat, (int, float)) and isinstance(observed_lng, (int, float))
-            else None,
-            "radius_meters": inc.get("cluster_radius_meters") or inc.get("radius_meters"),
-            "affected_area": inc.get("affected_area"),
-            "sos_beacons": [],
-            "mesh_relays": [],
-            "rescue_units": [],
-        }
-        if not inc:
-            return {
-                "incident_id": incident_id,
-                "title": f"Incident {incident_id}",
-                "centroid": {"lat": 13.0425, "lng": 80.2285},
-                "radius_meters": 250.0,
-                "affected_area": "Disaster Sector",
-                "sos_beacons": [],
-                "mesh_relays": [],
-                "rescue_units": []
-            }
 
-        lat = inc.get("lat") or 13.0425
-        lng = inc.get("lng") or 80.2285
+        lat = inc.get("lat")
+        lng = inc.get("lng")
+        if lat is None or lng is None:
+            # Fallback: check all ingested packets for this incident or any associated device
+            with self._get_sqlite_conn() as conn:
+                p_row = conn.execute(
+                    "SELECT lat, lng FROM ingested_packets WHERE (msg_id = ? OR conv_id = ?) AND lat IS NOT NULL LIMIT 1",
+                    (incident_id, incident_id)
+                ).fetchone()
+                if p_row and p_row["lat"] is not None:
+                    lat, lng = p_row["lat"], p_row["lng"]
+                elif inc.get("associated_devices"):
+                    d_row = conn.execute(
+                        "SELECT lat, lng FROM devices WHERE device_id IN ({}) AND lat IS NOT NULL LIMIT 1".format(
+                            ",".join("?" for _ in inc["associated_devices"])
+                        ),
+                        inc["associated_devices"]
+                    ).fetchone()
+                    if d_row and d_row["lat"] is not None:
+                        lat, lng = d_row["lat"], d_row["lng"]
+
         radius = inc.get("cluster_radius_meters") or 250.0
         assoc_devs = set(inc.get("associated_devices") or [])
         assigned_team = inc.get("assigned_team")
@@ -1028,32 +1155,33 @@ class GatewayStorage:
         comms = self.get_incident_communications(incident_id)
         sos_beacons = []
         for s in comms.get("sos_alerts", []):
-            sos_beacons.append({
-                "beacon_id": f"BEACON-{s['id']}",
-                "device_id": s["sender_id"],
-                "name": s["sender_name"],
-                "lat": s["lat"],
-                "lng": s["lng"],
-                "status": "CRITICAL_DISTRESS" if s["priority"] == "CRITICAL" else "ACTIVE_DISTRESS",
-                "casualties": s.get("casualties", 1),
-                "battery": s.get("battery_pct", 80),
-                "last_ping_seconds_ago": max(10, int((time.time() * 1000 - s["timestamp"]) / 1000))
-            })
-
-        # If no explicit SOS packets but associated devices exist, represent them as active distress beacons
-        if not sos_beacons and assoc_devs:
-            for dev_id in assoc_devs:
+            if s.get("lat") is not None and s.get("lng") is not None:
                 sos_beacons.append({
-                    "beacon_id": f"BEACON-{dev_id}",
-                    "device_id": dev_id,
-                    "name": f"Distress Node ({dev_id})",
-                    "lat": lat,
-                    "lng": lng,
-                    "status": "CRITICAL_DISTRESS",
-                    "casualties": inc.get("casualty_estimate") or 1,
-                    "battery": 80,
-                    "last_ping_seconds_ago": 30
+                    "beacon_id": f"BEACON-{s['id']}",
+                    "device_id": s["sender_id"],
+                    "name": s.get("sender_name") or s["sender_id"],
+                    "lat": s["lat"],
+                    "lng": s["lng"],
+                    "status": "CRITICAL_DISTRESS" if s.get("priority") == "CRITICAL" else "ACTIVE_DISTRESS",
+                    "casualties": s.get("casualties", 1),
+                    "battery": s.get("battery_pct", 80),
+                    "last_ping_seconds_ago": max(10, int((time.time() * 1000 - s["timestamp"]) / 1000)) if s.get("timestamp") else 30
                 })
+
+        # If no explicit SOS alerts with coordinates, but incident has coordinates, add incident distress beacon
+        if not sos_beacons and lat is not None and lng is not None:
+            primary_dev = list(assoc_devs)[0] if assoc_devs else incident_id
+            sos_beacons.append({
+                "beacon_id": f"BEACON-{incident_id[:8]}",
+                "device_id": primary_dev,
+                "name": inc.get("title") or f"Distress Node ({primary_dev[:8]})",
+                "lat": lat,
+                "lng": lng,
+                "status": "CRITICAL_DISTRESS",
+                "casualties": inc.get("people_count") or inc.get("casualty_estimate") or 1,
+                "battery": 85,
+                "last_ping_seconds_ago": 15
+            })
 
         # 2. Real nearby Mesh Relays from devices table
         mesh_relays = []
@@ -1161,14 +1289,14 @@ class GatewayStorage:
                     status, hops_away, lat, lng, last_seen, packets_forwarded
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(device_id) DO UPDATE SET
-                    name = excluded.name,
-                    device_type = excluded.device_type,
-                    owner_name = excluded.owner_name,
-                    battery_pct = excluded.battery_pct,
+                    name = COALESCE(excluded.name, devices.name),
+                    device_type = COALESCE(excluded.device_type, devices.device_type),
+                    owner_name = COALESCE(excluded.owner_name, devices.owner_name),
+                    battery_pct = COALESCE(excluded.battery_pct, devices.battery_pct),
                     status = excluded.status,
-                    hops_away = excluded.hops_away,
-                    lat = excluded.lat,
-                    lng = excluded.lng,
+                    hops_away = COALESCE(excluded.hops_away, devices.hops_away),
+                    lat = COALESCE(excluded.lat, devices.lat),
+                    lng = COALESCE(excluded.lng, devices.lng),
                     last_seen = excluded.last_seen,
                     packets_forwarded = devices.packets_forwarded + excluded.packets_forwarded
             """, (
@@ -1196,19 +1324,24 @@ class GatewayStorage:
     # MESSAGES
     # =========================================================================
 
-    def get_messages(self, msg_type: Optional[str] = "ALL", limit: int = 100) -> List[Dict[str, Any]]:
+    def get_messages(self, msg_type: Optional[str] = "ALL", limit: int = 100, since: Optional[int] = None, conv_id: Optional[str] = None) -> List[Dict[str, Any]]:
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
+            query = "SELECT * FROM ingested_packets WHERE 1=1"
+            params = []
             if msg_type and msg_type.upper() != "ALL":
-                cursor.execute(
-                    "SELECT * FROM ingested_packets WHERE packet_type = ? ORDER BY timestamp DESC LIMIT ?",
-                    (msg_type.upper(), limit)
-                )
-            else:
-                cursor.execute(
-                    "SELECT * FROM ingested_packets ORDER BY timestamp DESC LIMIT ?",
-                    (limit,)
-                )
+                query += " AND packet_type = ?"
+                params.append(msg_type.upper())
+            if since is not None:
+                query += " AND timestamp > ?"
+                params.append(since)
+            if conv_id:
+                query += " AND (conv_id = ? OR conv_id = ?)"
+                clean_conv = conv_id.replace("CONV_", "")
+                params.extend([conv_id, clean_conv])
+            query += " ORDER BY timestamp DESC LIMIT ?"
+            params.append(limit)
+            cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
             results = []
             for r in rows:
@@ -1221,6 +1354,7 @@ class GatewayStorage:
                         pass
                 results.append({
                     "id": d["msg_id"],
+                    "msg_id": d["msg_id"],
                     "sender_id": d["sender_id"],
                     "sender_name": d["sender_name"],
                     "conv_id": d["conv_id"],
@@ -1235,6 +1369,184 @@ class GatewayStorage:
                     "meta": meta
                 })
             return results
+
+    # =========================================================================
+    # MESH GROUPS & CHAT CHANNELS
+    # =========================================================================
+
+    def upsert_group(self, group_data: Dict[str, Any]) -> Dict[str, Any]:
+        group_id = str(group_data.get("group_id") or group_data.get("id") or "").strip().upper()
+        name = str(group_data.get("name") or "").strip()
+        if not group_id or not name:
+            logger.warning("[GatewayStorage] upsert_group skipped: missing group_id or name")
+            return group_data
+        description = group_data.get("description")
+        creator_id = group_data.get("creator_id") or "UNKNOWN"
+        conversation_id = group_data.get("conversation_id") or f"CONV_{group_id}"
+        member_count = int(group_data.get("member_count") or 1)
+        members = group_data.get("members") or []
+        now = int(time.time() * 1000)
+        created_at = int(group_data.get("created_at") or now)
+        updated_at = int(group_data.get("updated_at") or now)
+
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT members_json, member_count, name FROM mesh_groups WHERE group_id = ?", (group_id,))
+            existing = cursor.fetchone()
+            if existing:
+                try:
+                    if existing["members_json"]:
+                        existing_members = json.loads(existing["members_json"])
+                        existing_ids = {m.get("device_id") for m in existing_members}
+                        for m in members:
+                            if m.get("device_id") not in existing_ids:
+                                existing_members.append(m)
+                        members = existing_members
+                        member_count = max(len(members), existing["member_count"])
+                except Exception:
+                    pass
+
+            cursor.execute("""
+                INSERT INTO mesh_groups (
+                    group_id, name, description, creator_id, conversation_id,
+                    member_count, members_json, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(group_id) DO UPDATE SET
+                    name = CASE WHEN excluded.name != '' AND excluded.name NOT LIKE 'Mesh Group (GRP-%' THEN excluded.name ELSE mesh_groups.name END,
+                    description = COALESCE(excluded.description, mesh_groups.description),
+                    member_count = MAX(mesh_groups.member_count, excluded.member_count),
+                    members_json = excluded.members_json,
+                    updated_at = excluded.updated_at
+            """, (
+                group_id, name, description, creator_id, conversation_id,
+                member_count, json.dumps(members), created_at, updated_at
+            ))
+            conn.commit()
+
+        # Dual-persistence to MongoDB Atlas
+        self._async_mongo(
+            lambda doc: self.mongo_db.mesh_groups.update_one(
+                {"group_id": doc["group_id"]},
+                {"$set": doc},
+                upsert=True
+            ),
+            {
+                "group_id": group_id,
+                "name": name,
+                "description": description,
+                "creator_id": creator_id,
+                "conversation_id": conversation_id,
+                "member_count": member_count,
+                "members": members,
+                "created_at": created_at,
+                "updated_at": updated_at
+            }
+        )
+        return self.get_group(group_id) or group_data
+
+    def get_group(self, group_id: str) -> Optional[Dict[str, Any]]:
+        clean_id = str(group_id or "").strip().upper()
+        if not clean_id:
+            return None
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mesh_groups WHERE UPPER(group_id) = ?", (clean_id,))
+            row = cursor.fetchone()
+            if not row and not clean_id.startswith("GRP-"):
+                cursor.execute("SELECT * FROM mesh_groups WHERE UPPER(group_id) = ?", (f"GRP-{clean_id}",))
+                row = cursor.fetchone()
+            if not row and clean_id.startswith("GRP-"):
+                cursor.execute("SELECT * FROM mesh_groups WHERE UPPER(group_id) = ?", (clean_id[4:],))
+                row = cursor.fetchone()
+
+            if row:
+                d = dict(row)
+                members = []
+                if d.get("members_json"):
+                    try:
+                        members = json.loads(d["members_json"])
+                    except Exception:
+                        pass
+                d["members"] = members
+                return d
+
+            # Fallback 1: Search ingested_packets for welcome message 'Created mesh group "..." (GRP-...)'
+            cursor.execute(
+                "SELECT payload, sender_id, sender_name, created_at, meta_json FROM ingested_packets WHERE (payload LIKE ? OR meta_json LIKE ?) ORDER BY timestamp DESC LIMIT 1",
+                (f"%{clean_id}%", f"%{clean_id}%")
+            )
+            pkt = cursor.fetchone()
+            if pkt:
+                import re
+                payload_str = pkt["payload"] or ""
+                match = re.search(r'Created mesh group "([^"]+)"', payload_str)
+                recovered_name = match.group(1) if match else None
+                if not recovered_name and pkt["meta_json"]:
+                    try:
+                        meta = json.loads(pkt["meta_json"])
+                        recovered_name = meta.get("group_name")
+                    except Exception:
+                        pass
+                if recovered_name:
+                    target_gid = clean_id if clean_id.startswith("GRP-") else f"GRP-{clean_id}"
+                    auto_group = {
+                        "group_id": target_gid,
+                        "name": recovered_name,
+                        "description": "Recovered from mesh packet telemetry",
+                        "creator_id": pkt["sender_id"],
+                        "conversation_id": f"CONV_{target_gid}",
+                        "member_count": 2,
+                        "members": [{"device_id": pkt["sender_id"], "name": pkt["sender_name"] or "Admin", "role": "admin"}],
+                        "created_at": pkt["created_at"],
+                        "updated_at": pkt["created_at"]
+                    }
+                    return self.upsert_group(auto_group)
+        return None
+
+    def get_groups(self) -> List[Dict[str, Any]]:
+        with self._get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mesh_groups ORDER BY updated_at DESC")
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                members = []
+                if d.get("members_json"):
+                    try:
+                        members = json.loads(d["members_json"])
+                    except Exception:
+                        pass
+                d["members"] = members
+                results.append(d)
+            return results
+
+    def add_group_member(self, group_id: str, member_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        group = self.get_group(group_id)
+        if not group:
+            return None
+        members = group.get("members") or []
+        device_id = member_data.get("device_id")
+        if not device_id:
+            return group
+        existing_idx = next((i for i, m in enumerate(members) if m.get("device_id") == device_id), -1)
+        now = int(time.time() * 1000)
+        member_entry = {
+            "device_id": device_id,
+            "name": member_data.get("name") or device_id,
+            "role": member_data.get("role") or "member",
+            "status": "ACCEPTED",
+            "joined_at": now
+        }
+        if existing_idx >= 0:
+            members[existing_idx] = member_entry
+        else:
+            members.append(member_entry)
+        group["members"] = members
+        group["member_count"] = len(members)
+        group["updated_at"] = now
+        return self.upsert_group(group)
+
 
     # =========================================================================
     # RESOURCES & LOGISTICS

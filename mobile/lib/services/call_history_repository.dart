@@ -21,6 +21,9 @@ class CallHistoryRepository {
       durationSeconds: session.connectedAt == null
           ? 0
           : endedAt.difference(startedAt).inSeconds.clamp(0, 86400),
+      recordingState: session.recordingState,
+      recordingLocalPath: session.recordingLocalPath,
+      recordingRemotePath: session.recordingRemotePath,
     );
     await AppDatabase.instance.insert('call_history', entry.toMap());
   }

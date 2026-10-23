@@ -5,6 +5,7 @@ import '../models/user_profile.dart';
 import '../database/app_database.dart';
 import '../database/repositories/profile_repository.dart';
 import '../services/device_identity_service.dart';
+import '../services/network/network_state_service.dart';
 import '../services/user_auth_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
@@ -234,6 +235,30 @@ class ProfileProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('[ProfileProvider] Error updating profile in SQLite: $e');
     }
+  }
+
+  /// Fetches cloud profile and available data using IMEI as unique primary key when network is available.
+  Future<bool> fetchCloudProfileByImei({String? imei}) async {
+    final targetImei = imei ??
+        (DeviceIdentityService.instance.consentedImeiId ??
+            DeviceIdentityService.instance.deviceId);
+
+    final success =
+        await NetworkStateService.instance.fetchAndSyncCloudDataByImei(
+      imei: targetImei,
+    );
+
+    if (success) {
+      final dbProfile = await AppDatabase.instance.getUserProfile();
+      if (dbProfile != null && dbProfile.isRegistered) {
+        _profile = dbProfile;
+        _isRegistered = true;
+        final prefs = await SharedPreferences.getInstance();
+        await _mirrorProfileToPrefs(prefs, dbProfile);
+        notifyListeners();
+      }
+    }
+    return success;
   }
 
   Future<void> _mirrorProfileToPrefs(

@@ -66,6 +66,10 @@ class IncidentDispatchService {
     required String category,
     required int peopleCount,
     String? notes,
+    DeviceLocationFix? initialFix,
+    double? latitude,
+    double? longitude,
+    double? accuracy,
   }) async {
     final cleanedCategory = category.trim().isEmpty ? 'Other' : category.trim();
     final normalizedPeopleCount = peopleCount < 1 ? 1 : peopleCount;
@@ -73,12 +77,102 @@ class IncidentDispatchService {
     final now = DateTime.now();
 
     await _identity.initialize();
-    final locationPermission = await Permission.location.request();
-    DeviceLocationFix? fix;
-    if (locationPermission.isGranted || locationPermission.isLimited) {
-      await _locationService.initialize();
-      fix = await _locationService.refreshLocation(forceFresh: true);
+
+    // Acquire or fallback location fix using multi-tier hierarchy
+    DeviceLocationFix? fix = initialFix;
+    if (fix == null && latitude != null && longitude != null) {
+      fix = DeviceLocationFix.create(
+        latitude: latitude,
+        longitude: longitude,
+        horizontalAccuracyMeters: accuracy ?? 15.0,
+        timestamp: now.millisecondsSinceEpoch,
+        source: LocationFixSource.fusedGps,
+      );
     }
+
+    try {
+      final permStatus = await Permission.location.status;
+      if (!permStatus.isGranted && !permStatus.isLimited) {
+        await Permission.location.request();
+      }
+    } catch (_) {}
+
+    await _locationService.initialize();
+
+    // 1. Current fix from location service
+    fix ??= _locationService.currentLocation ??
+        _locationService.currentFix ??
+        _locationService.lastKnownPosition;
+
+    // 2. Proactive refresh with fast timeout
+    if (fix == null) {
+      try {
+        fix = await _locationService
+            .refreshLocation(forceFresh: true)
+            .timeout(const Duration(milliseconds: 2000), onTimeout: () => null);
+      } catch (_) {}
+    }
+
+    // 3. Fallback to location service getters
+    fix ??= _locationService.currentLocation ??
+        _locationService.currentFix ??
+        _locationService.lastKnownPosition;
+
+    // 4. Fallback to persisted location_history table in SQLite
+    if (fix == null) {
+      try {
+        final recentLocs = await _database.query(
+          'location_history',
+          orderBy: 'timestamp DESC',
+          limit: 1,
+        );
+        if (recentLocs.isNotEmpty) {
+          final r = recentLocs.first;
+          final lat = (r['latitude'] as num?)?.toDouble();
+          final lng = (r['longitude'] as num?)?.toDouble();
+          if (lat != null && lng != null) {
+            fix = DeviceLocationFix.create(
+              latitude: lat,
+              longitude: lng,
+              horizontalAccuracyMeters:
+                  (r['horizontal_accuracy'] as num?)?.toDouble() ?? 30.0,
+              timestamp: r['timestamp'] as int? ?? now.millisecondsSinceEpoch,
+              source: LocationFixSource.lastKnown,
+            );
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 5. Fallback to previous SOS events in SQLite
+    if (fix == null) {
+      try {
+        final recentSos = await _database.query(
+          'sos_events',
+          where: 'latitude IS NOT NULL AND longitude IS NOT NULL',
+          orderBy: 'created_at DESC',
+          limit: 1,
+        );
+        if (recentSos.isNotEmpty) {
+          final r = recentSos.first;
+          final lat = (r['latitude'] as num?)?.toDouble();
+          final lng = (r['longitude'] as num?)?.toDouble();
+          if (lat != null && lng != null) {
+            fix = DeviceLocationFix.create(
+              latitude: lat,
+              longitude: lng,
+              horizontalAccuracyMeters:
+                  (r['location_accuracy'] as num?)?.toDouble() ?? 50.0,
+              timestamp: r['created_at'] as int? ?? now.millisecondsSinceEpoch,
+              source: LocationFixSource.lastKnown,
+            );
+          }
+        }
+      } catch (_) {}
+    }
+
+
+
     final telemetry = await _telemetry.getTelemetry();
     final profile = await _database.getUserProfile();
     final senderName = _resolveSenderName(profile, _identity.displayName);
@@ -111,6 +205,8 @@ class IncidentDispatchService {
       'sender_name': senderName,
       'latitude': fix?.latitude,
       'longitude': fix?.longitude,
+      'lat': fix?.latitude,
+      'lng': fix?.longitude,
       'category': cleanedCategory,
       'people_count': normalizedPeopleCount,
       'notes': cleanedNotes.isEmpty ? null : cleanedNotes,
@@ -157,6 +253,8 @@ class IncidentDispatchService {
       'urgency': 'CRITICAL',
       'latitude': fix?.latitude,
       'longitude': fix?.longitude,
+      'lat': fix?.latitude,
+      'lng': fix?.longitude,
       'accuracy_m': fix?.horizontalAccuracyMeters,
       'location_timestamp': fix?.timestamp,
       'location_source': fix?.source,

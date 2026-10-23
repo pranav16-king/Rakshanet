@@ -134,6 +134,21 @@ class _NearbyCallView extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: theme.textMuted, fontSize: 13),
               ),
+              if (isActive &&
+                  session.recordingState == CallRecordingState.consentRequested)
+                _RecordingConsentCard(
+                  peerName: session.peerName,
+                  onAllow: calls.approveRecordingRequest,
+                  onDecline: calls.declineRecordingRequest,
+                ),
+              if (isActive &&
+                  (session.recordingState == CallRecordingState.active ||
+                      session.isPeerRecording))
+                _RecordingActiveNotice(
+                  isLocalRecording:
+                      session.recordingState == CallRecordingState.active,
+                  peerName: session.peerName,
+                ),
               const Spacer(),
               if (isIncoming) ...[
                 Row(
@@ -167,8 +182,10 @@ class _NearbyCallView extends StatelessWidget {
                   ],
                 ),
               ] else if (isActive) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                Wrap(
+                  alignment: WrapAlignment.spaceEvenly,
+                  spacing: 14,
+                  runSpacing: 14,
                   children: [
                     _RoundControl(
                       icon: session.isMuted
@@ -185,6 +202,25 @@ class _NearbyCallView extends StatelessWidget {
                       label: session.isSpeakerOn ? 'Speaker' : 'Earpiece',
                       active: session.isSpeakerOn,
                       onPressed: () => calls.toggleSpeaker(),
+                    ),
+                    _RoundControl(
+                      icon: session.recordingState == CallRecordingState.active
+                          ? Icons.stop_rounded
+                          : Icons.fiber_manual_record_rounded,
+                      label: _recordingLabel(session),
+                      active:
+                          session.recordingState == CallRecordingState.active,
+                      danger:
+                          session.recordingState == CallRecordingState.active,
+                      onPressed:
+                          session.recordingState ==
+                                  CallRecordingState.requestingConsent ||
+                              session.recordingState ==
+                                  CallRecordingState.consentRequested ||
+                              session.recordingState ==
+                                  CallRecordingState.recorded
+                          ? null
+                          : calls.requestOrStopRecording,
                     ),
                     _RoundControl(
                       icon: Icons.call_end_rounded,
@@ -265,6 +301,25 @@ class _NearbyCallView extends StatelessWidget {
     }
   }
 
+  String _recordingLabel(NearbyCallSession session) {
+    switch (session.recordingState) {
+      case CallRecordingState.active:
+        return 'Stop rec';
+      case CallRecordingState.requestingConsent:
+        return 'Asking…';
+      case CallRecordingState.consentRequested:
+        return 'Review';
+      case CallRecordingState.recorded:
+        return 'Saved';
+      case CallRecordingState.declined:
+        return 'Record';
+      case CallRecordingState.unavailable:
+        return 'Retry';
+      case CallRecordingState.none:
+        return 'Record';
+    }
+  }
+
   String _initials(String name) {
     final words = name.trim().split(RegExp(r'\s+'));
     if (words.isEmpty || words.first.isEmpty) return '?';
@@ -319,7 +374,7 @@ class _RoundControl extends StatelessWidget {
   final String label;
   final bool active;
   final bool danger;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -330,6 +385,7 @@ class _RoundControl extends StatelessWidget {
     final iconColor = danger || active ? Colors.white : theme.text;
     return Semantics(
       button: true,
+      enabled: onPressed != null,
       label: label,
       child: Column(
         children: [
@@ -349,6 +405,111 @@ class _RoundControl extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(label, style: TextStyle(color: theme.textMuted, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecordingConsentCard extends StatelessWidget {
+  const _RecordingConsentCard({
+    required this.peerName,
+    required this.onAllow,
+    required this.onDecline,
+  });
+
+  final String peerName;
+  final VoidCallback onAllow;
+  final VoidCallback onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTokens.sosRed.withValues(alpha: 0.12),
+        border: Border.all(color: AppTokens.sosRed.withValues(alpha: 0.7)),
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$peerName wants to record this call',
+            style: TextStyle(color: theme.text, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'If you allow it, audio is saved only on their phone until they stop the recording.',
+            style: TextStyle(color: theme.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onDecline,
+                  child: const Text('Do not allow'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTokens.signalYellow,
+                    foregroundColor: AppTokens.nightNavy,
+                  ),
+                  onPressed: onAllow,
+                  child: const Text('Allow recording'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecordingActiveNotice extends StatelessWidget {
+  const _RecordingActiveNotice({
+    required this.isLocalRecording,
+    required this.peerName,
+  });
+
+  final bool isLocalRecording;
+  final String peerName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+    final message = isLocalRecording
+        ? 'Recording on this phone • $peerName approved'
+        : '$peerName is recording on their phone';
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: AppTokens.sosRed.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.fiber_manual_record_rounded,
+            color: AppTokens.sosRed,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: theme.text, fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );

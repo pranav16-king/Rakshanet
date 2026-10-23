@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../config/app_config.dart';
 import '../database/app_database.dart';
 import '../models/chat_group.dart';
 import '../models/chat_message.dart';
@@ -313,6 +316,9 @@ class GroupService extends ChangeNotifier {
         _meshEngine.queueOutboxMessage(inviteEnvelope);
       }
 
+      // 7. Synchronize group to backend gateway when internet is accessible
+      unawaited(_syncGroupToGateway(group, myName));
+
       await loadGroups();
       selectGroup(groupId);
       await ChatService().reloadMessages();
@@ -432,6 +438,9 @@ class GroupService extends ChangeNotifier {
         category: 'Group',
       );
       await _dbService.insertMessage(joinMsg.toDbMap());
+
+      // 7. Register join on gateway if internet is available
+      unawaited(_notifyGatewayJoin(invite.groupId, myDeviceId, myName));
     }
 
     // 7. Send response packet over the mesh back to the inviter
@@ -566,25 +575,120 @@ class GroupService extends ChangeNotifier {
     );
   }
 
-  /// Join a group directly using a Group Code / Name
+  /// Join a group directly using a Group Code / Name.
+  /// Resolves the actual group name across local database, invitations,
+  /// ingested welcome packets, and the FastAPI cloud gateway.
   Future<ChatGroup> joinGroupByCode({
     required String groupCodeOrName,
     String? inviterName,
   }) async {
     final clean = groupCodeOrName.trim();
     final now = DateTime.now();
-    final isCode = clean.toUpperCase().startsWith('GRP-');
-    final groupId = isCode
-        ? clean.toUpperCase()
-        : 'GRP-${clean.hashCode.abs().toString().padLeft(6, '0').substring(0, 6)}';
-    final groupName = isCode ? 'Mesh Group ($groupId)' : clean;
+    final upper = clean.toUpperCase();
+    final isPrefixedCode = upper.startsWith('GRP-');
+    final isAlphanumericCode =
+        !clean.contains(' ') && clean.length >= 4 && clean.length <= 16;
+    final String groupId = isPrefixedCode
+        ? upper
+        : (isAlphanumericCode
+            ? 'GRP-$upper'
+            : 'GRP-${clean.hashCode.abs().toString().padLeft(6, '0').substring(0, 6)}');
+
+    String resolvedGroupName = isPrefixedCode || isAlphanumericCode ? '' : clean;
+    String resolvedInviterId = 'MESH-BEACON';
+    String resolvedInviterName = inviterName ?? 'Mesh Relay Coordinator';
+
+    // 1. Check local groups table
+    final existingGroupRows = await AppDatabase.instance.query(
+      'groups',
+      where: 'id = ? OR id = ? OR LOWER(name) = ?',
+      whereArgs: [groupId, clean, clean.toLowerCase()],
+      limit: 1,
+    );
+    if (existingGroupRows.isNotEmpty) {
+      final row = existingGroupRows.first;
+      final existingName = row['name']?.toString() ?? '';
+      if (existingName.isNotEmpty && !existingName.startsWith('Mesh Group (GRP-')) {
+        resolvedGroupName = existingName;
+      }
+      resolvedInviterId = row['creator_id']?.toString() ?? resolvedInviterId;
+    }
+
+    // 2. Check local group_invites table
+    if (resolvedGroupName.isEmpty) {
+      final existingInviteRows = await AppDatabase.instance.query(
+        'group_invites',
+        where: 'group_id = ? OR group_id = ? OR LOWER(group_name) = ?',
+        whereArgs: [groupId, clean, clean.toLowerCase()],
+        limit: 1,
+      );
+      if (existingInviteRows.isNotEmpty) {
+        final row = existingInviteRows.first;
+        final inviteName = row['group_name']?.toString() ?? '';
+        if (inviteName.isNotEmpty && !inviteName.startsWith('Mesh Group (GRP-')) {
+          resolvedGroupName = inviteName;
+        }
+        resolvedInviterId = row['inviter_id']?.toString() ?? resolvedInviterId;
+        resolvedInviterName =
+            row['inviter_name']?.toString() ?? resolvedInviterName;
+      }
+    }
+
+    // 3. Check local messages table for welcome message matching group id or code
+    if (resolvedGroupName.isEmpty) {
+      final msgRows = await AppDatabase.instance.query(
+        'messages',
+        where: 'conversation_id = ? OR conversation_id = ? OR content LIKE ?',
+        whereArgs: ['CONV_$groupId', groupId, '%$groupId%'],
+        orderBy: 'timestamp DESC',
+        limit: 5,
+      );
+      for (final m in msgRows) {
+        final content = m['content']?.toString() ?? '';
+        final match =
+            RegExp(r'Created mesh group "([^"]+)"').firstMatch(content);
+        if (match != null && match.group(1) != null) {
+          resolvedGroupName = match.group(1)!;
+          resolvedInviterName =
+              m['sender_name']?.toString() ?? resolvedInviterName;
+          resolvedInviterId = m['sender_id']?.toString() ?? resolvedInviterId;
+          break;
+        }
+      }
+    }
+
+    // 4. Query FastAPI gateway /api/v1/groups/{groupId}
+    if (resolvedGroupName.isEmpty) {
+      try {
+        final res = await http
+            .get(
+              Uri.parse(AppConfig.groupByIdUrl(groupId)),
+            )
+            .timeout(const Duration(seconds: 4));
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          final gData = jsonDecode(res.body);
+          if (gData is Map && gData['name'] != null) {
+            resolvedGroupName = gData['name'].toString();
+            resolvedInviterId =
+                gData['creator_id']?.toString() ?? resolvedInviterId;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 5. Final fallback if name couldn't be resolved yet
+    if (resolvedGroupName.isEmpty) {
+      resolvedGroupName = isPrefixedCode || isAlphanumericCode
+          ? 'Mesh Group ($groupId)'
+          : clean;
+    }
 
     final syntheticInvite = GroupInvite(
       id: 'INV-CODE-${groupId.hashCode.abs()}',
       groupId: groupId,
-      groupName: groupName,
-      inviterId: 'MESH-BEACON',
-      inviterName: inviterName ?? 'Mesh Relay Coordinator',
+      groupName: resolvedGroupName,
+      inviterId: resolvedInviterId,
+      inviterName: resolvedInviterName,
       inviteeDeviceId: DatabaseService.myDeviceId,
       status: GroupMemberStatus.pending,
       sentAt: now,
@@ -597,6 +701,58 @@ class GroupService extends ChangeNotifier {
     );
     await respondToInvite(syntheticInvite, true);
     return _groups.firstWhere((g) => g.id == groupId);
+  }
+
+  Future<void> _syncGroupToGateway(ChatGroup group, String myName) async {
+    try {
+      final res = await http
+          .post(
+            Uri.parse(AppConfig.groupsUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'group_id': group.id,
+              'name': group.name,
+              'description': group.description,
+              'creator_id': group.creatorId,
+              'conversation_id': group.conversationId,
+              'member_count': group.memberCount,
+              'members': [
+                {
+                  'device_id': group.creatorId,
+                  'name': myName,
+                  'role': 'admin',
+                  'status': 'ACCEPTED',
+                }
+              ]
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        debugPrint('[GroupService] Synced group ${group.id} to gateway');
+      }
+    } catch (e) {
+      debugPrint('[GroupService] Notice on syncGroupToGateway: $e');
+    }
+  }
+
+  Future<void> _notifyGatewayJoin(
+    String groupId,
+    String deviceId,
+    String name,
+  ) async {
+    try {
+      await http
+          .post(
+            Uri.parse(AppConfig.groupJoinUrl(groupId)),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'device_id': deviceId,
+              'name': name,
+              'role': 'member',
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
   /// Creates/discovers a new incoming group invitation so the user can test

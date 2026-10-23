@@ -255,7 +255,9 @@ class UserAuthService extends ChangeNotifier {
   Future<UserProfile?> _fetchFromCloud(String key) async {
     try {
       final uri = Uri.parse(
-        '$_baseUrl/api/v1/users/by-email?email=${Uri.encodeComponent(key)}',
+        !key.contains('@')
+            ? '$_baseUrl/api/v1/users/imei/$key'
+            : '$_baseUrl/api/v1/users/by-email?email=${Uri.encodeComponent(key)}',
       );
       final response = await HttpClient()
           .getUrl(uri)

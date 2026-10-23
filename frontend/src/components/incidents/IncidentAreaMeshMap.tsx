@@ -65,16 +65,13 @@ export const IncidentAreaMeshMap: React.FC<IncidentAreaMeshMapProps> = ({
     street: '&copy; OpenStreetMap contributors',
   };
 
-  const lat = incident.coordinates?.lat ?? topology?.centroid?.lat;
-  const lng = incident.coordinates?.lng ?? topology?.centroid?.lng;
-  const radius = incident.clusterRadiusMeters ?? topology?.radius_meters;
-
   const beacons = useMemo(() => topology?.sos_beacons || [], [topology]);
-
-
   const relays = useMemo(() => topology?.mesh_relays || [], [topology]);
-
   const rescueUnits = useMemo(() => topology?.rescue_units || [], [topology]);
+
+  const lat = incident.coordinates?.lat ?? topology?.centroid?.lat ?? beacons[0]?.lat ?? relays[0]?.lat;
+  const lng = incident.coordinates?.lng ?? topology?.centroid?.lng ?? beacons[0]?.lng ?? relays[0]?.lng;
+  const radius = incident.clusterRadiusMeters ?? topology?.radius_meters ?? 250;
 
 
 
@@ -252,7 +249,24 @@ export const IncidentAreaMeshMap: React.FC<IncidentAreaMeshMapProps> = ({
   ]);
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return <div className="flex items-center justify-center rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300" style={{ height }}>No consented incident coordinates are available for this map.</div>;
+    return (
+      <div
+        className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#CBD5E1] dark:border-[#26344F] p-8 text-center space-y-3 bg-[#F8FAFC]/50 dark:bg-[#0B1528]/50"
+        style={{ height }}
+      >
+        <div className="p-3 rounded-full bg-amber-500/10 text-amber-500">
+          <Radio className="w-8 h-8 animate-pulse" />
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+            Awaiting Geospatial Distress Lock
+          </h4>
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-sm">
+            This incident was ingested via multi-hop mesh radio packet without an embedded GNSS fix. Awaiting peer anchor multilateration or field unit sync.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const recenterMap = () => {

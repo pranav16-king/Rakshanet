@@ -10,32 +10,61 @@ function normalizeIncident(raw: any): Incident {
   const lng = numberOrUndefined(raw?.lng ?? raw?.centroid_lng ?? raw?.coordinates?.lng);
   const coordinates = lat !== undefined && lng !== undefined ? { lat, lng } : undefined;
   const id = String(raw?.incident_id ?? raw?.id ?? '');
-  const people = numberOrUndefined(raw?.affectedPeople ?? raw?.people_count ?? raw?.casualty_estimate ?? raw?.estimated_casualties);
-  const devices = numberOrUndefined(raw?.devicesCount ?? raw?.devices_count ?? raw?.total_devices);
+  const typeStr = textOrUndefined(raw?.type ?? raw?.disaster_type ?? raw?.category) ?? 'UNSPECIFIED';
+  const people = numberOrUndefined(raw?.affectedPeople ?? raw?.people_count ?? raw?.casualty_estimate ?? raw?.estimated_casualties) ?? (typeStr === 'SOS' || typeStr === 'EMERGENCY_SOS' ? 1 : undefined);
+  const devices = numberOrUndefined(raw?.devicesCount ?? raw?.devices_count ?? raw?.total_devices) ?? (Array.isArray(raw?.associated_devices) ? raw.associated_devices.length : 1);
+
+  const rawTitle = textOrUndefined(raw?.title);
+  const isUuid = (val?: string) => Boolean(val && (val.length === 36 && val.includes('-') || /^[0-9a-f-]{32,}$/i.test(val)));
+  const resolvedTitle = rawTitle && !isUuid(rawTitle) && rawTitle !== id
+    ? rawTitle
+    : `Distress Beacon · ${typeStr} (${id.slice(0, 8)})`;
+
+  const firstReportedTs = numberOrUndefined(raw?.firstReportedTimestamp ?? raw?.created_at);
+  const lastUpdateTs = numberOrUndefined(raw?.lastUpdateTimestamp ?? raw?.updated_at);
+
+  const formatDate = (ts?: number, fallbackStr?: string): string => {
+    if (fallbackStr && isNaN(Number(fallbackStr)) && fallbackStr !== 'Not reported') return fallbackStr;
+    const epoch = ts ?? (fallbackStr && !isNaN(Number(fallbackStr)) ? Number(fallbackStr) : undefined);
+    if (!epoch || epoch <= 0) return 'Not reported';
+    try {
+      const d = new Date(epoch);
+      return d.toLocaleString(undefined, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    } catch {
+      return fallbackStr || 'Not reported';
+    }
+  };
 
   return {
     ...raw,
     id,
     incident_id: id,
-    title: textOrUndefined(raw?.title) ?? id,
-    type: textOrUndefined(raw?.type ?? raw?.disaster_type ?? raw?.category) ?? 'UNSPECIFIED',
-    disaster_type: textOrUndefined(raw?.disaster_type ?? raw?.type ?? raw?.category) ?? 'UNSPECIFIED',
+    title: resolvedTitle,
+    type: typeStr,
+    disaster_type: typeStr,
     severity: String(raw?.severity ?? raw?.urgency ?? 'UNKNOWN').toUpperCase(),
     status: String(raw?.status ?? 'UNCLASSIFIED').toUpperCase(),
-    location: textOrUndefined(raw?.location ?? raw?.affected_area) ?? (coordinates ? `${lat!.toFixed(4)}°, ${lng!.toFixed(4)}°` : 'Location unavailable'),
+    location: textOrUndefined(raw?.location ?? raw?.affected_area) ?? (coordinates ? `${lat!.toFixed(4)}° N, ${lng!.toFixed(4)}° E` : 'Location unavailable'),
     coordinates,
     affectedAreaKm2: numberOrUndefined(raw?.affectedAreaKm2 ?? raw?.affected_area_km2),
-    clusterRadiusMeters: numberOrUndefined(raw?.clusterRadiusMeters ?? raw?.cluster_radius_meters ?? raw?.radius_meters),
+    clusterRadiusMeters: numberOrUndefined(raw?.clusterRadiusMeters ?? raw?.cluster_radius_meters ?? raw?.radius_meters) ?? 250,
     polygonCoords: Array.isArray(raw?.polygonCoords ?? raw?.polygon_coords) ? raw.polygonCoords ?? raw.polygon_coords : undefined,
     affectedPeople: people,
     people_count: people,
     devicesCount: devices,
     devices_count: devices,
     reportedBy: textOrUndefined(raw?.reportedBy ?? raw?.reported_by),
-    firstReported: textOrUndefined(raw?.firstReported ?? raw?.first_reported),
-    firstReportedTimestamp: numberOrUndefined(raw?.firstReportedTimestamp ?? raw?.created_at),
-    lastUpdate: textOrUndefined(raw?.lastUpdate ?? raw?.last_updated),
-    lastUpdateTimestamp: numberOrUndefined(raw?.lastUpdateTimestamp ?? raw?.updated_at),
+    firstReported: formatDate(firstReportedTs, textOrUndefined(raw?.firstReported ?? raw?.first_reported)),
+    firstReportedTimestamp: firstReportedTs,
+    lastUpdate: formatDate(lastUpdateTs, textOrUndefined(raw?.lastUpdate ?? raw?.last_updated)),
+    lastUpdateTimestamp: lastUpdateTs,
     assignedTeam: raw?.assigned_team ?? undefined,
     assignedUnitId: raw?.assignedUnitId ?? raw?.assigned_unit_id ?? undefined,
     description: textOrUndefined(raw?.description),

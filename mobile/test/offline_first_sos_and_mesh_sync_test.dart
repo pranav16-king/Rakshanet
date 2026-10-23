@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:rakshanet_mobile/config/app_config.dart';
 import 'package:rakshanet_mobile/database/app_database.dart';
@@ -19,6 +20,7 @@ void main() {
     late AppDatabase db;
 
     setUp(() async {
+      SharedPreferences.setMockInitialValues({});
       db = AppDatabase.createIsolated();
       await db.ensureInitialized();
     });
@@ -209,6 +211,107 @@ void main() {
         whereArgs: ['MISSING-AUTO-01'],
       );
       expect(missingRows.first['status'], equals('SYNCED'));
+    });
+
+    test('Uses IMEI as primary key to fetch cloud-available data and syncs into SQLite', () async {
+      const testImei = '358921098765432';
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path.contains('/api/v1/cloud-data/$testImei')) {
+          return http.Response(
+            jsonEncode({
+              'status': 'SUCCESS',
+              'imei': testImei,
+              'user_profile': {
+                'id': testImei,
+                'name': 'Cloud Verified User',
+                'email': 'cloud_user@rakshanet.org',
+                'role': 'Rescue Commander',
+                'phone': '+91-9876543210',
+                'bloodGroup': 'O+',
+                'medicalNotes': 'No known allergies',
+                'language': 'English',
+                'created_at': 1700000000,
+              },
+              'incidents': [
+                {
+                  'id': 'CLOUD-INC-001',
+                  'category': 'Cyclone Warning',
+                  'description': 'Coastal storm surge warning',
+                  'location': 'Zone B Coastal',
+                  'latitude': 13.05,
+                  'longitude': 80.25,
+                  'people_affected': 15,
+                  'severity': 'CRITICAL',
+                  'created_at': 1700000100,
+                }
+              ],
+              'missing_persons': [
+                {
+                  'id': 'CLOUD-MISSING-001',
+                  'name': 'Ananya Rao',
+                  'age': 22,
+                  'gender': 'Female',
+                  'description': 'Red backpack and spectacles',
+                  'last_seen_location': 'Shelter 3',
+                  'lat': 13.06,
+                  'lng': 80.26,
+                  'last_seen_time': 1700000200,
+                  'status': 'SEARCHING',
+                }
+              ],
+              'timestamp': 1700000300,
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('Not found', 404);
+      });
+
+      final service = NetworkStateService(
+        httpClient: mockClient,
+        database: db,
+        testModeNoDelays: true,
+      );
+
+      final success = await service.fetchAndSyncCloudDataByImei(
+        imei: testImei,
+        client: mockClient,
+      );
+
+      expect(success, isTrue);
+
+      // Verify UserProfile in SQLite
+      final profile = await AppDatabase.instance.getUserProfile();
+      expect(profile, isNotNull);
+      expect(profile!.id, equals(testImei));
+      expect(profile.name, equals('Cloud Verified User'));
+      expect(profile.email, equals('cloud_user@rakshanet.org'));
+      expect(profile.bloodGroup, equals('O+'));
+
+      // Verify Incident/EmergencyReport in SQLite
+      final reportRows = await AppDatabase.instance.query(
+        'emergency_reports',
+        where: 'id = ?',
+        whereArgs: ['CLOUD-INC-001'],
+      );
+      expect(reportRows.isNotEmpty, isTrue);
+      expect(
+        reportRows.first['description'],
+        equals('Coastal storm surge warning'),
+      );
+      expect(reportRows.first['people_affected'], equals(15));
+
+      // Verify MissingPerson in SQLite
+      final missingRows = await AppDatabase.instance.query(
+        'missing_persons',
+        where: 'id = ?',
+        whereArgs: ['CLOUD-MISSING-001'],
+      );
+      expect(missingRows.isNotEmpty, isTrue);
+      expect(missingRows.first['name'], equals('Ananya Rao'));
+      expect(missingRows.first['age'], equals(22));
     });
   });
 }

@@ -41,6 +41,7 @@ class DeviceIdentityService {
   bool get hasPrivacyConsent => _hasPrivacyConsent;
   String get displayName => _displayName;
   bool get isInitialized => _initialized;
+  String get uniqueImeiId => deviceId;
 
   Future<void> initialize() async {
     if (_initialized) return;

@@ -2,9 +2,26 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-/// Android-native PCM capture/playback bridge for an active Nearby call.
-/// Native code owns AudioRecord, AudioTrack, audio focus and the jitter buffer;
-/// Dart only moves bounded PCM frames onto the already-established local link.
+class CallRecordingFiles {
+  const CallRecordingFiles({this.localPath, this.remotePath});
+
+  final String? localPath;
+  final String? remotePath;
+
+  bool get hasFiles => localPath != null || remotePath != null;
+
+  static CallRecordingFiles? fromPlatform(Map<Object?, Object?>? value) {
+    if (value == null) return null;
+    final local = value['local_path']?.toString();
+    final remote = value['remote_path']?.toString();
+    if (local == null && remote == null) return null;
+    return CallRecordingFiles(localPath: local, remotePath: remote);
+  }
+}
+
+/// Android-native capture/playback bridge for an active Nearby call. Native
+/// code owns the G.711 conversion, audio focus, jitter buffer, and optional
+/// app-private recording; Dart only moves bounded call frames over Nearby.
 class OfflineAudioBridge {
   static const MethodChannel _methods = MethodChannel(
     'org.rakshanet/offline_audio',
@@ -47,10 +64,13 @@ class OfflineAudioBridge {
     }
   }
 
-  Future<void> playFrame(Uint8List pcm) async {
-    if (pcm.isEmpty) return;
+  Future<void> playFrame(Uint8List audio, {required String codec}) async {
+    if (audio.isEmpty) return;
     try {
-      await _methods.invokeMethod<void>('playFrame', pcm);
+      await _methods.invokeMethod<void>('playFrame', {
+        'audio': audio,
+        'codec': codec,
+      });
     } on PlatformException {
       // A disconnection races harmlessly with an arriving frame.
     }
@@ -71,6 +91,29 @@ class OfflineAudioBridge {
       await _methods.invokeMethod<void>('stopCapture');
     } on PlatformException {
       // Capture may already be stopped after a hardware interruption.
+    }
+  }
+
+  Future<CallRecordingFiles?> startCallRecording(String callId) async {
+    try {
+      final result = await _methods.invokeMapMethod<Object?, Object?>(
+        'startCallRecording',
+        callId,
+      );
+      return CallRecordingFiles.fromPlatform(result);
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  Future<CallRecordingFiles?> stopCallRecording() async {
+    try {
+      final result = await _methods.invokeMapMethod<Object?, Object?>(
+        'stopCallRecording',
+      );
+      return CallRecordingFiles.fromPlatform(result);
+    } on PlatformException {
+      return null;
     }
   }
 

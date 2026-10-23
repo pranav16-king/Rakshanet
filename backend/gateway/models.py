@@ -37,6 +37,11 @@ class PacketPayload(BaseModel):
 class SyncBatchRequest(BaseModel):
     device_id: str = Field(..., description="Gateway or data mule device uploading the batch")
     sync_timestamp: int = Field(default_factory=lambda: int(time.time() * 1000))
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    accuracy: Optional[float] = None
+    location: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
     packets: List[PacketPayload] = Field(default_factory=list, description="Array of buffered packets")
 
 
@@ -209,6 +214,47 @@ class AiChatResponse(BaseModel):
     warnings: Optional[str] = None
     steps: List[str] = Field(default_factory=list)
     category: str
+
+
+# =============================================================================
+# MESH GROUPS & CHAT CHANNELS
+# =============================================================================
+
+class MeshGroupMember(BaseModel):
+    device_id: str
+    name: str
+    role: Optional[str] = "member"
+    status: Optional[str] = "ACCEPTED"
+    joined_at: Optional[int] = None
+
+
+class MeshGroupCreate(BaseModel):
+    group_id: str
+    name: str
+    description: Optional[str] = None
+    creator_id: str
+    conversation_id: Optional[str] = None
+    member_count: Optional[int] = 1
+    members: Optional[List[MeshGroupMember]] = None
+
+
+class MeshGroupJoinRequest(BaseModel):
+    device_id: str
+    name: str
+    role: Optional[str] = "member"
+
+
+class MeshGroupResponse(BaseModel):
+    group_id: str
+    name: str
+    description: Optional[str] = None
+    creator_id: str
+    conversation_id: str
+    member_count: int
+    created_at: int
+    updated_at: int
+    members: List[Dict[str, Any]] = Field(default_factory=list)
+
     urgency: str
     created_at: int
     error_detail: Optional[str] = None

@@ -107,7 +107,7 @@ class AppDatabase {
 
       _db = await openDatabase(
         path,
-        version: 6,
+        version: 7,
         onCreate: (db, version) async {
           await _createTables(db);
           await _seedInitialData(db);
@@ -455,8 +455,8 @@ class AppDatabase {
       ''');
     } catch (_) {}
 
-    // Nearby call history contains metadata only. The application never saves
-    // recorded audio or raw PCM frames.
+    // Record only local recording metadata. The audio files themselves remain
+    // app-private and are never stored in SQLite, relayed, or uploaded.
     try {
       await db.execute('''
         CREATE TABLE IF NOT EXISTS call_history (
@@ -469,10 +469,22 @@ class AppDatabase {
           transport TEXT NOT NULL,
           created_at INTEGER NOT NULL,
           ended_at INTEGER NOT NULL,
-          duration_seconds INTEGER NOT NULL DEFAULT 0
+          duration_seconds INTEGER NOT NULL DEFAULT 0,
+          recording_state TEXT NOT NULL DEFAULT 'none',
+          recording_local_path TEXT,
+          recording_remote_path TEXT
         )
       ''');
     } catch (_) {}
+    for (final col in [
+      "recording_state TEXT NOT NULL DEFAULT 'none'",
+      'recording_local_path TEXT',
+      'recording_remote_path TEXT',
+    ]) {
+      try {
+        await db.execute('ALTER TABLE call_history ADD COLUMN $col');
+      } catch (_) {}
+    }
   }
 
   void _activateInMemoryFallback() {
@@ -815,7 +827,8 @@ class AppDatabase {
       )
     ''');
 
-    // 19. Nearby call history (metadata only; audio is never persisted).
+    // 19. Nearby call history with local-only recording metadata. Audio files
+    // are app-private and are never persisted in this database.
     await db.execute('''
       CREATE TABLE IF NOT EXISTS call_history (
         id TEXT PRIMARY KEY,
@@ -827,7 +840,10 @@ class AppDatabase {
         transport TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         ended_at INTEGER NOT NULL,
-        duration_seconds INTEGER NOT NULL DEFAULT 0
+        duration_seconds INTEGER NOT NULL DEFAULT 0,
+        recording_state TEXT NOT NULL DEFAULT 'none',
+        recording_local_path TEXT,
+        recording_remote_path TEXT
       )
     ''');
   }
