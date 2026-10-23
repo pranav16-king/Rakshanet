@@ -68,6 +68,9 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 
+# Agent internal states
+.gravitas/
+
 # Video generation workspace & outputs
 video/
 

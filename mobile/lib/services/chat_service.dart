@@ -318,6 +318,7 @@ class ChatService extends ChangeNotifier {
   Future<ChatMessage> sendMessage({
     required String content,
     String? messageId,
+    String? senderName,
     String? conversationId,
     String messageType = 'TEXT',
     String? category,
@@ -331,6 +332,7 @@ class ChatService extends ChangeNotifier {
     final resolvedMessageId =
         messageId ?? 'MSG-${_uuid.v4().substring(0, 8).toUpperCase()}';
     final resolvedConversationId = conversationId ?? currentTargetConversationId;
+    final resolvedSenderName = senderName ?? DatabaseService.myDisplayName;
     final resolvedCategory = category ??
         (resolvedConversationId.startsWith('CONV_GRP-')
             ? 'Group'
@@ -341,7 +343,7 @@ class ChatService extends ChangeNotifier {
       messageId: resolvedMessageId,
       conversationId: resolvedConversationId,
       senderId: DatabaseService.myDeviceId,
-      senderName: DatabaseService.myDisplayName,
+      senderName: resolvedSenderName,
       isMine: true,
       content: content,
       timestamp: now,
@@ -376,7 +378,7 @@ class ChatService extends ChangeNotifier {
     final envelope = MessageEnvelope(
       uuid: resolvedMessageId,
       senderId: DatabaseService.myDeviceId,
-      senderName: DatabaseService.myDisplayName,
+      senderName: resolvedSenderName,
       conversationId: resolvedConversationId,
       timestamp: now.millisecondsSinceEpoch,
       ttl: 5,
