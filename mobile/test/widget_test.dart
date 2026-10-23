@@ -17,17 +17,23 @@ import 'package:rakshanet_mobile/services/group_service.dart';
 import 'package:rakshanet_mobile/services/user_auth_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   testWidgets('RakshaNet App smoke test and splash screen display', (WidgetTester tester) async {
+    final meshProvider = MeshProvider()..stopScan();
+    final telemetryProvider = TelemetryProvider()..stopPolling();
+    final chatService = ChatService()..stopTimers();
+
     await tester.pumpWidget(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => ProfileProvider()),
           ChangeNotifierProvider(create: (_) => UserProfileProvider()),
-          ChangeNotifierProvider(create: (_) => MeshProvider()),
-          ChangeNotifierProvider(create: (_) => TelemetryProvider()),
+          ChangeNotifierProvider<MeshProvider>.value(value: meshProvider),
+          ChangeNotifierProvider<TelemetryProvider>.value(value: telemetryProvider),
           ChangeNotifierProvider(create: (_) => ChatProvider()),
-          ChangeNotifierProvider(create: (_) => ChatService()),
+          ChangeNotifierProvider<ChatService>.value(value: chatService),
           ChangeNotifierProvider(create: (_) => GroupService()),
           ChangeNotifierProvider(create: (_) => UserAuthService.instance),
           ChangeNotifierProvider(create: (_) => DeviceStatusProvider()),
@@ -43,7 +49,9 @@ void main() {
     // Verify MaterialApp is rendered
     expect(find.byType(MaterialApp), findsOneWidget);
 
-    // Drain the 1800ms splash delay timer
-    await tester.pump(const Duration(milliseconds: 2500));
+    // Drain the splash sequence timers and navigation transition
+    for (int i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
   });
 }

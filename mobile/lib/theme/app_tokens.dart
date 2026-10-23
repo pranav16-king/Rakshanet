@@ -11,6 +11,20 @@ class AppTokens {
   static const Color nightNavy = Color(0xFF0B1220);
   static const Color warningAmber = Color(0xFFF59E0B);
 
+  // Design System Tokens (Disaster-Response Visual Identity)
+  static const Color splashBg = Color(0xFF07111F);
+  static const Color deepNavyBg = Color(0xFF07111F);
+  static const Color darkSurfaceNavy = Color(0xFF0D1B2A);
+  static const Color darkSurfaceElevated = Color(0xFF13243A);
+  static const Color emergencyBlue = Color(0xFF1677FF);
+  static const Color electricCyan = Color(0xFF20D9F3);
+  static const Color emergencyRed = Color(0xFFFF365D);
+  static const Color safetyAmber = Color(0xFFFFC107);
+  static const Color activeGreen = Color(0xFF00D68F);
+  static const Color textPrimaryNavy = Color(0xFFF5F8FC);
+  static const Color textSecondaryNavy = Color(0xFF9AAEC4);
+  static const Color textDisabledNavy = Color(0xFF5E6B7D);
+
   // Light Theme Colors
   static const Color lightBg = Color(0xFFFFFCEB);
   static const Color lightBgAlt = Color(0xFFFFF5C2);

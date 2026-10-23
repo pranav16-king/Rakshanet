@@ -1,11 +1,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
+import '../../database/app_database.dart';
 import '../../providers/profile_provider.dart';
 import '../../services/user_auth_service.dart';
 import '../../theme/app_tokens.dart';
-import '../profile/profile_setup_screen.dart';
 import '../shell/main_shell.dart';
+
+enum StartupPhase {
+  boot,
+  loadLocalConfig,
+  prepareOfflineStorage,
+  checkCapabilities,
+  ready,
+  home,
+}
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,602 +26,581 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _beaconPulseAnimation;
-  Timer? _phaseTimer;
-  bool _showLandingPage = false;
+    with TickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late AnimationController _entranceController;
+  late Animation<double> _logoScaleAnimation;
+  late Animation<double> _logoFadeAnimation;
+  late Animation<double> _breathingGlowAnimation;
+  Timer? _delayTimer;
+
+  Future<void> _safeDelay(Duration duration) {
+    if (!mounted) return Future.value();
+    final completer = Completer<void>();
+    _delayTimer?.cancel();
+    _delayTimer = Timer(duration, () {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    });
+    return completer.future;
+  }
+
+  StartupPhase _currentPhase = StartupPhase.boot;
+  StartupPhase get currentPhase => _currentPhase;
+  String _statusMessage = 'Initializing secure communications';
+  double _progressValue = 0.20;
   bool _isNavigating = false;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+
+    // 1. Entrance animation (runs once on launch)
+    _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 900),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _logoFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+        parent: _entranceController,
+        curve: const Interval(0.0, 0.75, curve: Curves.easeIn),
       ),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.0).animate(
+    _logoScaleAnimation = Tween<double>(begin: 0.88, end: 1.0).animate(
       CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
+        parent: _entranceController,
+        curve: const Interval(0.0, 0.85, curve: Curves.easeOutBack),
       ),
     );
 
-    _beaconPulseAnimation = Tween<double>(begin: 0.85, end: 1.25).animate(
+    _entranceController.forward();
+
+    // 2. Continuous ambient pulse & breathing glow
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    )..repeat(reverse: true);
+
+    _breathingGlowAnimation = Tween<double>(begin: 0.78, end: 1.18).animate(
       CurvedAnimation(
-        parent: _animationController,
+        parent: _pulseController,
         curve: Curves.easeInOut,
       ),
     );
 
-    _animationController.repeat(reverse: true);
-
-    // Phase 1: Show dedicated Splash Screen for 1.8s while checking session store
-    _initializeSessionAndTransition();
+    // 3. Run the deterministic startup state machine
+    _runStartupSequence();
   }
 
-  Future<void> _initializeSessionAndTransition() async {
-    final minSplashDelay = Future.delayed(const Duration(milliseconds: 1800));
-    await Future<void>.delayed(Duration.zero);
+  /// Startup State Machine:
+  /// BOOT -> LOAD_LOCAL_CONFIG -> PREPARE_OFFLINE_STORAGE -> CHECK_CAPABILITIES -> READY -> HOME
+  Future<void> _runStartupSequence() async {
+    // Phase 1: BOOT
+    if (!mounted) return;
+    setState(() {
+      _currentPhase = StartupPhase.boot;
+      _statusMessage = 'Initializing secure communications';
+      _progressValue = 0.20;
+    });
+    await _safeDelay(const Duration(milliseconds: 380));
     if (!mounted) return;
 
-    bool hasValidSession = false;
-
+    // Phase 2: LOAD_LOCAL_CONFIG
+    setState(() {
+      _currentPhase = StartupPhase.loadLocalConfig;
+      _statusMessage = 'Preparing offline resources';
+      _progressValue = 0.45;
+    });
     try {
       final profileProvider =
           Provider.of<ProfileProvider>(context, listen: false);
-      await profileProvider.loadProfile();
-      final offlineAvailable =
-          await UserAuthService.instance.checkOfflineLoginAvailable();
-
-      if (offlineAvailable ||
-          (profileProvider.isRegistered &&
-              profileProvider.profile.name.trim().isNotEmpty &&
-              profileProvider.profile.id != 'unregistered')) {
-        hasValidSession = true;
-      }
+      await profileProvider
+          .loadProfile()
+          .timeout(const Duration(milliseconds: 650), onTimeout: () {});
     } catch (e) {
-      debugPrint('[SplashScreen] Session restore check error: $e');
+      debugPrint('[SplashScreen] Config load notice: $e');
     }
-
-    await minSplashDelay;
+    await _safeDelay(const Duration(milliseconds: 320));
     if (!mounted) return;
 
-    if (hasValidSession) {
-      // Active session exists in session store — restore directly into MainShell
-      setState(() => _isNavigating = true);
-      UserAuthService.instance.syncNow();
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, _, _) => const MainShell(),
-          transitionsBuilder: (_, a, _, c) =>
-              FadeTransition(opacity: a, child: c),
-          transitionDuration: const Duration(milliseconds: 350),
-        ),
-      );
-    } else {
-      setState(() {
-        _showLandingPage = true;
+    // Phase 3: PREPARE_OFFLINE_STORAGE
+    setState(() {
+      _currentPhase = StartupPhase.prepareOfflineStorage;
+      _statusMessage = 'Checking local network capabilities';
+      _progressValue = 0.70;
+    });
+    try {
+      await AppDatabase.instance.database
+          .timeout(const Duration(milliseconds: 600), onTimeout: () {
+        return AppDatabase.instance.database;
       });
+    } catch (e) {
+      debugPrint('[SplashScreen] Storage verify notice: $e');
     }
+    await _safeDelay(const Duration(milliseconds: 320));
+    if (!mounted) return;
+
+    // Phase 4: CHECK_CAPABILITIES
+    setState(() {
+      _currentPhase = StartupPhase.checkCapabilities;
+      _statusMessage = 'Loading emergency services';
+      _progressValue = 0.90;
+    });
+    try {
+      await UserAuthService.instance
+          .checkOfflineLoginAvailable()
+          .timeout(const Duration(milliseconds: 400), onTimeout: () => false);
+    } catch (e) {
+      debugPrint('[SplashScreen] Capability notice: $e');
+    }
+    await _safeDelay(const Duration(milliseconds: 280));
+    if (!mounted) return;
+
+    // Phase 5: READY
+    setState(() {
+      _currentPhase = StartupPhase.ready;
+      _statusMessage = 'Ready for emergency response';
+      _progressValue = 1.0;
+    });
+    await _safeDelay(const Duration(milliseconds: 380));
+    if (!mounted) return;
+
+    // Phase 6: HOME
+    _transitionToHome();
+  }
+
+  void _transitionToHome() {
+    if (!mounted || _isNavigating) return;
+    setState(() => _isNavigating = true);
+
+    // Non-blocking opportunistic sync in background
+    UserAuthService.instance.syncNow();
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, _, _) => const MainShell(),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeInOut,
+          ),
+          child: child,
+        ),
+        transitionDuration: const Duration(milliseconds: 380),
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
-    _phaseTimer?.cancel();
+    _delayTimer?.cancel();
+    _pulseController.dispose();
+    _entranceController.dispose();
     super.dispose();
-  }
-
-  /// Triggered when the user taps "Get Started" on the Landing Screen:
-  /// Checks session store first; if registered -> MainShell, else -> ProfileSetupScreen.
-  Future<void> _onGetStartedPressed() async {
-    if (!mounted || _isNavigating) return;
-    setState(() => _isNavigating = true);
-
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    await profileProvider.loadProfile();
-    final offlineLoginAvailable =
-        await UserAuthService.instance.checkOfflineLoginAvailable();
-    if (!mounted) return;
-
-    if (offlineLoginAvailable ||
-        (profileProvider.isRegistered &&
-            profileProvider.profile.name.trim().isNotEmpty &&
-            profileProvider.profile.id != 'unregistered')) {
-      UserAuthService.instance.syncNow();
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, _, _) => const MainShell(),
-          transitionsBuilder: (_, a, _, c) =>
-              FadeTransition(opacity: a, child: c),
-          transitionDuration: const Duration(milliseconds: 350),
-        ),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, _, _) => const ProfileSetupScreen(),
-          transitionsBuilder: (_, a, _, c) =>
-              FadeTransition(opacity: a, child: c),
-          transitionDuration: const Duration(milliseconds: 350),
-        ),
-      );
-    }
-  }
-
-  Future<void> _onSetupProfilePressed() async {
-    if (!mounted || _isNavigating) return;
-    setState(() => _isNavigating = true);
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, _, _) => const ProfileSetupScreen(),
-        transitionsBuilder: (_, a, _, c) =>
-            FadeTransition(opacity: a, child: c),
-        transitionDuration: const Duration(milliseconds: 350),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTokens.nightNavy,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 650),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        child: _showLandingPage
-            ? _buildLandingView(context)
-            : _buildSplashIntroView(context),
-      ),
-    );
-  }
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
 
-  /// PHASE 1: Dedicated Animated Splash Screen
-  Widget _buildSplashIntroView(BuildContext context) {
-    return Stack(
-      key: const ValueKey('splash_intro'),
-      children: [
-        // Background Atmospheric Search Beam Gradients
-        Positioned(
-          top: -120,
-          left: -60,
-          right: -60,
-          height: 480,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: const Alignment(0.0, -0.3),
-                radius: 0.9,
-                colors: [
-                  AppTokens.beaconTeal.withValues(alpha: 0.28),
-                  AppTokens.signalYellow.withValues(alpha: 0.14),
-                  Colors.transparent,
-                ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: AppTokens.splashBg,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: AppTokens.splashBg, // Deep navy: #07111F
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 1. Subtle Animated Mesh Nodes & Radial Cyan/Blue Ambient Lighting
+            RepaintBoundary(
+              child: CustomPaint(
+                painter: _MeshConstellationPainter(
+                  pulseValue:
+                      disableAnimations ? 0.5 : _pulseController.value,
+                ),
+                child: const SizedBox.expand(),
               ),
             ),
-          ),
-        ),
 
-        SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(flex: 2),
+            // 2. Safe Area Centered Branding & Balanced Loading
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Logo Region with Soft Ambient Breathing Halo
+                      AnimatedBuilder(
+                        animation: _entranceController,
+                        builder: (context, child) {
+                          final fade = disableAnimations
+                              ? 1.0
+                              : _logoFadeAnimation.value;
+                          final scale = disableAnimations
+                              ? 1.0
+                              : _logoScaleAnimation.value;
 
-                  // Pulsing Radar / Crest Logo
-                  AnimatedBuilder(
-                    animation: _animationController,
-                    builder: (context, child) {
-                      return Opacity(
-                        opacity: _fadeAnimation.value.clamp(0.4, 1.0),
-                        child: Transform.scale(
-                          scale: _scaleAnimation.value,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        AnimatedBuilder(
-                          animation: _beaconPulseAnimation,
-                          builder: (context, _) {
-                            return Container(
-                              width: 112 * _beaconPulseAnimation.value,
-                              height: 112 * _beaconPulseAnimation.value,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppTokens.signalYellow
-                                    .withValues(alpha: 0.14),
-                              ),
+                          return Opacity(
+                            opacity: fade,
+                            child: Transform.scale(
+                              scale: scale,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: AnimatedBuilder(
+                          animation: _pulseController,
+                          builder: (context, child) {
+                            final haloScale = disableAnimations
+                                ? 1.0
+                                : _breathingGlowAnimation.value;
+
+                            return Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Soft Cyan & Blue Ambient Radial Glow (Clean, No Mud)
+                                Container(
+                                  width: 156 * haloScale,
+                                  height: 156 * haloScale,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: RadialGradient(
+                                      colors: [
+                                        AppTokens.electricCyan
+                                            .withValues(alpha: 0.22),
+                                        AppTokens.emergencyBlue
+                                            .withValues(alpha: 0.14),
+                                        Colors.transparent,
+                                      ],
+                                      stops: const [0.0, 0.55, 1.0],
+                                    ),
+                                  ),
+                                ),
+
+                                // Complete RakshaNet Logo — Natural Transparency & Full Proportions (NO CROPPING)
+                                Container(
+                                  width: 140,
+                                  height: 140,
+                                  alignment: Alignment.center,
+                                  child: Image.asset(
+                                    'assets/images/rakshanet_logo.png',
+                                    width: 140,
+                                    height: 140,
+                                    fit: BoxFit.contain,
+                                    filterQuality: FilterQuality.high,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                      width: 120,
+                                      height: 120,
+                                      decoration: BoxDecoration(
+                                        color: AppTokens.darkSurfaceElevated,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: AppTokens.electricCyan,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.radar_rounded,
+                                        size: 64,
+                                        color: AppTokens.safetyAmber,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             );
                           },
                         ),
-                        Container(
-                          width: 118,
-                          height: 118,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    AppTokens.beaconTeal.withValues(alpha: 0.45),
-                                blurRadius: 28,
-                                spreadRadius: 6,
-                              ),
-                              BoxShadow(
-                                color: AppTokens.signalYellow
-                                    .withValues(alpha: 0.35),
-                                blurRadius: 18,
-                                spreadRadius: 2,
-                              ),
-                            ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Brand Name + Compact Amber "AI" Badge
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'RakshaNet',
+                            style: TextStyle(
+                              color: AppTokens.textPrimaryNavy, // #F5F8FC
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.4,
+                            ),
                           ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/rakshanet_logo.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                color: AppTokens.nightNavy,
-                                child: const Icon(
-                                  Icons.radar_rounded,
-                                  size: 54,
-                                  color: AppTokens.signalYellow,
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTokens.safetyAmber, // #FFC107
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTokens.safetyAmber
+                                      .withValues(alpha: 0.35),
+                                  blurRadius: 10,
+                                  spreadRadius: 1,
                                 ),
+                              ],
+                            ),
+                            child: const Text(
+                              'AI',
+                              style: TextStyle(
+                                color: AppTokens.splashBg, // #07111F
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.8,
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                        ],
+                      ),
 
-                  const SizedBox(height: 28),
+                      const SizedBox(height: 8),
 
-                  // Brand Title
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+                      // Subtitle
                       const Text(
-                        'RakshaNet ',
+                        'OFFLINE-FIRST DISASTER MESH NETWORK',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
+                          color: AppTokens.electricCyan, // #20D9F3
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.8,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppTokens.signalYellow,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'AI',
-                          style: TextStyle(
-                            color: AppTokens.nightNavy,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.0,
-                          ),
+
+                      const SizedBox(height: 52),
+
+                      // Professional Loading Experience & Real Status Track
+                      SizedBox(
+                        width: 240,
+                        child: Column(
+                          children: [
+                            // Thin progress track with cyan-to-amber highlight gradient
+                            Container(
+                              height: 3.5,
+                              width: 240,
+                              decoration: BoxDecoration(
+                                color: AppTokens.darkSurfaceElevated, // #13243A
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: AnimatedFractionallySizedBox(
+                                  duration: const Duration(milliseconds: 320),
+                                  curve: Curves.easeInOut,
+                                  widthFactor: _progressValue.clamp(0.05, 1.0),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(3),
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          AppTokens.electricCyan, // #20D9F3
+                                          AppTokens.safetyAmber,  // #FFC107
+                                        ],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppTokens.electricCyan
+                                              .withValues(alpha: 0.5),
+                                          blurRadius: 6,
+                                          spreadRadius: 0.5,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            // Small network initialization indicator & descriptive status
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.sensors_rounded,
+                                  size: 14,
+                                  color: AppTokens.electricCyan,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: Text(
+                                      _statusMessage,
+                                      key: ValueKey(_statusMessage),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: AppTokens
+                                            .textSecondaryNavy, // #9AAEC4
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 10),
-                  const Text(
-                    'OFFLINE-FIRST DISASTER MESH NETWORK',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppTokens.beaconTeal,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-
-                  const Spacer(flex: 2),
-
-                  // Boot Progress Indicator
-                  SizedBox(
-                    width: 180,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        minHeight: 4,
-                        backgroundColor:
-                            AppTokens.darkBorderStrong.withValues(alpha: 0.5),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppTokens.signalYellow,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Initializing BLE & Wi-Fi Direct Mesh...',
-                    style: TextStyle(
-                      color: AppTokens.darkTextMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
+}
 
-  /// PHASE 2: Full-Screen Hero Landing Page with Mountain Rescue Artwork & Get Started CTA
-  Widget _buildLandingView(BuildContext context) {
-    return Stack(
-      key: const ValueKey('landing_hero'),
-      fit: StackFit.expand,
-      children: [
-        // 1. Full-bleed Mountain Rescue Artwork Background
-        Image.asset(
-          'assets/images/splash_hero.jpg',
-          fit: BoxFit.cover,
-          alignment: Alignment.center,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(color: AppTokens.nightNavy);
-          },
+/// Link definition between two constellation node indices
+class _MeshLink {
+  final int from;
+  final int to;
+  const _MeshLink(this.from, this.to);
+}
+
+/// CustomPainter rendering a subtle, battery-conscious emergency mesh network constellation
+class _MeshConstellationPainter extends CustomPainter {
+  final double pulseValue;
+
+  _MeshConstellationPainter({required this.pulseValue});
+
+  // Normalized node coordinates across screen [0.0, 1.0]
+  static const List<Offset> _nodes = [
+    Offset(0.12, 0.16),
+    Offset(0.38, 0.10),
+    Offset(0.78, 0.14),
+    Offset(0.88, 0.28),
+    Offset(0.15, 0.38),
+    Offset(0.84, 0.50),
+    Offset(0.10, 0.68),
+    Offset(0.26, 0.82),
+    Offset(0.68, 0.76),
+    Offset(0.88, 0.84),
+    Offset(0.48, 0.92),
+  ];
+
+  static const List<_MeshLink> _links = [
+    _MeshLink(0, 1),
+    _MeshLink(1, 2),
+    _MeshLink(2, 3),
+    _MeshLink(0, 4),
+    _MeshLink(3, 5),
+    _MeshLink(4, 6),
+    _MeshLink(6, 7),
+    _MeshLink(7, 8),
+    _MeshLink(8, 9),
+    _MeshLink(8, 10),
+    _MeshLink(5, 9),
+    _MeshLink(1, 4),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Soft radial cyan/blue ambient lighting
+    final centerGlowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          AppTokens.emergencyBlue.withValues(alpha: 0.12),
+          AppTokens.electricCyan.withValues(alpha: 0.06),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(size.width * 0.5, size.height * 0.45),
+          radius: size.width * 0.68,
         ),
+      );
 
-        // 2. Cinematic Gradient Overlay for crisp text readability at top & bottom
-        // while keeping the central rescuer and glowing beacon vivid and clear
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: const [0.0, 0.28, 0.55, 0.76, 1.0],
-              colors: [
-                AppTokens.nightNavy.withValues(alpha: 0.78),
-                AppTokens.nightNavy.withValues(alpha: 0.35),
-                Colors.transparent,
-                AppTokens.nightNavy.withValues(alpha: 0.72),
-                AppTokens.nightNavy.withValues(alpha: 0.95),
-              ],
-            ),
-          ),
-        ),
-
-        // 3. Foreground Content
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 16),
-
-                // Top Brand Title: RakshaNet AI
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'RakshaNet ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.4,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black87,
-                            blurRadius: 12,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: AppTokens.signalYellow,
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                AppTokens.signalYellow.withValues(alpha: 0.45),
-                            blurRadius: 12,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: const Text(
-                        'AI',
-                        style: TextStyle(
-                          color: AppTokens.nightNavy,
-                          fontSize: 25,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 14),
-
-                // Primary Hero Headline matching Screen 1
-                const Text(
-                  'Stay Connected.\nSave Lives.\nAnytime. Anywhere.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    height: 1.35,
-                    letterSpacing: 0.2,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black87,
-                        blurRadius: 14,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Unobstructed middle area showcasing the Mountain Rescuer & Beacon
-                const Spacer(),
-
-                // Bottom Feature Subtitle
-                const Text(
-                  'Offline Communication',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.4,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        blurRadius: 10,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'AI-Powered Disaster Response',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Primary CTA: "Get Started" Button (56dp Hi-Vis Signal Yellow)
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isNavigating ? null : _onGetStartedPressed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTokens.signalYellow,
-                      foregroundColor: AppTokens.nightNavy,
-                      disabledBackgroundColor:
-                          AppTokens.signalYellow.withValues(alpha: 0.6),
-                      elevation: 8,
-                      shadowColor:
-                          AppTokens.signalYellow.withValues(alpha: 0.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _isNavigating
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: AppTokens.nightNavy,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Get Started',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 22,
-                                color: AppTokens.nightNavy,
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Secondary subtle action to open Profile Setup directly if desired
-                GestureDetector(
-                  onTap: _onSetupProfilePressed,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      'Configure Emergency Profile & Mesh Identity',
-                      style: TextStyle(
-                        color: AppTokens.darkInfo.withValues(alpha: 0.9),
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                        decorationColor:
-                            AppTokens.darkInfo.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                // 5-dot indicator matching Screen 1 design
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) {
-                    final isFirst = index == 0;
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: isFirst ? 22 : 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: isFirst
-                            ? AppTokens.signalYellow
-                            : Colors.white.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    );
-                  }),
-                ),
-
-                const SizedBox(height: 18),
-              ],
-            ),
-          ),
-        ),
-      ],
+    canvas.drawCircle(
+      Offset(size.width * 0.5, size.height * 0.45),
+      size.width * 0.68,
+      centerGlowPaint,
     );
+
+    // 2. Mesh Connection Links
+    final linkPaint = Paint()
+      ..color = AppTokens.emergencyBlue.withValues(alpha: 0.10)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    for (final link in _links) {
+      final p1 = Offset(_nodes[link.from].dx * size.width,
+          _nodes[link.from].dy * size.height);
+      final p2 = Offset(
+          _nodes[link.to].dx * size.width, _nodes[link.to].dy * size.height);
+      canvas.drawLine(p1, p2, linkPaint);
+    }
+
+    // 3. Slow-moving connection pulses between nodes
+    final pulseLinks = [0, 4, 7]; // designated active links
+    final particlePaints = [
+      Paint()..color = AppTokens.electricCyan.withValues(alpha: 0.85),
+      Paint()..color = AppTokens.safetyAmber.withValues(alpha: 0.85),
+      Paint()..color = AppTokens.electricCyan.withValues(alpha: 0.75),
+    ];
+
+    for (int i = 0; i < pulseLinks.length; i++) {
+      final linkIndex = pulseLinks[i];
+      final link = _links[linkIndex];
+      final p1 = Offset(_nodes[link.from].dx * size.width,
+          _nodes[link.from].dy * size.height);
+      final p2 = Offset(
+          _nodes[link.to].dx * size.width, _nodes[link.to].dy * size.height);
+
+      // Interpolate packet position along link
+      final progress = (pulseValue + (i * 0.33)) % 1.0;
+      final packetPos = Offset.lerp(p1, p2, progress)!;
+
+      // Glow halo
+      final glowPaint = Paint()
+        ..color = particlePaints[i].color.withValues(alpha: 0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      canvas.drawCircle(packetPos, 5.0, glowPaint);
+
+      // Core particle
+      canvas.drawCircle(packetPos, 2.2, particlePaints[i]);
+    }
+
+    // 4. Subtle Nodes
+    final nodePaint = Paint()
+      ..color = AppTokens.textSecondaryNavy.withValues(alpha: 0.28)
+      ..style = PaintingStyle.fill;
+
+    for (final node in _nodes) {
+      final pos = Offset(node.dx * size.width, node.dy * size.height);
+      canvas.drawCircle(pos, 2.5, nodePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MeshConstellationPainter oldDelegate) {
+    return oldDelegate.pulseValue != pulseValue;
   }
 }

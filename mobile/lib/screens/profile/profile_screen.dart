@@ -202,37 +202,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   width: 60,
                   height: 60,
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isLowPower
                           ? AppTokens.oledBorderStrong
-                          : AppTokens.signalYellow.withValues(alpha: 0.6),
+                          : AppTokens.safetyAmber.withValues(alpha: 0.6),
                       width: 2,
                     ),
                     boxShadow: isLowPower
                         ? null
                         : [
                             BoxShadow(
-                              color: AppTokens.signalYellow.withValues(alpha: 0.2),
+                              color: AppTokens.safetyAmber.withValues(alpha: 0.2),
                               blurRadius: 10,
                               spreadRadius: 1,
                             ),
                           ],
                   ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/rakshanet_logo.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: isLowPower
-                            ? AppTokens.oledSurfaceSunken
-                            : AppTokens.signalYellow.withValues(alpha: 0.15),
-                        child: const Icon(
-                          Icons.person,
-                          size: 34,
-                          color: AppTokens.signalYellow,
-                        ),
+                  child: Image.asset(
+                    'assets/images/rakshanet_logo.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: isLowPower
+                          ? AppTokens.oledSurfaceSunken
+                          : AppTokens.safetyAmber.withValues(alpha: 0.15),
+                      child: const Icon(
+                        Icons.person,
+                        size: 34,
+                        color: AppTokens.safetyAmber,
                       ),
                     ),
                   ),

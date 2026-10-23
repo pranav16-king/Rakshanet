@@ -60,40 +60,53 @@ class HomeScreen extends StatelessWidget {
         titleSpacing: 16,
         title: Row(
           children: [
-            ClipOval(
-              child: Image.asset(
-                'assets/images/rakshanet_logo.png',
+            Image.asset(
+              'assets/images/rakshanet_logo.png',
+              width: 32,
+              height: 32,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Container(
                 width: 32,
                 height: 32,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  width: 32,
-                  height: 32,
-                  decoration: const BoxDecoration(
-                    color: AppTokens.signalYellow,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.radar_rounded,
-                    color: AppTokens.nightNavy,
-                    size: 20,
-                  ),
+                decoration: const BoxDecoration(
+                  color: AppTokens.safetyAmber,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.radar_rounded,
+                  color: AppTokens.splashBg,
+                  size: 20,
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                'RakshaNet',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            const SizedBox(width: 8),
+            Text(
+              'RakshaNet',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: theme.isLight
+                    ? AppTokens.lightPrimaryInk
+                    : AppTokens.textPrimaryNavy,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: AppTokens.safetyAmber,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'AI',
                 style: TextStyle(
-                  color: theme.isLight
-                      ? AppTokens.lightPrimaryInk
-                      : AppTokens.signalYellow,
-                  fontSize: 20,
+                  color: AppTokens.splashBg,
+                  fontSize: 11,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 0.2,
+                  letterSpacing: 0.6,
                 ),
               ),
             ),
@@ -130,10 +143,15 @@ class HomeScreen extends StatelessWidget {
             final double sosButtonSize =
                 constraints.maxHeight < 560 ? 152.0 : AppTokens.sosHomeSize;
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Column(
-                children: [
+            return SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    child: Column(
+                      children: [
                   // 1. 4 Dynamic Status Cards Grid (2x2) with non-truncated titles
                   Row(
                     children: [
@@ -365,8 +383,11 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 6),
                 ],
               ),
-            );
-          },
+            ),
+          ),
+        ),
+      );
+    },
         ),
       ),
     );

@@ -110,26 +110,24 @@ class OnboardingScreen extends StatelessWidget {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppTokens.signalYellow.withValues(alpha: 0.4),
+                                    color: AppTokens.electricCyan.withValues(alpha: 0.35),
                                     blurRadius: 16,
                                     spreadRadius: 2,
                                   ),
                                   BoxShadow(
-                                    color: AppTokens.beaconTeal.withValues(alpha: 0.3),
+                                    color: AppTokens.safetyAmber.withValues(alpha: 0.25),
                                     blurRadius: 12,
                                     spreadRadius: 1,
                                   ),
                                 ],
                               ),
-                              child: ClipOval(
-                                child: Image.asset(
-                                  'assets/images/rakshanet_logo.png',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => const Icon(
-                                    Icons.podcasts_rounded,
-                                    color: AppTokens.signalYellow,
-                                    size: 36,
-                                  ),
+                              child: Image.asset(
+                                'assets/images/rakshanet_logo.png',
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) => const Icon(
+                                  Icons.podcasts_rounded,
+                                  color: AppTokens.safetyAmber,
+                                  size: 36,
                                 ),
                               ),
                             ),
