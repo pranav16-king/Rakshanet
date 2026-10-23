@@ -42,6 +42,19 @@ interface IncidentCommunicationsCenterProps {
   onRefresh?: () => void;
 }
 
+const reportedNumber = (value: unknown, suffix = ''): string =>
+  typeof value === 'number' && Number.isFinite(value)
+    ? `${value}${suffix}`
+    : 'Not reported';
+
+const reportedCoordinates = (lat: unknown, lng: unknown): string =>
+  typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng)
+    ? `[${lat.toFixed(4)}, ${lng.toFixed(4)}]`
+    : 'Location not reported';
+
+const reportedTimestamp = (value: unknown): string =>
+  typeof value === 'string' && value.trim() ? value : 'Time not reported';
+
 export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenterProps> = ({
   incidentId,
   communications,
@@ -57,12 +70,12 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
   const [broadcastSuccess, setBroadcastSuccess] = useState<string | null>(null);
 
   const summary = communications?.summary || {
-    total: 9,
-    sos_count: 3,
-    sitreps_count: 2,
-    team_comms_count: 2,
-    voice_count: 2,
-    active_devices: 8,
+    total: 0,
+    sos_count: 0,
+    sitreps_count: 0,
+    team_comms_count: 0,
+    voice_count: 0,
+    active_devices: 0,
   };
 
   const handleSendBroadcast = async (e: React.FormEvent) => {
@@ -77,7 +90,7 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
         'HIGH',
         'ALL_CHANNELS'
       );
-      setBroadcastSuccess('Tactical message dispatched over mesh network.');
+      setBroadcastSuccess('Command queued for a field gateway; delivery is not yet confirmed.');
       setBroadcastText('');
       setTimeout(() => setBroadcastSuccess(null), 4000);
       if (onRefresh) onRefresh();
@@ -113,11 +126,11 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
               Incident Mesh Communications Center
             </h2>
             <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-              Live Mesh Synchronized
+              Gateway data
             </span>
           </div>
           <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-0.5">
-            Every distress beacon, store-and-forward relay path, citizen report, and responder dispatch organized for this incident
+            Observed field packets and queued command-center messages for this incident
           </p>
         </div>
 
@@ -230,83 +243,93 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
             />
           </div>
 
-          <div className="space-y-3">
-            {filteredAll.map((item: IncidentCategorizedCommunication) => {
-              const isSOS = item.category === 'SOS';
-              const isSITREP = item.category === 'SITREP';
-              const isTeam = item.category === 'RESCUE_COMMS';
+          {filteredAll.length === 0 ? (
+            <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#111A2E] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2">
+              <Radio className="w-10 h-10 mx-auto text-[#64748B] dark:text-[#94A3B8] opacity-60" />
+              <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">No Communications Ingested Yet</h4>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-md mx-auto">
+                No mesh distress packets, field SITREPs, or team radio transmissions have been recorded for this incident cluster yet. Live mesh packets will appear here in real-time.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredAll.map((item: IncidentCategorizedCommunication) => {
+                const isSOS = item.category === 'SOS';
+                const isSITREP = item.category === 'SITREP';
+                const isTeam = item.category === 'RESCUE_COMMS';
 
-              return (
-                <div
-                  key={item.id}
-                  className={`p-4 rounded-xl border transition-all ${
-                    isSOS
-                      ? 'bg-red-500/5 dark:bg-red-950/20 border-red-500/30'
-                      : isSITREP
-                      ? 'bg-amber-500/5 dark:bg-amber-950/20 border-amber-500/30'
-                      : isTeam
-                      ? 'bg-emerald-500/5 dark:bg-emerald-950/20 border-emerald-500/30'
-                      : 'bg-white dark:bg-[#111A2E] border-[#E2E8F0] dark:border-[#1E293B]'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`p-2 rounded-lg shrink-0 mt-0.5 ${
-                          isSOS
-                            ? 'bg-red-500 text-white'
-                            : isSITREP
-                            ? 'bg-amber-500 text-white'
-                            : isTeam
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-purple-600 text-white'
-                        }`}
-                      >
-                        {isSOS ? (
-                          <ShieldAlert className="w-4 h-4" />
-                        ) : isSITREP ? (
-                          <FileText className="w-4 h-4" />
-                        ) : isTeam ? (
-                          <MessageSquare className="w-4 h-4" />
-                        ) : (
-                          <Mic className="w-4 h-4" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                            {item.title}
-                          </h4>
-                          <span className="font-mono text-[10.5px] px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-[#0891B2] dark:text-[#06B6D4]">
-                            {item.sender_id}
-                          </span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                              item.priority === 'CRITICAL'
-                                ? 'bg-red-500/15 text-red-600 border-red-500/30'
-                                : 'bg-amber-500/15 text-amber-600 border-amber-500/30'
-                            }`}
-                          >
-                            {item.priority}
-                          </span>
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-xl border transition-all ${
+                      isSOS
+                        ? 'bg-red-500/5 dark:bg-red-950/20 border-red-500/30'
+                        : isSITREP
+                        ? 'bg-amber-500/5 dark:bg-amber-950/20 border-amber-500/30'
+                        : isTeam
+                        ? 'bg-emerald-500/5 dark:bg-emerald-950/20 border-emerald-500/30'
+                        : 'bg-white dark:bg-[#111A2E] border-[#E2E8F0] dark:border-[#1E293B]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`p-2 rounded-lg shrink-0 mt-0.5 ${
+                            isSOS
+                              ? 'bg-red-500 text-white'
+                              : isSITREP
+                              ? 'bg-amber-500 text-white'
+                              : isTeam
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-purple-600 text-white'
+                          }`}
+                        >
+                          {isSOS ? (
+                            <ShieldAlert className="w-4 h-4" />
+                          ) : isSITREP ? (
+                            <FileText className="w-4 h-4" />
+                          ) : isTeam ? (
+                            <MessageSquare className="w-4 h-4" />
+                          ) : (
+                            <Mic className="w-4 h-4" />
+                          )}
                         </div>
-                        <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-1.5 leading-relaxed">
-                          "{item.content}"
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                              {item.title}
+                            </h4>
+                            <span className="font-mono text-[10.5px] px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-[#0891B2] dark:text-[#06B6D4]">
+                              {item.sender_id}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                item.priority === 'CRITICAL'
+                                  ? 'bg-red-500/15 text-red-600 border-red-500/30'
+                                  : 'bg-amber-500/15 text-amber-600 border-amber-500/30'
+                              }`}
+                            >
+                              {item.priority}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-1.5 leading-relaxed">
+                            "{item.content}"
+                          </p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col items-end gap-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] shrink-0 font-mono">
-                      <span>{item.timestamp_display}</span>
-                      <span className="text-[10px] bg-[#E2E8F0] dark:bg-[#1E293B] px-1.5 py-0.5 rounded">
-                        {item.hops} mesh hops
-                      </span>
+                      <div className="flex flex-col items-end gap-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] shrink-0 font-mono">
+                        <span>{reportedTimestamp(item.timestamp_display)}</span>
+                        <span className="text-[10px] bg-[#E2E8F0] dark:bg-[#1E293B] px-1.5 py-0.5 rounded">
+                          {item.hops} mesh hops
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -319,80 +342,90 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-red-500 shrink-0" />
               <span>
-                <strong>{communications?.sos_alerts?.length || 3} Emergency Transmissions Active:</strong> Direct survivor handsets emitting hop-by-hop distress packets.
+                <strong>{communications?.sos_alerts?.length ?? 0} observed SOS packet(s):</strong> values below are reported by the sender or its relay packet.
               </span>
             </div>
             <span className="font-bold">Prioritize Rooftop Extractions</span>
           </div>
 
-          <div className="space-y-3">
-            {(communications?.sos_alerts || []).map((sos: IncidentSosAlert) => (
-              <Card
-                key={sos.id}
-                className="p-5 bg-white dark:bg-[#111A2E] border-red-500/40 ring-1 ring-red-500/20 shadow-md"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-red-500 text-white animate-pulse">
-                        CRITICAL SOS
-                      </span>
-                      <h3 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                        {sos.sender_name}
-                      </h3>
-                      <span className="font-mono text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-cyan-600">
-                        {sos.sender_id}
-                      </span>
+          {(communications?.sos_alerts || []).length === 0 ? (
+            <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#111A2E] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2">
+              <ShieldAlert className="w-10 h-10 mx-auto text-red-500/60" />
+              <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">No Active SOS Transmissions</h4>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-md mx-auto">
+                No direct survivor SOS beacons have been emitted or relayed for this incident cluster.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(communications?.sos_alerts || []).map((sos: IncidentSosAlert) => (
+                <Card
+                  key={sos.id}
+                  className="p-5 bg-white dark:bg-[#111A2E] border-red-500/40 ring-1 ring-red-500/20 shadow-md"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-red-500 text-white animate-pulse">
+                          CRITICAL SOS
+                        </span>
+                        <h3 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                          {sos.sender_name}
+                        </h3>
+                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-cyan-600">
+                          {sos.sender_id}
+                        </span>
+                      </div>
+
+                      <p className="text-sm font-semibold text-red-950 dark:text-red-200 bg-red-500/10 p-3 rounded-xl border border-red-500/20">
+                        "{sos.payload}"
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-[#64748B] dark:text-[#94A3B8] pt-1">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3.5 h-3.5 text-red-500" />
+                          <strong>{reportedNumber(sos.casualties)} people reported</strong>
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 font-mono">
+                          <Battery className="w-3.5 h-3.5 text-amber-500" />
+                          {reportedNumber(sos.battery_pct, '%')} battery
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 font-mono">
+                          <MapPin className="w-3.5 h-3.5 text-cyan-500" />
+                          {reportedCoordinates(sos.lat, sos.lng)}
+                        </span>
+                        <span>•</span>
+                        <span>{reportedTimestamp(sos.timestamp_display)}</span>
+                      </div>
                     </div>
 
-                    <p className="text-sm font-semibold text-red-950 dark:text-red-200 bg-red-500/10 p-3 rounded-xl border border-red-500/20">
-                      "{sos.payload}"
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-[#64748B] dark:text-[#94A3B8] pt-1">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5 text-red-500" />
-                        <strong>{sos.casualties} Souls at Risk</strong>
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1 font-mono">
-                        <Battery className="w-3.5 h-3.5 text-amber-500" />
-                        {sos.battery_pct}% Battery
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1 font-mono">
-                        <MapPin className="w-3.5 h-3.5 text-cyan-500" />
-                        [{sos.lat.toFixed(4)}, {sos.lng.toFixed(4)}]
-                      </span>
-                      <span>•</span>
-                      <span>{sos.timestamp_display}</span>
+                    {/* Relay Route Snippet */}
+                    <div className="sm:w-64 p-3 rounded-xl bg-gray-50 dark:bg-[#0B1220] border border-[#E2E8F0] dark:border-[#1E293B] shrink-0 text-xs">
+                      <div className="font-bold text-[#0F172A] dark:text-[#F8FAFC] flex items-center justify-between mb-2">
+                        <span>DTN Relay Chain</span>
+                        <span className="text-[10px] text-cyan-600 font-mono">
+                          {sos.hops} Hops
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {(sos.relay_path || []).map((step, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between text-[11px] text-[#475569] dark:text-[#CBD5E1]"
+                          >
+                            <span className="truncate max-w-[130px] font-mono">{step.node}</span>
+                            <span className="font-mono text-[10px] text-cyan-500">{step.rssi}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-
-                  {/* Relay Route Snippet */}
-                  <div className="sm:w-64 p-3 rounded-xl bg-gray-50 dark:bg-[#0B1220] border border-[#E2E8F0] dark:border-[#1E293B] shrink-0 text-xs">
-                    <div className="font-bold text-[#0F172A] dark:text-[#F8FAFC] flex items-center justify-between mb-2">
-                      <span>DTN Relay Chain</span>
-                      <span className="text-[10px] text-cyan-600 font-mono">
-                        {sos.hops} Hops
-                      </span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {sos.relay_path.map((step, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between text-[11px] text-[#475569] dark:text-[#CBD5E1]"
-                        >
-                          <span className="truncate max-w-[130px] font-mono">{step.node}</span>
-                          <span className="font-mono text-[10px] text-cyan-500">{step.rssi}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -411,60 +444,70 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
             <span className="font-mono text-[11px]">Lossless Mesh Transport</span>
           </div>
 
-          <div className="space-y-4">
-            {(communications?.relay_topology || []).map((route: RelayTopologyRoute) => (
-              <Card
-                key={route.route_id}
-                className="p-5 bg-white dark:bg-[#111A2E] border border-[#E2E8F0] dark:border-[#1E293B]"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm text-[#0F172A] dark:text-[#F8FAFC]">
-                      Relay Route: {route.route_id}
-                    </h3>
-                    <span className="text-xs px-2 py-0.5 rounded font-mono bg-cyan-500/20 text-cyan-600 dark:text-cyan-400">
-                      Origin: {route.origin_device}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs font-mono">
-                    <span className="text-[#64748B] dark:text-[#94A3B8]">
-                      Latency: ~{route.estimated_latency_ms}ms
-                    </span>
-                    <span className="px-2 py-0.5 rounded font-bold bg-emerald-500/20 text-emerald-600">
-                      {route.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Node-by-node Chain Visual */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {route.hops.map((hop, hidx) => (
-                    <div
-                      key={hidx}
-                      className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#0B1220] border border-[#E2E8F0] dark:border-[#1E293B] relative"
-                    >
-                      <div className="flex items-center justify-between text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                        <span>Hop #{hop.hop_number}</span>
-                        <span className="text-[10px] text-cyan-600 font-mono">
-                          {hop.signal_dbm} dBm
-                        </span>
-                      </div>
-                      <div className="text-xs font-mono text-[#0891B2] mt-1 font-semibold">
-                        {hop.device_id}
-                      </div>
-                      <div className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-0.5">
-                        {hop.role}
-                      </div>
-                      <div className="mt-2 pt-2 border-t border-[#E2E8F0] dark:border-[#1E293B] flex items-center justify-between text-[10px] text-[#64748B]">
-                        <span>Delay: +{hop.delay_ms}ms</span>
-                        <span>Battery: {hop.battery}%</span>
-                      </div>
+          {(communications?.relay_topology || []).length === 0 ? (
+            <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#111A2E] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2">
+              <Radio className="w-10 h-10 mx-auto text-cyan-500/60" />
+              <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">No Multi-Hop Routes Recorded</h4>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-md mx-auto">
+                Packets for this incident were received via direct single-hop or gateway uplink without intermediate store-and-forward relay hops.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {(communications?.relay_topology || []).map((route: RelayTopologyRoute) => (
+                <Card
+                  key={route.route_id}
+                  className="p-5 bg-white dark:bg-[#111A2E] border border-[#E2E8F0] dark:border-[#1E293B]"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm text-[#0F172A] dark:text-[#F8FAFC]">
+                        Relay Route: {route.route_id}
+                      </h3>
+                      <span className="text-xs px-2 py-0.5 rounded font-mono bg-cyan-500/20 text-cyan-600 dark:text-cyan-400">
+                        Origin: {route.origin_device}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </Card>
-            ))}
-          </div>
+                    <div className="flex items-center gap-3 text-xs font-mono">
+                      <span className="text-[#64748B] dark:text-[#94A3B8]">
+                        Latency: ~{route.estimated_latency_ms}ms
+                      </span>
+                      <span className="px-2 py-0.5 rounded font-bold bg-emerald-500/20 text-emerald-600">
+                        {route.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Node-by-node Chain Visual */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {route.hops.map((hop, hidx) => (
+                      <div
+                        key={hidx}
+                        className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#0B1220] border border-[#E2E8F0] dark:border-[#1E293B] relative"
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                          <span>Hop #{hop.hop_number}</span>
+                          <span className="text-[10px] text-cyan-600 font-mono">
+                            {hop.signal_dbm} dBm
+                          </span>
+                        </div>
+                        <div className="text-xs font-mono text-[#0891B2] mt-1 font-semibold">
+                          {hop.device_id}
+                        </div>
+                        <div className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-0.5">
+                          {hop.role}
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-[#E2E8F0] dark:border-[#1E293B] flex items-center justify-between text-[10px] text-[#64748B]">
+                          <span>Delay: +{hop.delay_ms}ms</span>
+                          <span>Battery: {hop.battery}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -473,39 +516,49 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
       {/* ===================================================================== */}
       {activeSubTab === 'SITREP' && (
         <div className="space-y-4">
-          <div className="space-y-3">
-            {(communications?.field_sitreps || []).map((sit: IncidentFieldSitrep) => (
-              <Card
-                key={sit.id}
-                className="p-5 bg-white dark:bg-[#111A2E] border border-amber-500/30"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                        {sit.category.replace('_', ' ')}
-                      </span>
-                      <h4 className="font-bold text-sm text-[#0F172A] dark:text-[#F8FAFC]">
-                        {sit.location}
-                      </h4>
+          {(communications?.field_sitreps || []).length === 0 ? (
+            <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#111A2E] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2">
+              <FileText className="w-10 h-10 mx-auto text-amber-500/60" />
+              <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">No Field SITREPs Submitted</h4>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-md mx-auto">
+                No citizen or volunteer hazard reports have been submitted for this incident sector yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(communications?.field_sitreps || []).map((sit: IncidentFieldSitrep) => (
+                <Card
+                  key={sit.id}
+                  className="p-5 bg-white dark:bg-[#111A2E] border border-amber-500/30"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                          {sit.category.replace('_', ' ')}
+                        </span>
+                        <h4 className="font-bold text-sm text-[#0F172A] dark:text-[#F8FAFC]">
+                          {sit.location}
+                        </h4>
+                      </div>
+                      <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-2 leading-relaxed">
+                        "{sit.notes}"
+                      </p>
+                      <div className="mt-2.5 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200">
+                        <strong>Reported operational action:</strong> {sit.actionable || 'Not reported'}
+                      </div>
                     </div>
-                    <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-2 leading-relaxed">
-                      "{sit.notes}"
-                    </p>
-                    <div className="mt-2.5 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200">
-                      <strong>Recommended Operational Action:</strong> {sit.actionable}
-                    </div>
-                  </div>
 
-                  <div className="flex sm:flex-col items-end gap-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] shrink-0 font-mono">
-                    <span>{sit.timestamp_display}</span>
-                    <span>Reported by: {sit.reporter}</span>
-                    <span>[{sit.lat.toFixed(4)}, {sit.lng.toFixed(4)}]</span>
+                    <div className="flex sm:flex-col items-end gap-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] shrink-0 font-mono">
+                      <span>{reportedTimestamp(sit.timestamp_display)}</span>
+                      <span>Reported by: {sit.reporter}</span>
+                      <span>{reportedCoordinates(sit.lat, sit.lng)}</span>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -514,34 +567,44 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
       {/* ===================================================================== */}
       {activeSubTab === 'TEAM' && (
         <div className="space-y-4">
-          <div className="space-y-3">
-            {(communications?.team_comms || []).map((tc: IncidentTeamComm) => (
-              <Card
-                key={tc.id}
-                className="p-4 bg-white dark:bg-[#111A2E] border-emerald-500/30"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600">
-                        {tc.type}
-                      </span>
-                      <span className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">
-                        {tc.sender} → {tc.recipient}
-                      </span>
+          {(communications?.team_comms || []).length === 0 ? (
+            <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#111A2E] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2">
+              <MessageSquare className="w-10 h-10 mx-auto text-emerald-500/60" />
+              <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">No Rescue Team Dispatches</h4>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-md mx-auto">
+                No command orders or tactical progress messages have been sent to field rescue units for this incident yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(communications?.team_comms || []).map((tc: IncidentTeamComm) => (
+                <Card
+                  key={tc.id}
+                  className="p-4 bg-white dark:bg-[#111A2E] border-emerald-500/30"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600">
+                          {tc.type}
+                        </span>
+                        <span className="text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">
+                          {tc.sender} → {tc.recipient}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-2 leading-relaxed">
+                        "{tc.message}"
+                      </p>
                     </div>
-                    <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-2 leading-relaxed">
-                      "{tc.message}"
-                    </p>
+                    <div className="flex flex-col items-end text-[11px] font-mono text-[#64748B]">
+                      <span>{reportedTimestamp(tc.timestamp_display)}</span>
+                      <span className="text-emerald-500 font-bold">{tc.status}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end text-[11px] font-mono text-[#64748B]">
-                    <span>{tc.timestamp_display}</span>
-                    <span className="text-emerald-500 font-bold">{tc.status}</span>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -550,44 +613,54 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
       {/* ===================================================================== */}
       {activeSubTab === 'VOICE' && (
         <div className="space-y-4">
-          <div className="space-y-3">
-            {(communications?.voice_transcriptions || []).map((vt: IncidentVoiceTranscription) => (
-              <Card
-                key={vt.id}
-                className="p-4 bg-white dark:bg-[#111A2E] border-purple-500/30"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Mic className="w-4 h-4 text-purple-500" />
-                      <h4 className="font-bold text-sm text-[#0F172A] dark:text-[#F8FAFC]">
-                        {vt.speaker} ({vt.duration_seconds}s audio)
-                      </h4>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 font-mono">
-                        AI NLP Conf: {Math.round(vt.urgency_score * 100)}%
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-2 italic bg-purple-500/5 p-3 rounded-lg border border-purple-500/20">
-                      "{vt.transcription}"
-                    </p>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <span className="text-[11px] font-semibold text-[#64748B]">Extracted NLP Entities:</span>
-                      {vt.nlp_extracted_entities.map((ent, eidx) => (
-                        <span
-                          key={eidx}
-                          className="px-2 py-0.5 text-[10px] rounded bg-purple-500/10 text-purple-700 dark:text-purple-300 font-semibold"
-                        >
-                          {ent}
+          {(communications?.voice_transcriptions || []).length === 0 ? (
+            <div className="p-8 text-center rounded-2xl bg-white dark:bg-[#111A2E] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2">
+              <Mic className="w-10 h-10 mx-auto text-purple-500/60" />
+              <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">No Audio Transcriptions</h4>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-md mx-auto">
+                No voice memos or audio recordings have been captured from mesh handsets for this incident.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(communications?.voice_transcriptions || []).map((vt: IncidentVoiceTranscription) => (
+                <Card
+                  key={vt.id}
+                  className="p-4 bg-white dark:bg-[#111A2E] border-purple-500/30"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Mic className="w-4 h-4 text-purple-500" />
+                        <h4 className="font-bold text-sm text-[#0F172A] dark:text-[#F8FAFC]">
+                          {vt.speaker} ({vt.duration_seconds}s audio)
+                        </h4>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 font-mono">
+                          AI NLP Conf: {Math.round(vt.urgency_score * 100)}%
                         </span>
-                      ))}
+                      </div>
+
+                      <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-2 italic bg-purple-500/5 p-3 rounded-lg border border-purple-500/20">
+                        "{vt.transcription}"
+                      </p>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-semibold text-[#64748B]">Extracted NLP Entities:</span>
+                        {vt.nlp_extracted_entities.map((ent, eidx) => (
+                          <span
+                            key={eidx}
+                            className="px-2 py-0.5 text-[10px] rounded bg-purple-500/10 text-purple-700 dark:text-purple-300 font-semibold"
+                          >
+                            {ent}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

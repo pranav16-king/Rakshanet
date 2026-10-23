@@ -17,8 +17,9 @@ class DeviceIdentityService {
   DeviceIdentityService._();
 
   static final DeviceIdentityService instance = DeviceIdentityService._();
-  static const MethodChannel _telemetryChannel =
-      MethodChannel('org.rakshanet/telemetry');
+  static const MethodChannel _telemetryChannel = MethodChannel(
+    'org.rakshanet/telemetry',
+  );
 
   static const _deviceIdKey = 'rakshanet_mesh_device_id';
   static const _consentedImeiKey = 'rakshanet_consented_imei_id';
@@ -34,8 +35,8 @@ class DeviceIdentityService {
 
   String get deviceId =>
       (_consentedImeiId != null && _consentedImeiId!.isNotEmpty)
-          ? _consentedImeiId!
-          : _deviceId;
+      ? _consentedImeiId!
+      : _deviceId;
   String? get consentedImeiId => _consentedImeiId;
   bool get hasPrivacyConsent => _hasPrivacyConsent;
   String get displayName => _displayName;
@@ -166,8 +167,9 @@ class DeviceIdentityService {
       ];
       for (final prop in propsToRead) {
         try {
-          final res = await Process.run('getprop', [prop])
-              .timeout(const Duration(milliseconds: 500));
+          final res = await Process.run('getprop', [
+            prop,
+          ]).timeout(const Duration(milliseconds: 500));
           final val = res.stdout?.toString().trim() ?? '';
           if (val.isNotEmpty && val.toLowerCase() != 'unknown') {
             hwTokens.add('$prop=$val');

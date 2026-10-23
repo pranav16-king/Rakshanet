@@ -255,7 +255,10 @@ class IncidentDispatchService {
     return notes.isEmpty ? base : '$base Notes: $notes';
   }
 
-  static EmergencyReport _copyWithStatus(EmergencyReport report, String status) {
+  static EmergencyReport _copyWithStatus(
+    EmergencyReport report,
+    String status,
+  ) {
     return EmergencyReport.create(
       id: report.id,
       type: report.type,

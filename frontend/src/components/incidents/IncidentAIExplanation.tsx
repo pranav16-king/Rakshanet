@@ -20,68 +20,53 @@ interface IncidentAIExplanationProps {
 export const IncidentAIExplanation: React.FC<IncidentAIExplanationProps> = ({ explainability }) => {
   const { isDark } = useTheme();
 
-  // Safely extract raw factors and string detections from backend
+  if (!explainability || (typeof explainability === 'object' && Object.keys(explainability).length === 0)) {
+    return <div className={`rounded-xl border p-5 text-sm ${isDark ? 'border-[#26344F] bg-[#162036] text-[#9FADC2]' : 'border-[#E2E8F0] bg-white text-[#64748B]'}`}>No AI assessment was reported for this incident.</div>;
+  }
+
+  // Render an assessment only when the gateway supplied all of its inputs.
+  // A partial object must not be completed with made-up scores or factors.
   const rawFactors = explainability?.factors;
   const isFactorsArray = Array.isArray(rawFactors);
   const detectedSignals: string[] = isFactorsArray ? rawFactors : (Array.isArray(explainability?.factorList) ? explainability.factorList : []);
 
   const factorsObj = (!isFactorsArray && rawFactors && typeof rawFactors === 'object') ? rawFactors : {};
+  const requiredFactorKeys = [
+    'incidentSeverity',
+    'lastContactTime',
+    'affectedPopulation',
+    'hazardBoundaryProximity',
+    'communicationStatus',
+  ];
+  const hasReportedAssessment =
+    typeof explainability?.priorityScore === 'number' &&
+    typeof explainability?.confidencePct === 'number' &&
+    typeof explainability?.confidenceGrade === 'string' &&
+    typeof (explainability?.modelVersion ?? explainability?.model_version) === 'string' &&
+    typeof explainability?.synthesis === 'string' &&
+    typeof explainability?.disclaimer === 'string' &&
+    requiredFactorKeys.every((key) => {
+      const factor = factorsObj[key];
+      return factor && typeof factor.name === 'string' && typeof factor.factorKey === 'string' &&
+        typeof factor.weightPct === 'number' && typeof factor.valueDisplay === 'string' &&
+        typeof factor.status === 'string' && typeof factor.details === 'string';
+    });
 
-  // Standardized 5 Core Explainability Factors with bulletproof fallbacks
-  const severityFactor: AIFactor = factorsObj.incidentSeverity || {
-    name: 'Incident Severity',
-    factorKey: 'severity',
-    weightPct: 30,
-    valueDisplay: 'Critical',
-    status: 'critical',
-    details: detectedSignals[0] || 'High casualty risk and infrastructure compromise detected by AI spatial triage',
-  };
+  if (!hasReportedAssessment) {
+    return <div className={`rounded-xl border p-5 text-sm ${isDark ? 'border-[#26344F] bg-[#162036] text-[#9FADC2]' : 'border-[#E2E8F0] bg-white text-[#64748B]'}`}>No complete AI assessment was reported for this incident.</div>;
+  }
 
-  const lastContactFactor: AIFactor = factorsObj.lastContactTime || {
-    name: 'Last Contact Time',
-    factorKey: 'last_contact',
-    weightPct: 25,
-    valueDisplay: 'Active',
-    status: 'critical',
-    details: detectedSignals[1] || 'Recent telemetry packet received via peer mesh hop or data mule',
-  };
-
-  const populationFactor: AIFactor = factorsObj.affectedPopulation || {
-    name: 'Estimated Population',
-    factorKey: 'population',
-    weightPct: 20,
-    valueDisplay: 'Multiple Victims',
-    status: 'warning',
-    details: detectedSignals[2] || 'Multi-victim expansion multiplier derived from DBSCAN cluster density',
-  };
-
-  const hazardFactor: AIFactor = factorsObj.hazardBoundaryProximity || {
-    name: 'Hazard Proximity',
-    factorKey: 'hazard',
-    weightPct: 15,
-    valueDisplay: 'Within Boundary',
-    status: 'critical',
-    details: 'Located within active geographical inundation or debris obstruction perimeter',
-  };
-
-  const commsFactor: AIFactor = factorsObj.communicationStatus || {
-    name: 'Mesh Relay Status',
-    factorKey: 'comms',
-    weightPct: 10,
-    valueDisplay: 'Mesh Operational',
-    status: 'normal',
-    details: 'Ad-hoc peer-to-peer radio relay active; zero cellular dependence required',
-  };
-
-  const priorityScore = explainability?.priorityScore ?? 96;
-  const confidencePct = explainability?.confidencePct ?? 94;
-  const confidenceGrade = explainability?.confidenceGrade ?? (confidencePct >= 90 ? 'VERY_HIGH' : 'HIGH');
-  const modelVersion = explainability?.modelVersion || explainability?.model_version || 'RakshaNet-SpatialTriage-v2.1';
-  const synthesis = explainability?.synthesis ||
-    (detectedSignals.length > 0
-      ? `AI Spatial Triage: ${detectedSignals.join('. ')}`
-      : 'High confidence cluster of distress transmissions. Spatiotemporal velocity indicates flash disaster event. Urgent unit deployment recommended.');
-  const disclaimer = explainability?.disclaimer || 'Probabilistic casualty & search zone model. Values are estimated, not exact.';
+  const severityFactor = factorsObj.incidentSeverity as AIFactor;
+  const lastContactFactor = factorsObj.lastContactTime as AIFactor;
+  const populationFactor = factorsObj.affectedPopulation as AIFactor;
+  const hazardFactor = factorsObj.hazardBoundaryProximity as AIFactor;
+  const commsFactor = factorsObj.communicationStatus as AIFactor;
+  const priorityScore = explainability.priorityScore as number;
+  const confidencePct = explainability.confidencePct as number;
+  const confidenceGrade = explainability.confidenceGrade as string;
+  const modelVersion = (explainability.modelVersion ?? explainability.model_version) as string;
+  const synthesis = explainability.synthesis as string;
+  const disclaimer = explainability.disclaimer as string;
 
   const factorList = [
     {

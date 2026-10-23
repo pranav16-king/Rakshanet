@@ -178,8 +178,8 @@ class MeshEngine extends ChangeNotifier {
         _seenMessageIds.add(msg.id);
         _bloomFilter.add(msg.id);
       }
-      final existingPackets =
-          await AppDatabase.instance.getAllEncryptedMeshPackets();
+      final existingPackets = await AppDatabase.instance
+          .getAllEncryptedMeshPackets();
       for (final pkt in existingPackets) {
         _seenMessageIds.add(pkt.messageId);
         _bloomFilter.add(pkt.messageId);
@@ -461,8 +461,8 @@ class MeshEngine extends ChangeNotifier {
     );
     final status =
         (existingPkt?.status == MeshDeliveryState.deliveredToRecipient)
-            ? MeshDeliveryState.deliveredToRecipient
-            : MeshDeliveryState.relayed;
+        ? MeshDeliveryState.deliveredToRecipient
+        : MeshDeliveryState.relayed;
 
     await AppDatabase.instance.saveEncryptedMeshPacket(
       EncryptedMeshPacket(
@@ -901,13 +901,17 @@ class MeshEngine extends ChangeNotifier {
       data['id'] = envelope.uuid;
       final person = MissingPerson.fromMap(data);
       await AppDatabase.instance.saveMissingPerson(person);
-      debugPrint('[MeshEngine] Persisted incoming MISSING_PERSON mesh packet: ${person.name}');
+      debugPrint(
+        '[MeshEngine] Persisted incoming MISSING_PERSON mesh packet: ${person.name}',
+      );
     } catch (e) {
       debugPrint('[MeshEngine] Error parsing MISSING_PERSON packet: $e');
     }
   }
 
-  Future<void> _persistIncomingMissingPersonSighting(MessageEnvelope envelope) async {
+  Future<void> _persistIncomingMissingPersonSighting(
+    MessageEnvelope envelope,
+  ) async {
     try {
       Map<String, dynamic> data = {};
       if (envelope.payload.trim().startsWith('{')) {
@@ -915,12 +919,18 @@ class MeshEngine extends ChangeNotifier {
       } else if (envelope.metadata != null) {
         data = Map<String, dynamic>.from(envelope.metadata!);
       }
-      final personId = data['person_id']?.toString() ?? envelope.conversationId.replaceFirst('CONV_MP_', '');
+      final personId =
+          data['person_id']?.toString() ??
+          envelope.conversationId.replaceFirst('CONV_MP_', '');
       final sighting = MissingPersonSighting.fromMap(data);
       await AppDatabase.instance.addMissingPersonSighting(personId, sighting);
-      debugPrint('[MeshEngine] Persisted incoming MISSING_PERSON_SIGHTING mesh packet for person: $personId');
+      debugPrint(
+        '[MeshEngine] Persisted incoming MISSING_PERSON_SIGHTING mesh packet for person: $personId',
+      );
     } catch (e) {
-      debugPrint('[MeshEngine] Error parsing MISSING_PERSON_SIGHTING packet: $e');
+      debugPrint(
+        '[MeshEngine] Error parsing MISSING_PERSON_SIGHTING packet: $e',
+      );
     }
   }
 
@@ -944,7 +954,10 @@ class MeshEngine extends ChangeNotifier {
   }
 
   /// Broadcast a Sighting to all nearby mesh peers
-  Future<void> broadcastMissingPersonSighting(String personId, MissingPersonSighting sighting) async {
+  Future<void> broadcastMissingPersonSighting(
+    String personId,
+    MissingPersonSighting sighting,
+  ) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final myDeviceId = DatabaseService.myDeviceId;
     final data = sighting.toMap()..['person_id'] = personId;
@@ -1115,7 +1128,10 @@ class MeshEngine extends ChangeNotifier {
           senderDeviceId: currentMsg.senderId,
           recipientUserId: currentMsg.recipientTarget,
           recipientDeviceId: isLast ? nextNode : null,
-          routingHeaderJson: jsonEncode({'hops': currentHop, 'ttl': currentTtl}),
+          routingHeaderJson: jsonEncode({
+            'hops': currentHop,
+            'ttl': currentTtl,
+          }),
           encryptedPayloadJson: currentMsg.content,
           status: isLast
               ? MeshDeliveryState.deliveredToRecipient

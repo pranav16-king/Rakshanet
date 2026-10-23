@@ -144,10 +144,11 @@ export const IncidentsPage: React.FC = () => {
       mapInstanceRef.current = null;
     }
 
-    // Centroid of incidents or center of active disaster theater
-    const defaultLat = filtered[0]?.coordinates?.lat || 13.0425;
-    const defaultLng = filtered[0]?.coordinates?.lng || 80.2285;
-    const initialZoom = filtered.length === 1 ? 14 : filtered.length > 1 ? 11 : 12;
+    const mappedIncidents = filtered.filter((incident) => Number.isFinite(incident.coordinates?.lat) && Number.isFinite(incident.coordinates?.lng));
+    if (mappedIncidents.length === 0) return;
+    const defaultLat = mappedIncidents[0].coordinates.lat;
+    const defaultLng = mappedIncidents[0].coordinates.lng;
+    const initialZoom = mappedIncidents.length === 1 ? 14 : 11;
 
     const map = L.map(mapContainerRef.current, {
       center: [defaultLat, defaultLng],
@@ -165,9 +166,9 @@ export const IncidentsPage: React.FC = () => {
       maxZoom: 19,
     }).addTo(map);
 
-    filtered.forEach((inc) => {
-      const lat = inc.coordinates?.lat || (inc as any).lat || 13.0425;
-      const lng = inc.coordinates?.lng || (inc as any).lng || 80.2285;
+    mappedIncidents.forEach((inc) => {
+      const lat = inc.coordinates.lat;
+      const lng = inc.coordinates.lng;
       const sev = (inc.severity || 'HIGH').toUpperCase();
       const color =
         sev === 'CRITICAL'
@@ -175,17 +176,19 @@ export const IncidentsPage: React.FC = () => {
           : sev === 'HIGH'
           ? '#F59E0B'
           : '#06B6D4';
-      const radiusM = inc.clusterRadiusMeters || 600;
+      const radiusM = inc.clusterRadiusMeters;
 
       // Geofence circle
-      L.circle([lat, lng], {
-        radius: radiusM,
-        color: color,
-        weight: 2,
-        dashArray: '4, 4',
-        fillColor: color,
-        fillOpacity: 0.2,
-      }).addTo(map);
+      if (typeof radiusM === 'number') {
+        L.circle([lat, lng], {
+          radius: radiusM,
+          color: color,
+          weight: 2,
+          dashArray: '4, 4',
+          fillColor: color,
+          fillOpacity: 0.2,
+        }).addTo(map);
+      }
 
       // Custom Pulsating Pin
       const icon = L.divIcon({

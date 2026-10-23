@@ -27,7 +27,7 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
   onRefresh,
 }) => {
   const [pingingId, setPingingId] = useState<string | null>(null);
-  const [pingResults, setPingResults] = useState<Record<string, number>>({});
+  const [pingResults, setPingResults] = useState<Record<string, number | null>>({});
 
   const handlePing = async (deviceId: string) => {
     setPingingId(deviceId);
@@ -165,7 +165,7 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
 
                   {/* Battery % bar */}
                   <td className="px-5 py-3.5 whitespace-nowrap">
-                    <BatteryBar percent={device.battery} />
+                    {device.battery === undefined ? <span className="text-xs text-slate-500">Not reported</span> : <BatteryBar percent={device.battery} />}
                   </td>
 
                   {/* Status */}

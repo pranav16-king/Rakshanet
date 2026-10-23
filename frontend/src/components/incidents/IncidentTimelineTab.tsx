@@ -45,7 +45,18 @@ export const IncidentTimelineTab: React.FC<IncidentTimelineTabProps> = ({ timeli
         </p>
       </div>
 
-      <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-inherit/40">
+      {timeline.length === 0 ? (
+        <div className="p-8 text-center rounded-xl bg-gray-50/50 dark:bg-[#0E1627]/50 border border-dashed border-[#CBD5E1] dark:border-[#26344F] space-y-2">
+          <Clock size={32} className="mx-auto opacity-40 text-[#64748B] dark:text-[#94A3B8]" />
+          <h4 className="text-sm font-bold text-[#0F172A] dark:text-white">
+            No Timeline Events Recorded Yet
+          </h4>
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-md mx-auto">
+            Audit trail will update in real-time as distress pings, responder dispatches, and relay acknowledgments are ingested.
+          </p>
+        </div>
+      ) : (
+        <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-inherit/40">
         {timeline.map((item) => (
           <div key={item.id} className="relative group">
             {/* Timeline node dot */}
@@ -90,6 +101,7 @@ export const IncidentTimelineTab: React.FC<IncidentTimelineTabProps> = ({ timeli
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 };

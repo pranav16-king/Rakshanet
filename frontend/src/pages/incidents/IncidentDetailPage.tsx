@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
+import type { IncidentPerson, IncidentDevice, IncidentTimelineEvent } from '../../types/incident.ts';
 import {
   fetchIncidentById,
   getIncidentPeople,
@@ -59,7 +60,7 @@ export const IncidentDetailPage: React.FC = () => {
   const [currentStatus, setCurrentStatus] = useState<string>('ACTIVE');
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
 
-  const incidentId = id || 'INC-FLD-2026-001';
+  const incidentId = id || '';
 
   // 1. Fetch Master Incident Details with 12s live polling
   const {
@@ -133,13 +134,105 @@ export const IncidentDetailPage: React.FC = () => {
     }
   };
 
-  const people = useMemo(
-    () => getIncidentPeople(incident?.affectedPeople || 142),
-    [incident?.affectedPeople]
-  );
-  const devices = useMemo(() => getIncidentDevices(), []);
-  const timeline = useMemo(() => getIncidentTimeline(), []);
+  const people: IncidentPerson[] = useMemo(() => getIncidentPeople(), []); /* Legacy derived profiles deliberately disabled.
+    if (communications?.sos_alerts && communications.sos_alerts.length > 0) {
+      return communications.sos_alerts.map((s, idx) => ({
+        id: s.id || `person-${idx}`,
+        name: s.sender_name || s.sender_id || `Survivor ${idx + 1}`,
+        role: 'Civic Survivor',
+        status: s.priority === 'CRITICAL' ? 'Critical Triage' : 'Trapped',
+        familyMembersCount: s.casualties || 1,
+        devicePseudonym: s.sender_id,
+        location: `${s.lat.toFixed(4)}° N, ${s.lng.toFixed(4)}° E`,
+        lastContact: s.timestamp_display,
+        medicalNotes: s.payload,
+      }));
+    }
+    if (incident?.associatedDevices && incident.associatedDevices.length > 0) {
+      return (incident.associatedDevices as string[]).map((devId: string, idx: number) => ({
+        id: `dev-person-${idx}`,
+        name: `Distress Handset (${devId})`,
+        role: 'Civic Survivor',
+        status: 'Trapped',
+        familyMembersCount: incident.affectedPeople ? Math.max(1, Math.round(incident.affectedPeople / incident.associatedDevices.length)) : 1,
+        devicePseudonym: devId,
+        location: typeof incident.location === 'string' ? incident.location : `${incident.coordinates.lat.toFixed(4)}° N, ${incident.coordinates.lng.toFixed(4)}° E`,
+        lastContact: 'Active Uplink',
+        medicalNotes: 'Disaster mesh distress telemetry',
+      }));
+    }
+    return [];
+  }, [communications?.sos_alerts, incident?.associatedDevices, incident?.affectedPeople, incident?.location, incident?.coordinates]);
 
+  */
+  const devices: IncidentDevice[] = useMemo(() => getIncidentDevices(), []); /* Legacy derived device telemetry deliberately disabled.
+    if (incident?.associatedDevices && incident.associatedDevices.length > 0) {
+      return (incident.associatedDevices as string[]).map((devId: string) => ({
+        deviceId: devId,
+        ownerName: `Mesh Handset (${devId})`,
+        deviceType: 'Phone',
+        batteryPct: 85,
+        hops: 0,
+        lastSeen: 'Active Uplink',
+        status: 'Relay',
+        rssi: -58,
+      }));
+    }
+    return [];
+  }, [incident?.associatedDevices]);
+
+  */
+  const timeline: IncidentTimelineEvent[] = useMemo(() => getIncidentTimeline(), []); /* Legacy inferred timeline deliberately disabled.
+    const events: IncidentTimelineEvent[] = [];
+    if (incident?.firstReported) {
+      events.push({
+        id: 'ev-report',
+        timestamp: incident.firstReported,
+        title: 'Incident Distress Beacon Ingested',
+        description: `Initial spatiotemporal cluster formed from distress beacons. Severity assessed as ${incident.severity}.`,
+        category: 'DISTRESS',
+        actor: 'RakshaNet Gateway Engine',
+        severity: incident.severity as any,
+      });
+    }
+    if (incident?.assignedTeam) {
+      events.push({
+        id: 'ev-assigned',
+        timestamp: incident.lastUpdate || 'Recent',
+        title: 'Rescue Team Dispatched',
+        description: `Tactical assignment given to ${incident.assignedTeam}.`,
+        category: 'DISPATCH',
+        actor: 'Command Center Commander',
+      });
+    }
+    if (communications?.sos_alerts && communications.sos_alerts.length > 0) {
+      communications.sos_alerts.forEach((s) => {
+        events.push({
+          id: `ev-sos-${s.id}`,
+          timestamp: s.timestamp_display,
+          title: `SOS Alert: ${s.sender_name}`,
+          description: s.payload,
+          category: 'DISTRESS',
+          actor: s.sender_id,
+        });
+      });
+    }
+    if (communications?.team_comms && communications.team_comms.length > 0) {
+      communications.team_comms.forEach((tc) => {
+        events.push({
+          id: `ev-tc-${tc.id}`,
+          timestamp: tc.timestamp_display,
+          title: `Tactical Command: ${tc.sender}`,
+          description: tc.message,
+          category: 'DISPATCH',
+          actor: tc.sender,
+        });
+      });
+    }
+    return events;
+  }, [incident?.firstReported, incident?.lastUpdate, incident?.severity, incident?.assignedTeam, communications?.sos_alerts, communications?.team_comms]);
+
+  */
   const handleShare = () => {
     const url = `${window.location.origin}/api/v1/interop/cap/${incidentId}.xml`;
     navigator.clipboard?.writeText(url);
@@ -179,10 +272,10 @@ export const IncidentDetailPage: React.FC = () => {
 
   const tabs = [
     'Overview',
-    `Mesh Communications (${communications?.summary?.total || 9})`,
+    `Mesh Communications (${communications?.summary?.total ?? 0})`,
     'Incident Area Map',
-    `People (${incident.affectedPeople})`,
-    `Devices (${incident.devicesCount})`,
+    `People (${incident.affectedPeople ?? 'Not reported'})`,
+    `Devices (${incident.devicesCount ?? 'Not reported'})`,
     'Resources',
     'Timeline',
   ];
@@ -346,10 +439,10 @@ export const IncidentDetailPage: React.FC = () => {
             (activeTab === 'Overview' && tab === 'Overview') ||
             (activeTab === 'Mesh Communications' && tab.startsWith('Mesh Communications')) ||
             (activeTab === 'Incident Area Map' && tab === 'Incident Area Map') ||
-            (activeTab.startsWith('People') && tab.startsWith('People')) ||
-            (activeTab.startsWith('Devices') && tab.startsWith('Devices')) ||
+            (activeTab === 'People' && tab.startsWith('People')) ||
+            (activeTab === 'Devices' && tab.startsWith('Devices')) ||
             (activeTab === 'Resources' && tab === 'Resources') ||
-            (activeTab === 'Timeline' && tab === 'Timeline');
+            (activeTab === 'Timeline' && tab.startsWith('Timeline'));
 
           return (
             <button
@@ -357,6 +450,12 @@ export const IncidentDetailPage: React.FC = () => {
               onClick={() => {
                 if (tab.startsWith('Mesh Communications')) {
                   setActiveTab('Mesh Communications');
+                } else if (tab.startsWith('People')) {
+                  setActiveTab('People');
+                } else if (tab.startsWith('Devices')) {
+                  setActiveTab('Devices');
+                } else if (tab.startsWith('Timeline')) {
+                  setActiveTab('Timeline');
                 } else {
                   setActiveTab(tab);
                 }

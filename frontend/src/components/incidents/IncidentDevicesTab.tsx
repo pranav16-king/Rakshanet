@@ -31,7 +31,18 @@ export const IncidentDevicesTab: React.FC<IncidentDevicesTabProps> = ({ devices 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {devices.length === 0 ? (
+        <div className="p-8 text-center rounded-xl bg-gray-50/50 dark:bg-[#0E1627]/50 border border-dashed border-[#CBD5E1] dark:border-[#26344F] space-y-2">
+          <Smartphone size={32} className="mx-auto opacity-40 text-[#64748B] dark:text-[#94A3B8]" />
+          <h4 className="text-sm font-bold text-[#0F172A] dark:text-white">
+            No Connected Mesh Handsets
+          </h4>
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-md mx-auto">
+            No active handset or solar repeater IDs are directly associated with this incident cluster.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {devices.map((dev) => (
           <div
             key={dev.deviceId}
@@ -93,6 +104,7 @@ export const IncidentDevicesTab: React.FC<IncidentDevicesTabProps> = ({ devices 
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 };

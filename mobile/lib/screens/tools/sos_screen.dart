@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -72,11 +73,8 @@ class _SosScreenState extends State<SosScreen>
         ),
       );
     } else {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => const LiveMapScreen(),
-        ),
-      );
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const LiveMapScreen()));
     }
   }
 
@@ -237,10 +235,7 @@ class _SosScreenState extends State<SosScreen>
               ),
               Text(
                 '${alertHistory.length} total',
-                style: TextStyle(
-                  color: theme.textMuted,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: theme.textMuted, fontSize: 12),
               ),
             ],
           ),
@@ -249,7 +244,9 @@ class _SosScreenState extends State<SosScreen>
           if (alertHistory.isEmpty)
             _buildEmptyAlertHistoryCard(theme)
           else
-            ...alertHistory.map((alert) => _buildAlertHistoryCard(theme, alert, localFix)),
+            ...alertHistory.map(
+              (alert) => _buildAlertHistoryCard(theme, alert, localFix),
+            ),
         ],
       ),
     );
@@ -295,7 +292,9 @@ class _SosScreenState extends State<SosScreen>
           Row(
             children: [
               Icon(
-                hasFix ? Icons.my_location_rounded : Icons.location_searching_rounded,
+                hasFix
+                    ? Icons.my_location_rounded
+                    : Icons.location_searching_rounded,
                 color: badgeColor,
                 size: 20,
               ),
@@ -312,7 +311,10 @@ class _SosScreenState extends State<SosScreen>
               ),
               if (hasFix)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: isStale
                         ? AppTokens.warningAmber.withValues(alpha: 0.15)
@@ -322,7 +324,9 @@ class _SosScreenState extends State<SosScreen>
                   child: Text(
                     isStale ? 'STALE' : 'LIVE',
                     style: TextStyle(
-                      color: isStale ? AppTokens.warningAmber : AppTokens.beaconTeal,
+                      color: isStale
+                          ? AppTokens.warningAmber
+                          : AppTokens.beaconTeal,
                       fontSize: 10.5,
                       fontWeight: FontWeight.w800,
                     ),
@@ -409,7 +413,9 @@ class _SosScreenState extends State<SosScreen>
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: const BoxDecoration(
               color: AppTokens.sosRed,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusMd - 2)),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppTokens.radiusMd - 2),
+              ),
             ),
             child: Row(
               children: [
@@ -420,7 +426,9 @@ class _SosScreenState extends State<SosScreen>
                     height: 14 * _pulseScale.value,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: _pulseOpacity.value * 0.9),
+                      color: Colors.white.withValues(
+                        alpha: _pulseOpacity.value * 0.9,
+                      ),
                     ),
                   ),
                 ),
@@ -484,7 +492,9 @@ class _SosScreenState extends State<SosScreen>
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.12),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -510,17 +520,26 @@ class _SosScreenState extends State<SosScreen>
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: distanceResult.freshnessStatus == GeospatialFreshness.live
+                              color:
+                                  distanceResult.freshnessStatus ==
+                                      GeospatialFreshness.live
                                   ? AppTokens.beaconTeal.withValues(alpha: 0.25)
-                                  : AppTokens.warningAmber.withValues(alpha: 0.25),
+                                  : AppTokens.warningAmber.withValues(
+                                      alpha: 0.25,
+                                    ),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               distanceResult.freshnessStatus,
                               style: TextStyle(
-                                color: distanceResult.freshnessStatus == GeospatialFreshness.live
+                                color:
+                                    distanceResult.freshnessStatus ==
+                                        GeospatialFreshness.live
                                     ? AppTokens.beaconTeal
                                     : AppTokens.warningAmber,
                                 fontSize: 10,
@@ -556,12 +575,21 @@ class _SosScreenState extends State<SosScreen>
                           backgroundColor: AppTokens.beaconTeal,
                           foregroundColor: AppTokens.nightNavy,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              AppTokens.radiusSm,
+                            ),
                           ),
                         ),
-                        onPressed: () => _openMapToDistress(alert.lat, alert.lng, targetName: alert.formattedSender),
+                        onPressed: () => _openMapToDistress(
+                          alert.lat,
+                          alert.lng,
+                          targetName: alert.formattedSender,
+                        ),
                         icon: const Icon(Icons.map_rounded, size: 16),
-                        label: const Text('View On Map', style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: const Text(
+                          'View On Map',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -571,12 +599,17 @@ class _SosScreenState extends State<SosScreen>
                           foregroundColor: Colors.white,
                           side: const BorderSide(color: Colors.white38),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              AppTokens.radiusSm,
+                            ),
                           ),
                         ),
-                        onPressed: () =>
-                            SosAlertService.instance.acknowledgeAndRespond(alert),
-                        icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                        onPressed: () => SosAlertService.instance
+                            .acknowledgeAndRespond(alert),
+                        icon: const Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 16,
+                        ),
                         label: const Text('Acknowledge'),
                       ),
                     ),
@@ -609,7 +642,11 @@ class _SosScreenState extends State<SosScreen>
 
     return InkWell(
       borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-      onTap: () => _openMapToDistress(alert.lat, alert.lng, targetName: alert.formattedSender),
+      onTap: () => _openMapToDistress(
+        alert.lat,
+        alert.lng,
+        targetName: alert.formattedSender,
+      ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(12),
@@ -651,7 +688,11 @@ class _SosScreenState extends State<SosScreen>
                     ),
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded, color: AppTokens.sosRed, size: 18),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppTokens.sosRed,
+                  size: 18,
+                ),
               ],
             ),
             if (!distanceResult.isCoordinatesAvailable &&

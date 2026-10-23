@@ -60,12 +60,10 @@ export const PeoplePage: React.FC = () => {
   };
 
   const handleToggleAuthorization = (personId: string, authorize: boolean) => {
-    const updated = peopleApi.toggleAuthorization(personId, authorize);
-    if (updated) {
-      setPeople((prev) => prev.map((p) => (p.id === personId ? { ...p, isAuthorized: authorize } : p)));
-      if (selectedPerson && selectedPerson.id === personId) {
-        setSelectedPerson({ ...selectedPerson, isAuthorized: authorize });
-      }
+    void peopleApi.toggleAuthorization(personId, authorize);
+    setPeople((prev) => prev.map((p) => (p.id === personId ? { ...p, isAuthorized: authorize } : p)));
+    if (selectedPerson && selectedPerson.id === personId) {
+      setSelectedPerson({ ...selectedPerson, isAuthorized: authorize });
     }
   };
 

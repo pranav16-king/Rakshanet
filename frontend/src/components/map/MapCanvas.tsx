@@ -108,7 +108,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   zoom = 13,
 }) => {
   // Dynamically compute center coordinates from active incidents or devices
-  const computedCenter = useMemo((): [number, number] => {
+  const computedCenter = useMemo((): [number, number] | null => {
     if (center) return center;
 
     const points: [number, number][] = [];
@@ -128,50 +128,15 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       }
     });
 
-    if (points.length === 0) {
-      return [13.0425, 80.2285]; // Default sector centroid (South India / Chennai operational grid)
-    }
+    if (points.length === 0) return null;
 
     const avgLat = points.reduce((sum, p) => sum + p[0], 0) / points.length;
     const avgLng = points.reduce((sum, p) => sum + p[1], 0) / points.length;
     return [avgLat, avgLng];
   }, [center, incidents, devices, rescueTeams]);
 
-  // Mesh connections dynamic line segments connecting active devices
-  const meshLines: [number, number][][] = useMemo(() => {
-    const activeNodes = devices.filter(
-      (d) => (d.status === 'Online' || d.status === 'Relay') && d.lat !== 0 && d.lng !== 0
-    );
-    if (activeNodes.length < 2) return [];
-
-    const lines: [number, number][][] = [];
-    const maxMeshDistDegrees = 0.08; // ~8.5km LoRa/BLE long-range radio threshold
-
-    for (let i = 0; i < activeNodes.length; i++) {
-      for (let j = i + 1; j < activeNodes.length; j++) {
-        const d1 = activeNodes[i];
-        const d2 = activeNodes[j];
-        const dist = Math.sqrt(
-          Math.pow(d1.lat - d2.lat, 2) + Math.pow(d1.lng - d2.lng, 2)
-        );
-        if (dist <= maxMeshDistDegrees) {
-          lines.push([[d1.lat, d1.lng], [d2.lat, d2.lng]]);
-        }
-      }
-    }
-
-    // Connect sequential neighbors if nodes are sparse but alive
-    if (lines.length === 0 && activeNodes.length >= 2) {
-      for (let i = 0; i < activeNodes.length - 1; i++) {
-        lines.push([
-          [activeNodes[i].lat, activeNodes[i].lng],
-          [activeNodes[i + 1].lat, activeNodes[i + 1].lng],
-        ]);
-      }
-    }
-
-    return lines;
-  }, [devices]);
+  // The gateway does not publish radio-neighbour edges. Do not infer links from hop counts or proximity.
+  const meshLines: [number, number][][] = useMemo(() => [], []);
 
   // Device dot icons
   const deviceIcons = useMemo(() => {
@@ -208,6 +173,10 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       }),
     };
   }, []);
+
+  if (!computedCenter) {
+    return <div className="flex h-full min-h-[320px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">No consented GPS coordinates have reached the gateway yet. Devices without a shared location remain visible in the device list.</div>;
+  }
 
   // Incident icon generator with real dynamic labels and urgency pulsing
   const getIncidentIcon = (inc: MapIncidentNode, isSelected: boolean) => {
@@ -383,7 +352,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
         {/* Real Rescue Teams Layer */}
         {layers.rescueTeams &&
           rescueTeams.map((team) => {
-            if (!team.lat || !team.lng) return null;
+            if (!Number.isFinite(team.lat) || !Number.isFinite(team.lng)) return null;
             const isSelected = selectedRescueTeam?.id === team.id;
             return (
               <Marker
@@ -427,7 +396,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
         {/* Real Live Devices Layer */}
         {layers.nearbyDevices &&
           devices.map((device) => {
-            if (!device.lat || !device.lng) return null;
+            if (device.lat === undefined || device.lng === undefined) return null;
             let icon = deviceIcons.online;
             if (device.status === 'Relay') icon = deviceIcons.relay;
             if (device.status === 'Offline') icon = deviceIcons.offline;

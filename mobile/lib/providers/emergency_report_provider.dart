@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+
 import '../database/app_database.dart';
 import '../models/emergency_report.dart';
 

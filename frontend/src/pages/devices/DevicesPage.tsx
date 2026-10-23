@@ -43,13 +43,13 @@ export const DevicesPage: React.FC = () => {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
 
   const [metrics, setMetrics] = useState<DeviceSummaryMetrics>({
-    totalDevices: 8,
-    onlineCount: 5,
-    onlinePercent: 63,
-    relayCount: 2,
-    relayPercent: 25,
-    offlineCount: 1,
-    offlinePercent: 12,
+    totalDevices: 0,
+    onlineCount: 0,
+    onlinePercent: 0,
+    relayCount: 0,
+    relayPercent: 0,
+    offlineCount: 0,
+    offlinePercent: 0,
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -330,17 +330,19 @@ export const DevicesPage: React.FC = () => {
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
-                              {d.signalStrengthDbm} dBm
+                              {d.signalStrengthDbm === undefined ? 'Not reported' : `${d.signalStrengthDbm} dBm`}
                             </span>
                             <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-[#0E1627] text-slate-500 dark:text-[#9FADC2] border border-slate-200/60 dark:border-[#26344F]">
-                              {d.meshHops === 0 ? 'Base' : `${d.meshHops}h`}
+                              {d.meshHops === undefined ? 'Hops unavailable' : d.meshHops === 0 ? '0 hops' : `${d.meshHops} hops`}
                             </span>
                           </div>
                         </td>
 
                         {/* Battery Level */}
                         <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2">
+                          {d.battery === undefined ? (
+                            <span className="text-xs text-slate-500 dark:text-[#9FADC2]">Not reported</span>
+                          ) : <div className="flex items-center gap-2">
                             <div className="w-14 h-2 rounded-full bg-slate-200 dark:bg-slate-700/60 overflow-hidden">
                               <div
                                 className={`h-full ${
@@ -356,12 +358,12 @@ export const DevicesPage: React.FC = () => {
                             <span className="font-mono text-[11px] font-bold text-slate-900 dark:text-white">
                               {d.battery}%
                             </span>
-                          </div>
+                          </div>}
                         </td>
 
                         {/* Packets Muled */}
                         <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-700 dark:text-[#CBD5E1]">
-                          {d.packetsForwarded ?? 0}
+                          {d.packetsForwarded ?? 'Not reported'}
                         </td>
 
                         {/* Status Badge */}

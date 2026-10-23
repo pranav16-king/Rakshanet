@@ -78,7 +78,18 @@ export const IncidentPeopleTab: React.FC<IncidentPeopleTabProps> = ({ people }) 
       </div>
 
       {/* People Table */}
-      <div className="overflow-x-auto">
+      {filtered.length === 0 ? (
+        <div className="p-8 text-center rounded-xl bg-gray-50/50 dark:bg-[#0E1627]/50 border border-dashed border-[#CBD5E1] dark:border-[#26344F] space-y-2">
+          <Users size={32} className="mx-auto opacity-40 text-[#64748B] dark:text-[#94A3B8]" />
+          <h4 className="text-sm font-bold text-[#0F172A] dark:text-white">
+            No Individual Survivor Profiles Identified
+          </h4>
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-md mx-auto">
+            No specific individuals have been registered or extracted from distress packets for this incident cluster yet.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr
@@ -142,6 +153,7 @@ export const IncidentPeopleTab: React.FC<IncidentPeopleTabProps> = ({ people }) 
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 };

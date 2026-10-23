@@ -420,9 +420,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/providers/chat_provider.dart": {
-    "mtime": 1792760803.2339208,
-    "seen": 1792761240.6759634,
-    "ast_hash": "60e1243a76e6547860754f1b6c203d96",
+    "mtime": 1792762589.4084516,
+    "seen": 1792764406.8218813,
+    "ast_hash": "7b8b64259b3811c17b02786da25b9cc4",
     "semantic_hash": ""
   },
   "mobile/lib/providers/device_status_provider.dart": {
@@ -432,9 +432,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/providers/emergency_report_provider.dart": {
-    "mtime": 1792760803.2349784,
-    "seen": 1792761240.6759634,
-    "ast_hash": "faf0db71c7642ef897233bf98300fdd7",
+    "mtime": 1792762589.4064395,
+    "seen": 1792764406.8218813,
+    "ast_hash": "4de9807be04511a25566180f60a0b2d5",
     "semantic_hash": ""
   },
   "mobile/lib/providers/mesh_provider.dart": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/home/emergency_report_screen.dart": {
-    "mtime": 1792760534.4338217,
-    "seen": 1792761240.6759634,
-    "ast_hash": "ebd20c1231a10a3ddf4817c0cf85cb91",
+    "mtime": 1792762589.2686872,
+    "seen": 1792764406.8218813,
+    "ast_hash": "5685f6cb4e731364331bfb10277effa9",
     "semantic_hash": ""
   },
   "mobile/lib/screens/home/home_screen.dart": {
@@ -516,9 +516,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/profile/profile_setup_screen.dart": {
-    "mtime": 1792760794.4319687,
-    "seen": 1792761240.6759634,
-    "ast_hash": "ff260f355d83e77cbf8f67afac61995a",
+    "mtime": 1792762589.397422,
+    "seen": 1792764406.8218813,
+    "ast_hash": "0adf5a002c2b652b105b9cbd3123e390",
     "semantic_hash": ""
   },
   "mobile/lib/screens/settings/settings_screen.dart": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/chat_service.dart": {
-    "mtime": 1792759799.1727178,
-    "seen": 1792761240.6759634,
-    "ast_hash": "a2fdce185675d05801f00b355d93689b",
+    "mtime": 1792762589.164312,
+    "seen": 1792764406.8218813,
+    "ast_hash": "b3065cbeff94c4ef500c1e3973027621",
     "semantic_hash": ""
   },
   "mobile/lib/services/database_service.dart": {
@@ -612,9 +612,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/mesh_engine.dart": {
-    "mtime": 1792760534.4275463,
-    "seen": 1792761240.6759634,
-    "ast_hash": "02fa7e2863da195b4c75bd2ab0068dcd",
+    "mtime": 1792762589.1890113,
+    "seen": 1792764406.8218813,
+    "ast_hash": "8ffba84e8e52de531340e68db397a8b3",
     "semantic_hash": ""
   },
   "mobile/lib/services/mesh_router.dart": {
@@ -1062,21 +1062,21 @@
     "semantic_hash": ""
   },
   "backend/gateway/app.py": {
-    "mtime": 1792761020.8569653,
-    "seen": 1792761240.6743364,
-    "ast_hash": "2c607dcef6db4c77b87a86a142fd8b37",
+    "mtime": 1792764234.5587747,
+    "seen": 1792764406.8139088,
+    "ast_hash": "b3d34d0a64c0f270b9ed2d1fc5d50edd",
     "semantic_hash": ""
   },
   "backend/gateway/models.py": {
-    "mtime": 1792760891.5672176,
-    "seen": 1792761240.6743364,
-    "ast_hash": "cb32e399a0ee460f281285e0c7d98fce",
+    "mtime": 1792761607.0721333,
+    "seen": 1792764406.8139088,
+    "ast_hash": "82e110182a255116d15647584b341935",
     "semantic_hash": ""
   },
   "backend/gateway/storage.py": {
-    "mtime": 1792761012.99831,
-    "seen": 1792761240.6743364,
-    "ast_hash": "3887b8d15f43945e19abeabf5ecaa6c8",
+    "mtime": 1792764206.5332136,
+    "seen": 1792764406.8139088,
+    "ast_hash": "fd02d432fdc57f998252cd99b3cebb01",
     "semantic_hash": ""
   },
   "backend/test_backend_ai.py": {
@@ -1140,9 +1140,9 @@
     "semantic_hash": ""
   },
   "backend/test_command_center_api.py": {
-    "mtime": 1792756710.796522,
-    "seen": 1792759397.5284603,
-    "ast_hash": "0eee84c08e1b80f08553ed7bb5389455",
+    "mtime": 1792763582.7892456,
+    "seen": 1792764406.8139088,
+    "ast_hash": "13391445b17419e19974ffbd1ded92e3",
     "semantic_hash": ""
   },
   "frontend/.oxlintrc.json": {
@@ -1200,9 +1200,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/devices.ts": {
-    "mtime": 1792755450.205441,
-    "seen": 1792759397.5284603,
-    "ast_hash": "a4979a1593166e0394985eb7e0312e19",
+    "mtime": 1792761682.3824654,
+    "seen": 1792764406.8139088,
+    "ast_hash": "11973e271815796ab7c2339414740c03",
     "semantic_hash": ""
   },
   "frontend/src/api/dispatch.ts": {
@@ -1212,15 +1212,15 @@
     "semantic_hash": ""
   },
   "frontend/src/api/incidents.ts": {
-    "mtime": 1792755075.5464623,
-    "seen": 1792759397.5284603,
-    "ast_hash": "846c18625eb78bd3085b9829a108080d",
+    "mtime": 1792762458.3629296,
+    "seen": 1792764406.8139088,
+    "ast_hash": "00243be5390eff866e0f832732127637",
     "semantic_hash": ""
   },
   "frontend/src/api/map.ts": {
-    "mtime": 1792252480.55102,
-    "seen": 1792252649.6864681,
-    "ast_hash": "36653c944ff19c3997f98b569dfa6ed2",
+    "mtime": 1792761849.044564,
+    "seen": 1792764406.8139088,
+    "ast_hash": "2b66d2db37d372becb3b67dcdbf6c0c2",
     "semantic_hash": ""
   },
   "frontend/src/api/messages.ts": {
@@ -1374,9 +1374,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/devices/ConnectionLogsTable.tsx": {
-    "mtime": 1791018048.707311,
-    "seen": 1791018120.5658996,
-    "ast_hash": "2d2884e3e8d131a6dc916ba27317a9db",
+    "mtime": 1792761930.3866868,
+    "seen": 1792764406.8218813,
+    "ast_hash": "e70c2e63b1e20dfbf320a0a34b0fc176",
     "semantic_hash": ""
   },
   "frontend/src/components/devices/DeviceMetricCards.tsx": {
@@ -1386,9 +1386,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/devices/DeviceTable.tsx": {
-    "mtime": 1791018005.8408105,
-    "seen": 1791018120.5658996,
-    "ast_hash": "b671d1aec23a66e9b67bf5e668221ed0",
+    "mtime": 1792761930.3866868,
+    "seen": 1792764406.8218813,
+    "ast_hash": "c36177b4f70e97532acee933415916b8",
     "semantic_hash": ""
   },
   "frontend/src/components/devices/DeviceTabs.tsx": {
@@ -1398,9 +1398,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/devices/NetworkTopology.tsx": {
-    "mtime": 1791018033.7892926,
-    "seen": 1791018120.5658996,
-    "ast_hash": "e257fb303f9a06f7d434d5cfcb56588f",
+    "mtime": 1792761930.3921258,
+    "seen": 1792764406.8218813,
+    "ast_hash": "d6758707fc7a982b6548358798b2975d",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/AssignTeamModal.tsx": {
@@ -1410,9 +1410,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentAIExplanation.tsx": {
-    "mtime": 1792731179.454885,
-    "seen": 1792759397.5284603,
-    "ast_hash": "ee10f8abdf516dec08a3dfa4bb31370a",
+    "mtime": 1792764014.393764,
+    "seen": 1792764406.8218813,
+    "ast_hash": "985525e8a7e22999bf1962b12941218e",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentDescriptionCard.tsx": {
@@ -1422,9 +1422,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentDevicesTab.tsx": {
-    "mtime": 1792731179.458465,
-    "seen": 1792759397.5284603,
-    "ast_hash": "6aa2d63beceefa467252db83cf05a694",
+    "mtime": 1792762905.8294797,
+    "seen": 1792764406.8218813,
+    "ast_hash": "93f4f1256cef99c627ae3b4bb8e83a55",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentFilters.tsx": {
@@ -1434,15 +1434,15 @@
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentKeyInfoCard.tsx": {
-    "mtime": 1792731179.4618053,
-    "seen": 1792759397.5284603,
+    "mtime": 1792764067.6745808,
+    "seen": 1792764406.8218813,
     "ast_hash": "f05d501a51df37c4029781592d3123b6",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentLeafletMap.tsx": {
-    "mtime": 1791301107.7886028,
-    "seen": 1791305314.7162669,
-    "ast_hash": "c10405007879b0e359ba9b300d946f3e",
+    "mtime": 1792763809.4754677,
+    "seen": 1792764406.8218813,
+    "ast_hash": "6a60b831860dae1ff22888ed35ac76ba",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentMessagesTab.tsx": {
@@ -1452,9 +1452,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentOverviewTab.tsx": {
-    "mtime": 1792726557.6943324,
-    "seen": 1792759397.5284603,
-    "ast_hash": "b01f078e8091ff4a81a17d5f05f3c9f6",
+    "mtime": 1792763823.3066766,
+    "seen": 1792764406.8218813,
+    "ast_hash": "cf7f9b4aad8d177fe89e544f97518132",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentPagination.tsx": {
@@ -1464,9 +1464,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentPeopleTab.tsx": {
-    "mtime": 1792731179.4674795,
-    "seen": 1792759397.5284603,
-    "ast_hash": "cce464933e231d4d427b80fa2180a88a",
+    "mtime": 1792762868.4362202,
+    "seen": 1792764406.8218813,
+    "ast_hash": "b3994e4cb04d71d449aa39e7eaf65064",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentResourcesTab.tsx": {
@@ -1482,9 +1482,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentTimelineTab.tsx": {
-    "mtime": 1792731179.4739418,
-    "seen": 1792759397.5284603,
-    "ast_hash": "0f57e307a03be49445a04ccc4ecd9739",
+    "mtime": 1792762928.341484,
+    "seen": 1792764406.8218813,
+    "ast_hash": "103b37fd050b22f23758a157f17403dc",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/ResourcesNeededCard.tsx": {
@@ -1560,9 +1560,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/map/MapCanvas.tsx": {
-    "mtime": 1792731205.3447914,
-    "seen": 1792759397.5284603,
-    "ast_hash": "de291d229c3e8f20171382d356b2aeef",
+    "mtime": 1792761810.263414,
+    "seen": 1792764406.8218813,
+    "ast_hash": "030e5e2e95893cce96000afb1e53ff17",
     "semantic_hash": ""
   },
   "frontend/src/components/map/MapControlBar.tsx": {
@@ -1578,9 +1578,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/map/MapView.tsx": {
-    "mtime": 1792731896.705935,
-    "seen": 1792759397.5284603,
-    "ast_hash": "0f00bba069d0bdbfc3bb729f30af8d7e",
+    "mtime": 1792762914.3949108,
+    "seen": 1792764406.8218813,
+    "ast_hash": "ac32e896e5de5d639ce5b6ac23303db5",
     "semantic_hash": ""
   },
   "frontend/src/components/map/NodeDetailDrawer.tsx": {
@@ -1848,15 +1848,15 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/devices/DevicesPage.tsx": {
-    "mtime": 1792751892.4928393,
-    "seen": 1792759397.5284603,
-    "ast_hash": "1accc071aa7db56911694c00ea0c5a8c",
+    "mtime": 1792761715.760137,
+    "seen": 1792764406.8218813,
+    "ast_hash": "3677acd54ebbaa708a6a821e15c55976",
     "semantic_hash": ""
   },
   "frontend/src/pages/incidents/IncidentDetailPage.tsx": {
-    "mtime": 1792731205.372053,
-    "seen": 1792759397.5284603,
-    "ast_hash": "1b43c6f3467553b7fb27481dc68ed32e",
+    "mtime": 1792763842.3322532,
+    "seen": 1792764406.8218813,
+    "ast_hash": "d167182eb2623de088247a9d3d9a7d84",
     "semantic_hash": ""
   },
   "frontend/src/pages/incidents/IncidentsListPage.tsx": {
@@ -1866,15 +1866,15 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/incidents/IncidentsPage.tsx": {
-    "mtime": 1792732287.7304385,
-    "seen": 1792759397.5284603,
-    "ast_hash": "2e05987aabe1d7ca0dc6ba89297f14da",
+    "mtime": 1792762560.1394415,
+    "seen": 1792764406.8218813,
+    "ast_hash": "d6c87a5fdfc0f949caa9e6349f556f5e",
     "semantic_hash": ""
   },
   "frontend/src/pages/map/LiveMapPage.tsx": {
-    "mtime": 1792750865.7417567,
-    "seen": 1792759397.5284603,
-    "ast_hash": "20be55f862563338d6eea134841b63c8",
+    "mtime": 1792762854.6511135,
+    "seen": 1792764406.8218813,
+    "ast_hash": "77762ccccdcfabdb99874b9ed6baae2c",
     "semantic_hash": ""
   },
   "frontend/src/pages/messages/MessagesPage.tsx": {
@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/people/PeoplePage.tsx": {
-    "mtime": 1792731735.7211504,
-    "seen": 1792759397.5284603,
-    "ast_hash": "010a83374837b65111db2c550360b398",
+    "mtime": 1792761949.7710485,
+    "seen": 1792764406.8218813,
+    "ast_hash": "d4145670d2817f89c9708c16eb110e1c",
     "semantic_hash": ""
   },
   "frontend/src/pages/reports/ReportsPage.tsx": {
@@ -1962,9 +1962,9 @@
     "semantic_hash": ""
   },
   "frontend/src/types/devices.ts": {
-    "mtime": 1792751746.54539,
-    "seen": 1792759397.5284603,
-    "ast_hash": "93838d6cf7e3640b7db0de31cfcf0026",
+    "mtime": 1792761692.957035,
+    "seen": 1792764406.8218813,
+    "ast_hash": "0a2a845b5f687145a43ed335976b146e",
     "semantic_hash": ""
   },
   "frontend/src/types/incident.ts": {
@@ -2064,9 +2064,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/device_identity_service.dart": {
-    "mtime": 1792760803.237207,
-    "seen": 1792761240.6759634,
-    "ast_hash": "762e935380fbe010bc5e3acd80c0d984",
+    "mtime": 1792762589.218717,
+    "seen": 1792764406.8218813,
+    "ast_hash": "2b630a6ac6bdf30c5d258ef8a9fc2d1b",
     "semantic_hash": ""
   },
   "frontend/README.md": {
@@ -2178,9 +2178,9 @@
     "semantic_hash": ""
   },
   "backend/test_command_center_full.py": {
-    "mtime": 1792756781.3344123,
-    "seen": 1792759397.5284603,
-    "ast_hash": "99e5ae1c37b2572ebf954bf218204e3b",
+    "mtime": 1792763582.7903495,
+    "seen": 1792764406.8139088,
+    "ast_hash": "9bee162314a3ec4ac984cd09aa63b5f8",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/anomalous-matter-hero.tsx": {
@@ -2826,9 +2826,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/missing-persons/MissingPersonsPage.tsx": {
-    "mtime": 1792733412.073891,
-    "seen": 1792759397.5284603,
-    "ast_hash": "5bd0a9af77aedeed882ac380fd9a8b9a",
+    "mtime": 1792762943.3090696,
+    "seen": 1792764406.8218813,
+    "ast_hash": "760983a94cf83ca79c67f0d5ddc8fb02",
     "semantic_hash": ""
   },
   "frontend/src/types/missingPerson.ts": {
@@ -2868,9 +2868,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/sos_screen.dart": {
-    "mtime": 1792760549.62782,
-    "seen": 1792761240.6759634,
-    "ast_hash": "da2813631a839d2ecc64d4147a852073",
+    "mtime": 1792762589.3257031,
+    "seen": 1792764406.8218813,
+    "ast_hash": "70e9a116d7be98faae0911b08cb202e7",
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/tools_screen.dart": {
@@ -2886,9 +2886,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/network/network_state_service.dart": {
-    "mtime": 1792760304.3711798,
-    "seen": 1792761240.6759634,
-    "ast_hash": "a6bec01a7fb9541ef32e226eefba6982",
+    "mtime": 1792762589.210721,
+    "seen": 1792764406.8218813,
+    "ast_hash": "1df45584eff9798aca0bb069b07c5d90",
     "semantic_hash": ""
   },
   "mobile/lib/services/offline_map_manager.dart": {
@@ -3414,21 +3414,21 @@
     "semantic_hash": ""
   },
   "frontend/src/components/devices/DeviceDetailDrawer.tsx": {
-    "mtime": 1792751833.121895,
-    "seen": 1792759397.5284603,
-    "ast_hash": "537f97b870ea65f4593cd7ea6ce02f6e",
+    "mtime": 1792762903.7800794,
+    "seen": 1792764406.8218813,
+    "ast_hash": "df1b5116d04e5a7d838923301135e577",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentAreaMeshMap.tsx": {
-    "mtime": 1792755571.438912,
-    "seen": 1792759397.5284603,
-    "ast_hash": "c60fe0180e0334698e169549b37727aa",
+    "mtime": 1792762547.7363284,
+    "seen": 1792764406.8218813,
+    "ast_hash": "9a122a98242bfe87471c6f5732299da3",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentCommunicationsCenter.tsx": {
-    "mtime": 1792729665.1475134,
-    "seen": 1792759397.5284603,
-    "ast_hash": "87c0655c780b372d20ff659812a0685f",
+    "mtime": 1792763645.986056,
+    "seen": 1792764406.8218813,
+    "ast_hash": "50f0eab37f086c04f7cca16f4a780a43",
     "semantic_hash": ""
   },
   "frontend/src/components/reports/CsvPreviewModal.tsx": {
@@ -3606,9 +3606,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/incident_dispatch_service.dart": {
-    "mtime": 1792760837.298665,
-    "seen": 1792761240.6759634,
-    "ast_hash": "1742ebe57922893fc1609eacf64d1f98",
+    "mtime": 1792762589.152248,
+    "seen": 1792764406.8218813,
+    "ast_hash": "ea8ed3b06a6e8f1c6ef7ae949e2e4042",
     "semantic_hash": ""
   }
 }

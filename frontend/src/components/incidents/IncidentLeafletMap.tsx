@@ -16,6 +16,14 @@ export const IncidentLeafletMap: React.FC<IncidentLeafletMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const { isDark } = useTheme();
+  const coordinates = incident.coordinates;
+  const hasCoordinates =
+    typeof coordinates?.lat === 'number' && Number.isFinite(coordinates.lat) &&
+    typeof coordinates?.lng === 'number' && Number.isFinite(coordinates.lng);
+  const radiusMeters =
+    typeof incident.clusterRadiusMeters === 'number' && Number.isFinite(incident.clusterRadiusMeters)
+      ? incident.clusterRadiusMeters
+      : undefined;
   const [mapStyle, setMapStyle] = useState<'satellite' | 'street' | 'dark'>(() =>
     isDark ? 'satellite' : 'satellite'
   );
@@ -34,7 +42,7 @@ export const IncidentLeafletMap: React.FC<IncidentLeafletMapProps> = ({
 
   // Re-initialize map
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current || !hasCoordinates) return;
 
     // Clean up previous instance
     if (mapInstanceRef.current) {
@@ -42,7 +50,7 @@ export const IncidentLeafletMap: React.FC<IncidentLeafletMapProps> = ({
       mapInstanceRef.current = null;
     }
 
-    const { lat, lng } = incident.coordinates;
+    const { lat, lng } = coordinates;
     const map = L.map(mapContainerRef.current, {
       center: [lat, lng],
       zoom: 13,
@@ -75,10 +83,10 @@ export const IncidentLeafletMap: React.FC<IncidentLeafletMapProps> = ({
           <div style="font-size: 11px; color: #555;">Casualties: ~${incident.affectedPeople} survivors</div>
         </div>
       `);
-    } else {
+    } else if (radiusMeters !== undefined) {
       // Centroid Circle & Radius
       const circle = L.circle([lat, lng], {
-        radius: incident.clusterRadiusMeters || 1200,
+        radius: radiusMeters,
         color: '#D92D20',
         weight: 2,
         dashArray: '4, 6',
@@ -113,28 +121,6 @@ export const IncidentLeafletMap: React.FC<IncidentLeafletMapProps> = ({
       direction: 'top',
     });
 
-    // Sub-cluster signal points around centroid
-    const samplePings: [number, number, string][] = [
-      [lat + 0.005, lng - 0.004, 'SR-8F42 (SOS)'],
-      [lat - 0.003, lng + 0.006, 'SR-9A1C (Relay)'],
-      [lat + 0.008, lng + 0.002, 'SR-3D7B (Distress)'],
-      [lat - 0.006, lng - 0.005, 'SR-6E2F (Medical)'],
-    ];
-
-    samplePings.forEach(([pLat, pLng, label]) => {
-      const pingIcon = L.divIcon({
-        className: 'ping-marker',
-        html: `
-          <div style="width: 10px; height: 10px; border-radius: 50%; background: #0E8A94; border: 1.5px solid #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.3);"></div>
-        `,
-        iconSize: [10, 10],
-        iconAnchor: [5, 5],
-      });
-      L.marker([pLat, pLng], { icon: pingIcon })
-        .addTo(map)
-        .bindTooltip(label, { direction: 'right' });
-    });
-
     mapInstanceRef.current = map;
 
     return () => {
@@ -142,17 +128,27 @@ export const IncidentLeafletMap: React.FC<IncidentLeafletMapProps> = ({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [incident, mapStyle]);
+  }, [coordinates, hasCoordinates, incident.id, incident.polygonCoords, incident.title, mapStyle, radiusMeters]);
 
   const recenterMap = () => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([incident.coordinates.lat, incident.coordinates.lng], 13);
+    if (mapInstanceRef.current && hasCoordinates) {
+      mapInstanceRef.current.setView([coordinates.lat, coordinates.lng], 13);
     }
   };
 
   const cycleMapLayer = () => {
     setMapStyle((prev) => (prev === 'satellite' ? 'dark' : prev === 'dark' ? 'street' : 'satellite'));
   };
+
+  if (!hasCoordinates) {
+    return (
+      <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-6 text-center text-[#64748B] dark:border-[#26344F] dark:bg-[#111A2E] dark:text-[#94A3B8]" style={{ height }}>
+        <AlertTriangle size={24} className="text-amber-500" />
+        <strong className="text-sm">Map unavailable</strong>
+        <span className="text-xs">This incident has no reported coordinates.</span>
+      </div>
+    );
+  }
 
   return (
     <div

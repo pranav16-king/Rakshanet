@@ -89,7 +89,8 @@ class SyncResult {
 ///    - Emits `lastSyncTimestamp`
 class NetworkStateService extends ChangeNotifier {
   static NetworkStateService? _instance;
-  static NetworkStateService get instance => _instance ??= NetworkStateService();
+  static NetworkStateService get instance =>
+      _instance ??= NetworkStateService();
 
   final http.Client _httpClient;
   final AppDatabase _db;
@@ -115,9 +116,9 @@ class NetworkStateService extends ChangeNotifier {
     AppDatabase? database,
     math.Random? random,
     this.testModeNoDelays = false,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _db = database ?? AppDatabase.instance,
-        _random = random ?? math.Random() {
+  }) : _httpClient = httpClient ?? http.Client(),
+       _db = database ?? AppDatabase.instance,
+       _random = random ?? math.Random() {
     _ensureTablesExist();
   }
 
@@ -127,7 +128,8 @@ class NetworkStateService extends ChangeNotifier {
 
   TransportState get currentState => _mockState ?? _currentState;
 
-  bool get internetAvailable => currentState == TransportState.internetAvailable;
+  bool get internetAvailable =>
+      currentState == TransportState.internetAvailable;
   bool get wifiNoInternet => currentState == TransportState.wifiNoInternet;
   bool get cellularData => currentState == TransportState.cellularData;
   bool get p2pTransportAvailable =>
@@ -195,7 +197,9 @@ class NetworkStateService extends ChangeNotifier {
     TransportState detectedState = TransportState.noTransport;
 
     // Step 1: Verified HTTP ping to gateway / 8.8.8.8
-    final hasInternet = await verifyInternetHttpPing(gatewayHealthUrl: gatewayHealthUrl);
+    final hasInternet = await verifyInternetHttpPing(
+      gatewayHealthUrl: gatewayHealthUrl,
+    );
 
     if (hasInternet) {
       detectedState = TransportState.internetAvailable;
@@ -214,7 +218,8 @@ class NetworkStateService extends ChangeNotifier {
       } else {
         // Step 3: Check device-to-device mesh radios
         final tm = TransportManager.instance;
-        final hasP2p = tm.wifiDirectTransport.isAvailable || tm.onlinePeers.isNotEmpty;
+        final hasP2p =
+            tm.wifiDirectTransport.isAvailable || tm.onlinePeers.isNotEmpty;
         final hasBle = tm.bleTransport.isAvailable;
 
         if (hasP2p) {
@@ -352,10 +357,14 @@ class NetworkStateService extends ChangeNotifier {
       final unsyncedLocations = await _queryUnsyncedLocations();
 
       final totalRecords =
-          unsyncedPackets.length + unsyncedSos.length + unsyncedLocations.length;
+          unsyncedPackets.length +
+          unsyncedSos.length +
+          unsyncedLocations.length;
 
       if (totalRecords == 0) {
-        debugPrint('[NetworkStateService] Auto-recovery: No unsynced records pending.');
+        debugPrint(
+          '[NetworkStateService] Auto-recovery: No unsynced records pending.',
+        );
         _isSyncing = false;
         notifyListeners();
         return SyncResult(
@@ -400,13 +409,18 @@ class NetworkStateService extends ChangeNotifier {
           'ver': 1,
           'msg_id': id,
           'message_id': id,
-          'sender_id': routing['senderId'] ?? p['sender_device_id'] ?? myDeviceId,
+          'sender_id':
+              routing['senderId'] ?? p['sender_device_id'] ?? myDeviceId,
           'conv_id': routing['conversationId'] ?? 'CONV_COMMUNITY',
-          'ts': routing['timestamp'] ?? p['created_at'] ?? DateTime.now().millisecondsSinceEpoch,
+          'ts':
+              routing['timestamp'] ??
+              p['created_at'] ??
+              DateTime.now().millisecondsSinceEpoch,
           'ttl': routing['ttl'] ?? p['ttl'] ?? 5,
           'hops': routing['hops'] ?? p['hop_count'] ?? 0,
           'type': routing['type'] ?? 'MESH_PACKET',
-          'payload': p['encrypted_payload_json'] ?? p['routing_header_json'] ?? '',
+          'payload':
+              p['encrypted_payload_json'] ?? p['routing_header_json'] ?? '',
           'meta': meta,
         };
         final senderName = routing['senderName']?.toString().trim() ?? '';
@@ -415,7 +429,8 @@ class NetworkStateService extends ChangeNotifier {
           if (meta['latitude'] != null) 'lat': meta['latitude'],
           if (meta['longitude'] != null) 'lng': meta['longitude'],
           if (meta['accuracy_m'] != null) 'accuracy': meta['accuracy_m'],
-          if (meta['location_source'] != null) 'fix_type': meta['location_source'],
+          if (meta['location_source'] != null)
+            'fix_type': meta['location_source'],
         };
         if (location.containsKey('lat') && location.containsKey('lng')) {
           packet['location'] = location;
@@ -461,8 +476,7 @@ class NetworkStateService extends ChangeNotifier {
             'lng': s['longitude'],
             if (s['location_accuracy'] != null)
               'accuracy': s['location_accuracy'],
-            if (s['location_source'] != null)
-              'fix_type': s['location_source'],
+            if (s['location_source'] != null) 'fix_type': s['location_source'],
           };
         }
         payloadList.add(packet);
@@ -577,7 +591,9 @@ class NetworkStateService extends ChangeNotifier {
       );
       return result;
     } catch (e, stack) {
-      debugPrint('[NetworkStateService] Auto-recovery fatal exception: $e\n$stack');
+      debugPrint(
+        '[NetworkStateService] Auto-recovery fatal exception: $e\n$stack',
+      );
       _isSyncing = false;
       notifyListeners();
       return SyncResult(
@@ -598,8 +614,10 @@ class NetworkStateService extends ChangeNotifier {
     // 2^(attempt - 1) * initial
     final expMs =
         initial.inMilliseconds * math.pow(2.0, math.max(0, attempt - 1));
-    final clampedMs =
-        math.min(expMs.toDouble(), maxBackoff.inMilliseconds.toDouble());
+    final clampedMs = math.min(
+      expMs.toDouble(),
+      maxBackoff.inMilliseconds.toDouble(),
+    );
     // Jitter ±20% (multiplier between 0.8 and 1.2)
     final jitterMultiplier =
         1.0 + (_random.nextDouble() * 2.0 - 1.0) * jitterFactor;

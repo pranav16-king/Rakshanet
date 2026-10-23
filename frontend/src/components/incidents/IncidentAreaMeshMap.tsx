@@ -65,9 +65,9 @@ export const IncidentAreaMeshMap: React.FC<IncidentAreaMeshMapProps> = ({
     street: '&copy; OpenStreetMap contributors',
   };
 
-  const lat = incident.coordinates?.lat || topology?.centroid?.lat || 13.0425;
-  const lng = incident.coordinates?.lng || topology?.centroid?.lng || 80.2285;
-  const radius = incident.clusterRadiusMeters || topology?.radius_meters || 600;
+  const lat = incident.coordinates?.lat ?? topology?.centroid?.lat;
+  const lng = incident.coordinates?.lng ?? topology?.centroid?.lng;
+  const radius = incident.clusterRadiusMeters ?? topology?.radius_meters;
 
   const beacons = useMemo(() => topology?.sos_beacons || [], [topology]);
 
@@ -80,7 +80,7 @@ export const IncidentAreaMeshMap: React.FC<IncidentAreaMeshMapProps> = ({
 
   // Initialize and redraw map
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove();
@@ -111,7 +111,7 @@ export const IncidentAreaMeshMap: React.FC<IncidentAreaMeshMapProps> = ({
           fillColor: '#D92D20',
           fillOpacity: 0.22,
         }).addTo(map);
-      } else {
+      } else if (typeof radius === 'number') {
         L.circle([lat, lng], {
           radius: radius,
           color: '#D92D20',
@@ -250,6 +250,10 @@ export const IncidentAreaMeshMap: React.FC<IncidentAreaMeshMapProps> = ({
     mapStyle,
     onSelectNode,
   ]);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return <div className="flex items-center justify-center rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300" style={{ height }}>No consented incident coordinates are available for this map.</div>;
+  }
 
   const recenterMap = () => {
     if (mapInstanceRef.current) {

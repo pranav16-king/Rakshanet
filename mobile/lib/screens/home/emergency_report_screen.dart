@@ -85,13 +85,12 @@ class _EmergencyReportScreenState extends State<EmergencyReportScreen> {
 
     late final IncidentDispatchResult result;
     try {
-      result = await IncidentDispatchService(
-        chatService: chatService,
-      ).dispatchSos(
-        category: _selectedCategory,
-        peopleCount: _peopleCount,
-        notes: _notesController.text,
-      );
+      result = await IncidentDispatchService(chatService: chatService)
+          .dispatchSos(
+            category: _selectedCategory,
+            peopleCount: _peopleCount,
+            notes: _notesController.text,
+          );
     } catch (error) {
       if (mounted) {
         setState(() => _isSending = false);

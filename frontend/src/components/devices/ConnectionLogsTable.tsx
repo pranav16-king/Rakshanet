@@ -9,26 +9,18 @@ interface ConnectionLogsTableProps {
 export const ConnectionLogsTable: React.FC<ConnectionLogsTableProps> = ({ logs }) => {
   const getStatusBadge = (status: ConnectionLog['status']) => {
     switch (status) {
-      case 'Delivered':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-            <ShieldCheck className="w-3 h-3" />
-            Delivered
-          </span>
-        );
-      case 'Relayed':
+      case 'Ingested':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
             <Radio className="w-3 h-3" />
-            Relayed
+            Ingested
           </span>
         );
-      case 'Dropped':
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300">
             <AlertCircle className="w-3 h-3" />
-            Dropped
+            Not reported
           </span>
         );
     }
@@ -71,10 +63,10 @@ export const ConnectionLogsTable: React.FC<ConnectionLogsTableProps> = ({ logs }
                 {log.protocol}
               </td>
               <td className="px-5 py-3 whitespace-nowrap text-xs text-slate-600 dark:text-slate-300">
-                {log.hopCount}
+                {log.hopCount ?? 'Not reported'}
               </td>
               <td className="px-5 py-3 whitespace-nowrap font-mono text-xs text-slate-500">
-                {log.rssiDbm} dBm
+                {log.rssiDbm === undefined ? 'Not reported' : `${log.rssiDbm} dBm`}
               </td>
               <td className="px-5 py-3 whitespace-nowrap text-right">
                 {getStatusBadge(log.status)}

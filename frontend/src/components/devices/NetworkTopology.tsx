@@ -180,14 +180,14 @@ export const NetworkTopology: React.FC<NetworkTopologyProps> = ({ nodes }) => {
                 <div className="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-500">Signal RSSI:</span>
                   <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {selectedNode.signalDbm} dBm (Good)
+                    {selectedNode.signalDbm === undefined ? 'Not reported' : `${selectedNode.signalDbm} dBm`}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-500">Hop Distance:</span>
                   <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    {selectedNode.hops === 0
+                    {selectedNode.hops === undefined ? 'Not reported' : selectedNode.hops === 0
                       ? '0 (Base Station)'
                       : `${selectedNode.hops} ${selectedNode.hops === 1 ? 'hop' : 'hops'}`}
                   </span>
@@ -195,7 +195,7 @@ export const NetworkTopology: React.FC<NetworkTopologyProps> = ({ nodes }) => {
 
                 <div className="py-1">
                   <span className="text-slate-500 block mb-1">Battery Level:</span>
-                  <BatteryBar percent={selectedNode.battery} />
+                  {selectedNode.battery === undefined ? <span className="text-xs text-slate-500">Not reported</span> : <BatteryBar percent={selectedNode.battery} />}
                 </div>
 
                 <div className="pt-2">

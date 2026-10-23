@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+
 import '../models/chat_message.dart';
 import '../database/app_database.dart';
 
@@ -13,11 +15,13 @@ class ChatProvider extends ChangeNotifier {
   int get unreadCount => _unreadCount;
 
   int get pendingOutboxCount => _messages
-      .where((m) =>
-          m.isOutgoing &&
-          (m.status == MessageStatus.saved ||
-              m.status == MessageStatus.queued ||
-              m.status == MessageStatus.sending))
+      .where(
+        (m) =>
+            m.isOutgoing &&
+            (m.status == MessageStatus.saved ||
+                m.status == MessageStatus.queued ||
+                m.status == MessageStatus.sending),
+      )
       .length;
 
   bool get isLoading => _isLoading;
@@ -72,17 +76,26 @@ class ChatProvider extends ChangeNotifier {
     // Step 2: Queue for BLE mesh broadcast
     Timer(const Duration(milliseconds: 400), () async {
       _updateLocalStatus(messageId, MessageStatus.queued);
-      await AppDatabase.instance.updateMessageStatus(messageId, MessageStatus.queued);
+      await AppDatabase.instance.updateMessageStatus(
+        messageId,
+        MessageStatus.queued,
+      );
 
       // Step 3: Mesh relay hop simulation
       Timer(const Duration(milliseconds: 800), () async {
         _updateLocalStatus(messageId, MessageStatus.relayed);
-        await AppDatabase.instance.updateMessageStatus(messageId, MessageStatus.relayed);
+        await AppDatabase.instance.updateMessageStatus(
+          messageId,
+          MessageStatus.relayed,
+        );
 
         // Step 4: Reached nearby devices / delivered
         Timer(const Duration(milliseconds: 1200), () async {
           _updateLocalStatus(messageId, MessageStatus.delivered);
-          await AppDatabase.instance.updateMessageStatus(messageId, MessageStatus.delivered);
+          await AppDatabase.instance.updateMessageStatus(
+            messageId,
+            MessageStatus.delivered,
+          );
         });
       });
     });
@@ -109,7 +122,10 @@ class ChatProvider extends ChangeNotifier {
     final pending = await AppDatabase.instance.getPendingOutboxMessages();
     for (final msg in pending) {
       _updateLocalStatus(msg.id, MessageStatus.delivered);
-      await AppDatabase.instance.updateMessageStatus(msg.id, MessageStatus.delivered);
+      await AppDatabase.instance.updateMessageStatus(
+        msg.id,
+        MessageStatus.delivered,
+      );
     }
     notifyListeners();
   }

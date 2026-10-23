@@ -581,42 +581,7 @@ def login(login_req: LoginRequest):
     email = login_req.email.strip().lower()
     user = gateway_storage.get_user_by_email(email)
 
-    # Pre-seed fallback check for default authorized admins
-    if not user:
-        if email in ("admin@rakshanet.org", "admin@signalrescue.org"):
-            admin_data = {
-                "id": "USR-ADMIN-01",
-                "email": "admin@rakshanet.org",
-                "name": "Chief Commander Sharma",
-                "password_hash": hash_password("RakshaNet@2026"),
-                "role": "Administrator",
-                "agency": "Government Operations",
-                "phone": "+91-98765-43210",
-                "status": "Active"
-            }
-            user = gateway_storage.create_user(admin_data)
-            user["password_hash"] = admin_data["password_hash"]
-        elif "@" in email and len(login_req.password) >= 4:
-            # Auto-provision authorized disaster operations personnel (e.g. pranavkhaire53@gmail.com)
-            name_part = email.split("@")[0].replace(".", " ").replace("_", " ").title()
-            admin_data = {
-                "id": f"USR-{uuid.uuid4().hex[:8].upper()}",
-                "email": email,
-                "name": f"Commander {name_part}",
-                "password_hash": hash_password(login_req.password),
-                "role": "Administrator",
-                "agency": "Disaster Response Command",
-                "phone": "+91-98000-00000",
-                "status": "Active"
-            }
-            user = gateway_storage.create_user(admin_data)
-            user["password_hash"] = admin_data["password_hash"]
-
-    is_valid_pw = False
-    if user and verify_password(login_req.password, user.get("password_hash", "")):
-        is_valid_pw = True
-    elif user and user.get("id") == "USR-ADMIN-01" and login_req.password in ("RakshaNet@2026", "SignalRescue@2026"):
-        is_valid_pw = True
+    is_valid_pw = bool(user and verify_password(login_req.password, user.get("password_hash", "")))
 
     if not user or not is_valid_pw:
         raise HTTPException(
@@ -861,6 +826,15 @@ def get_incidents_list(
         if distress_packets:
             engine = SpatialClusterEngine(eps_meters=eps_meters, min_samples=min_samples) if (eps_meters != 120.0 or min_samples != 2) else spatial_cluster_engine
             clusters = engine.cluster_distress_signals(distress_packets)
+            subsumed_ids = set()
+            for cl in clusters:
+                subsumed_ids.update(getattr(cl, "raw_packet_ids", []))
+
+            # Remove unclustered raw SOS reports that are now represented by clusters
+            for raw_id in subsumed_ids:
+                if raw_id in inc_map and inc_map[raw_id].get("status") in ("REPORTED", "UNCLASSIFIED", "OPEN"):
+                    inc_map.pop(raw_id, None)
+
             for cl in clusters:
                 if cl.incident_id not in inc_map:
                     cat_name = str(getattr(cl, "category", None) or "UNSPECIFIED").capitalize()
@@ -883,7 +857,14 @@ def get_incidents_list(
                     gateway_storage.upsert_incident(cl_dict)
                     inc_map[cl.incident_id] = _normalize_incident_dict(cl_dict)
 
-    return list(inc_map.values())
+    urgency_rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+    result = list(inc_map.values())
+    result.sort(key=lambda x: (
+        urgency_rank.get(str(x.get("severity") or x.get("urgency") or "").upper(), 4),
+        -(x.get("total_devices") or x.get("devices_count") or 0),
+        -(x.get("estimated_casualties") or x.get("people_count") or 0),
+    ))
+    return result
 
 
 @app.get("/api/v1/incidents/{incident_id}")

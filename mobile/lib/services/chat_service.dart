@@ -48,7 +48,8 @@ class ChatService extends ChangeNotifier {
   String get activeFilter => _activeFilter;
   String? get activeGroupConversationId => _activeGroupConversationId;
   String get searchQuery => _searchQuery;
-  Set<String> get bookmarkedMessageIds => Set.unmodifiable(_bookmarkedMessageIds);
+  Set<String> get bookmarkedMessageIds =>
+      Set.unmodifiable(_bookmarkedMessageIds);
   int get onlineDevices => _radioService.connectedCount;
   bool get isSyncing => _isSyncing;
 
@@ -124,7 +125,8 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  bool isBookmarked(String messageId) => _bookmarkedMessageIds.contains(messageId);
+  bool isBookmarked(String messageId) =>
+      _bookmarkedMessageIds.contains(messageId);
 
   Future<bool> toggleBookmark(String messageId) async {
     final bool added;
@@ -331,9 +333,11 @@ class ChatService extends ChangeNotifier {
     final now = DateTime.now();
     final resolvedMessageId =
         messageId ?? 'MSG-${_uuid.v4().substring(0, 8).toUpperCase()}';
-    final resolvedConversationId = conversationId ?? currentTargetConversationId;
+    final resolvedConversationId =
+        conversationId ?? currentTargetConversationId;
     final resolvedSenderName = senderName ?? DatabaseService.myDisplayName;
-    final resolvedCategory = category ??
+    final resolvedCategory =
+        category ??
         (resolvedConversationId.startsWith('CONV_GRP-')
             ? 'Group'
             : _activeFilter);

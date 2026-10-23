@@ -28,7 +28,7 @@ export interface RakshaMapViewProps {
  * and offline procedural grid vector canvas.
  */
 export function RakshaMapView({
-  center = [13.0425, 80.2285], // Default: Active Disaster Sector Centroid (Ward 14 / Adyar Basin Grid)
+  center,
   zoom = 13,
   minZoom = 3,
   maxZoom = 20,
@@ -48,6 +48,10 @@ export function RakshaMapView({
   }, []);
 
   const isLight = theme === 'light';
+
+  if (!center) {
+    return <div className={`raksha-map-container flex items-center justify-center p-6 text-center text-sm text-slate-600 dark:text-slate-300 ${className}`} style={style}>No map center was reported by a consented device or incident.</div>;
+  }
 
   return (
     <div

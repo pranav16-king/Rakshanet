@@ -1,291 +1,81 @@
 import { apiClient } from './client';
-import type {
-  Device,
-  DeviceSummaryMetrics,
-  NetworkTopologyNode,
-  ConnectionLog,
-  DeviceType,
-  DeviceStatus,
-} from '../types/devices';
+import type { ConnectionLog, Device, DeviceStatus, DeviceSummaryMetrics, DeviceType, NetworkTopologyNode } from '../types/devices';
 
-const EMPTY_METRICS: DeviceSummaryMetrics = {
-  totalDevices: 0,
-  onlineCount: 0,
-  onlinePercent: 0,
-  relayCount: 0,
-  relayPercent: 0,
-  offlineCount: 0,
-  offlinePercent: 0,
-};
+const EMPTY_METRICS: DeviceSummaryMetrics = { totalDevices: 0, onlineCount: 0, onlinePercent: 0, relayCount: 0, relayPercent: 0, offlineCount: 0, offlinePercent: 0 };
+const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
-function formatTimeAgo(timestampMs?: number): string {
-  if (!timestampMs) return 'Recent';
-  const diffSec = Math.floor((Date.now() - timestampMs) / 1000);
-  if (diffSec < 45) return 'Just now';
-  if (diffSec < 90) return '1m ago';
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  return `${Math.floor(diffSec / 86400)}d ago`;
+function formatTimeAgo(timestamp?: unknown): string {
+  if (!isNumber(timestamp) && typeof timestamp !== 'string') return 'Not reported';
+  const time = typeof timestamp === 'string' ? Date.parse(timestamp) : timestamp;
+  if (!Number.isFinite(time)) return 'Not reported';
+  const diff = Math.max(0, Math.floor((Date.now() - time) / 1000));
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function resolveSector(lat?: number, lng?: number, name?: string): string {
-  if (name?.includes('Gateway') || name?.includes('Logistics')) return 'Disaster Command Center Base';
-  if (name?.includes('Repeater') || name?.includes('Ridge')) return 'Guindy High Grounds Ridge';
-  if (lat && lng) {
-    if (lat > 13.06) return 'Industrial Park Gate 3';
-    if (lat > 13.03) return 'Sector 4B Riverside Colony';
-    if (lat > 12.96) return 'South Market Commercial Plaza';
-    if (lat > 12.90) return 'NH-48 Mountain Pass km 74';
-    return 'Kovalam Coast Sector 1';
-  }
-  return 'Sector 4B Riverside Colony';
+function deviceType(value: unknown): DeviceType {
+  const raw = String(value ?? '').toLowerCase();
+  if (raw.includes('tablet')) return 'Tablet';
+  if (raw.includes('satellite') || raw.includes('uplink') || raw.includes('gateway')) return 'Satellite Uplink';
+  if (raw.includes('beacon') || raw.includes('repeater') || raw.includes('relay')) return 'Relay Beacon';
+  if (raw.includes('phone')) return 'Phone';
+  return 'Unknown';
 }
-
-function normalizeDeviceType(rawType?: string): DeviceType {
-  const t = (rawType || '').toLowerCase();
-  if (t.includes('tablet')) return 'Tablet';
-  if (t.includes('satellite') || t.includes('uplink') || t.includes('gateway')) return 'Satellite Uplink';
-  if (t.includes('beacon') || t.includes('repeater') || t.includes('relay')) return 'Relay Beacon';
-  return 'Phone';
+function deviceStatus(value: unknown): DeviceStatus {
+  const raw = String(value ?? '').toLowerCase();
+  if (raw === 'online') return 'Online';
+  if (raw === 'relay') return 'Relay';
+  if (raw === 'offline') return 'Offline';
+  return 'Reported';
+}
+function coordinateLabel(lat: unknown, lng: unknown): string {
+  return isNumber(lat) && isNumber(lng) ? `${lat.toFixed(4)}°, ${lng.toFixed(4)}°` : 'Location unavailable';
 }
 
 export const devicesApi = {
-  getSummaryMetrics: async (): Promise<DeviceSummaryMetrics> => {
+  async getSummaryMetrics(): Promise<DeviceSummaryMetrics> {
     try {
-      const response = await apiClient.get<any>('/api/v1/devices/stats');
-      const d = response.data;
-      if (d && typeof d.total === 'number') {
-        const total = d.total || 0;
-        return {
-          totalDevices: total,
-          onlineCount: d.online ?? 0,
-          onlinePercent: total > 0 ? Math.round(((d.online ?? 0) / total) * 100) : 0,
-          relayCount: d.relay ?? 0,
-          relayPercent: total > 0 ? Math.round(((d.relay ?? 0) / total) * 100) : 0,
-          offlineCount: d.offline ?? 0,
-          offlinePercent: total > 0 ? Math.round(((d.offline ?? 0) / total) * 100) : 0,
-        };
-      }
-      return EMPTY_METRICS;
-    } catch {
-      return EMPTY_METRICS;
-    }
+      const { data } = await apiClient.get<any>('/api/v1/devices/stats');
+      if (!data || !isNumber(data.total)) return EMPTY_METRICS;
+      const total = data.total;
+      const online = isNumber(data.online) ? data.online : 0;
+      const relay = isNumber(data.relay) ? data.relay : 0;
+      const offline = isNumber(data.offline) ? data.offline : 0;
+      return { totalDevices: total, onlineCount: online, relayCount: relay, offlineCount: offline, onlinePercent: total ? Math.round((online / total) * 100) : 0, relayPercent: total ? Math.round((relay / total) * 100) : 0, offlinePercent: total ? Math.round((offline / total) * 100) : 0 };
+    } catch { return EMPTY_METRICS; }
   },
-
-  getDevices: async (
-    typeFilter: string = 'All',
-    statusFilter: string = 'All',
-    searchQuery: string = ''
-  ): Promise<Device[]> => {
+  async getDevices(typeFilter = 'All', statusFilter = 'All', searchQuery = ''): Promise<Device[]> {
     try {
-      const response = await apiClient.get<any[]>('/api/v1/devices');
-      if (Array.isArray(response.data) && response.data.length > 0) {
-        const mapped: Device[] = response.data.map((d: any) => {
-          const type = normalizeDeviceType(d.device_type);
-          const location = resolveSector(d.lat, d.lng, d.name || d.owner_name);
-          const hops = typeof d.hops_away === 'number' ? d.hops_away : 0;
-          const status = (d.status === 'Relay' ? 'Relay' : d.status === 'Offline' ? 'Offline' : 'Online') as DeviceStatus;
-
-          return {
-            id: d.device_id || 'DEV-NODE',
-            userName: d.owner_name || d.name || 'Field Responder',
-            ownerName: d.owner_name || d.name,
-            type,
-            location,
-            battery: typeof d.battery_pct === 'number' ? d.battery_pct : 80,
-            status,
-            meshHops: hops,
-            signalStrengthDbm: -45 - (hops * 16),
-            lastPing: formatTimeAgo(d.last_seen),
-            lastSeenTimestamp: d.last_seen,
-            hardwareModel: `${type} · Mesh Radio Core`,
-            relayActive: status === 'Relay' || hops === 0,
-            lat: d.lat,
-            lng: d.lng,
-            packetsForwarded: d.packets_forwarded ?? 0,
-          };
-        });
-
-        let filtered = mapped;
-        if (typeFilter && typeFilter !== 'All') {
-          filtered = filtered.filter((dev) => dev.type.toLowerCase() === typeFilter.toLowerCase());
-        }
-        if (statusFilter && statusFilter !== 'All') {
-          filtered = filtered.filter((dev) => dev.status.toLowerCase() === statusFilter.toLowerCase());
-        }
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          filtered = filtered.filter(
-            (dev) =>
-              dev.id.toLowerCase().includes(q) ||
-              dev.userName.toLowerCase().includes(q) ||
-              (dev.ownerName && dev.ownerName.toLowerCase().includes(q)) ||
-              dev.location.toLowerCase().includes(q)
-          );
-        }
-        return filtered;
-      }
-    } catch {
-      // Fallback handled gracefully
-    }
-    return [];
-  },
-
-  getTopology: async (): Promise<NetworkTopologyNode[]> => {
-    try {
-      const response = await apiClient.get<any[]>('/api/v1/devices');
-      const devs = response.data;
-      if (Array.isArray(devs) && devs.length > 0) {
-        // Build dynamic real network topology from live devices
-        const nodes: NetworkTopologyNode[] = [
-          {
-            id: 'GATEWAY-HQ',
-            label: 'Command Gateway Base (HQ)',
-            type: 'gateway',
-            status: 'Online',
-            battery: 100,
-            x: 480,
-            y: 180,
-            signalDbm: -35,
-            hops: 0,
-            connections: [],
-            hardwareType: 'Satellite Uplink',
-            packetsForwarded: 650,
-          },
-        ];
-
-        // Group devices by hops
-        const zeroHops = devs.filter((d: any) => (d.hops_away ?? 0) === 0);
-        const oneHops = devs.filter((d: any) => (d.hops_away ?? 0) === 1);
-        const twoHops = devs.filter((d: any) => (d.hops_away ?? 0) >= 2);
-
-        // Distribute 0-hop nodes around gateway
-        const zeroAngles = [210, 150, 90, 30, 330];
-        zeroHops.forEach((d: any, idx: number) => {
-          const angle = ((zeroAngles[idx % zeroAngles.length] || 45) * Math.PI) / 180;
-          const radius = 170;
-          const x = Math.round(480 + radius * Math.cos(angle));
-          const y = Math.round(180 + radius * Math.sin(angle));
-
-          nodes[0].connections.push(d.device_id);
-          nodes.push({
-            id: d.device_id,
-            label: `${d.owner_name || d.name} (${d.device_id})`,
-            type: d.status === 'Relay' ? 'relay' : 'client',
-            status: d.status as DeviceStatus,
-            battery: d.battery_pct ?? 85,
-            x,
-            y,
-            signalDbm: -45,
-            hops: 0,
-            connections: ['GATEWAY-HQ'],
-            hardwareType: normalizeDeviceType(d.device_type),
-            packetsForwarded: d.packets_forwarded ?? 0,
-          });
-        });
-
-        // Position 1-hop nodes chained from nearby 0-hop relays
-        oneHops.forEach((d: any, idx: number) => {
-          const parent = zeroHops[idx % zeroHops.length]?.device_id || 'GATEWAY-HQ';
-          const x = 200 + idx * 160;
-          const y = 370;
-
-          // Connect to parent
-          const pNode = nodes.find((n) => n.id === parent);
-          if (pNode) pNode.connections.push(d.device_id);
-
-          nodes.push({
-            id: d.device_id,
-            label: `${d.owner_name || d.name} (${d.device_id})`,
-            type: d.status === 'Relay' ? 'relay' : 'client',
-            status: d.status as DeviceStatus,
-            battery: d.battery_pct ?? 40,
-            x,
-            y,
-            signalDbm: -68,
-            hops: 1,
-            connections: [parent],
-            hardwareType: normalizeDeviceType(d.device_type),
-            packetsForwarded: d.packets_forwarded ?? 0,
-          });
-        });
-
-        // Position 2+ hop nodes
-        twoHops.forEach((d: any, idx: number) => {
-          const parent = oneHops[0]?.device_id || 'GATEWAY-HQ';
-          const x = 320 + idx * 240;
-          const y = 470;
-
-          const pNode = nodes.find((n) => n.id === parent);
-          if (pNode) pNode.connections.push(d.device_id);
-
-          nodes.push({
-            id: d.device_id,
-            label: `${d.owner_name || d.name} (${d.device_id})`,
-            type: d.status === 'Relay' ? 'relay' : 'client',
-            status: d.status as DeviceStatus,
-            battery: d.battery_pct ?? 20,
-            x,
-            y,
-            signalDbm: -92,
-            hops: d.hops_away ?? 2,
-            connections: [parent],
-            hardwareType: normalizeDeviceType(d.device_type),
-            packetsForwarded: d.packets_forwarded ?? 0,
-          });
-        });
-
-        return nodes;
-      }
-    } catch {
-      // Fallback
-    }
-    return [];
-  },
-
-  getConnectionLogs: async (): Promise<ConnectionLog[]> => {
-    try {
-      const response = await apiClient.get<any>('/api/v1/telemetry/packets', {
-        params: { limit: 40 },
+      const { data } = await apiClient.get<any[]>('/api/v1/devices');
+      const mapped = (Array.isArray(data) ? data : []).flatMap((raw): Device[] => {
+        if (!raw?.device_id && !raw?.id) return [];
+        const id = String(raw.device_id ?? raw.id);
+        const lat = isNumber(raw.lat) ? raw.lat : undefined;
+        const lng = isNumber(raw.lng) ? raw.lng : undefined;
+        return [{ id, userName: String(raw.owner_name ?? raw.name ?? id), ownerName: typeof raw.owner_name === 'string' ? raw.owner_name : undefined, type: deviceType(raw.device_type ?? raw.type), location: coordinateLabel(lat, lng), battery: isNumber(raw.battery_pct) ? raw.battery_pct : undefined, status: deviceStatus(raw.status), meshHops: isNumber(raw.hops_away) ? raw.hops_away : undefined, signalStrengthDbm: isNumber(raw.signal_dbm) ? raw.signal_dbm : undefined, lastPing: formatTimeAgo(raw.last_seen), lastSeenTimestamp: isNumber(raw.last_seen) ? raw.last_seen : undefined, hardwareModel: typeof raw.hardware_model === 'string' ? raw.hardware_model : undefined, relayActive: raw.relay_active === true, lat, lng, packetsForwarded: isNumber(raw.packets_forwarded) ? raw.packets_forwarded : undefined }];
       });
-      const data = response.data;
-      const packets = Array.isArray(data) ? data : data?.packets;
-      if (Array.isArray(packets) && packets.length > 0) {
-        return packets.map((p: any) => {
-          const hops = p.hops ?? 1;
-          const protocol = hops > 1 ? 'LoRa P2P' : p.packet_type === 'SOS' ? 'BLE Mesh' : 'Wi-Fi Direct';
-          const ts = p.timestamp || p.created_at || Date.now();
-          const d = new Date(ts);
-          const timeStr = d.toTimeString().split(' ')[0] || '12:00:00';
-
-          return {
-            id: p.msg_id || `pkt-${Math.random().toString(36).slice(2, 7)}`,
-            timestamp: timeStr,
-            deviceId: p.sender_id || p.mule_device_id || 'DEV-NODE',
-            userName: p.sender_name || 'Disaster Node Transmitter',
-            event: `${p.packet_type || 'DATA'} Packet: "${(p.payload || 'Telemetry beacon heartbeat').slice(0, 52)}${p.payload && p.payload.length > 52 ? '...' : ''}"`,
-            protocol,
-            hopCount: hops,
-            rssiDbm: -48 - (hops * 15),
-            status: p.packet_type === 'SOS' ? 'Delivered' : hops > 0 ? 'Relayed' : 'Delivered',
-            packetType: p.packet_type || 'DATA',
-          };
-        });
-      }
-    } catch {
-      // Fallback
-    }
-    return [];
+      const query = searchQuery.trim().toLowerCase();
+      return mapped.filter((device) => (typeFilter === 'All' || device.type === typeFilter) && (statusFilter === 'All' || device.status === statusFilter) && (!query || [device.id, device.userName, device.ownerName, device.location].filter(Boolean).some((value) => value!.toLowerCase().includes(query))));
+    } catch { return []; }
   },
-
-  pingDevice: async (deviceId: string): Promise<{ success: boolean; latencyMs: number }> => {
-    // Ping device via mesh gateway
-    await new Promise((r) => setTimeout(r, 400));
-    return {
-      success: true,
-      latencyMs: Math.floor(Math.random() * 32) + 18,
-    };
+  // The gateway does not expose verified neighbour edges. Do not infer topology from hop counts or locations.
+  async getTopology(): Promise<NetworkTopologyNode[]> { return []; },
+  async getConnectionLogs(): Promise<ConnectionLog[]> {
+    try {
+      const { data } = await apiClient.get<any>('/api/v1/telemetry/packets', { params: { limit: 40 } });
+      const packets = Array.isArray(data) ? data : data?.packets;
+      return (Array.isArray(packets) ? packets : []).flatMap((packet): ConnectionLog[] => {
+        const id = packet?.msg_id;
+        const senderId = packet?.sender_id ?? packet?.mule_device_id;
+        if (!id || !senderId) return [];
+        return [{ id: String(id), timestamp: formatTimeAgo(packet.timestamp ?? packet.created_at), deviceId: String(senderId), userName: String(packet.sender_name ?? senderId), event: String(packet.packet_type ?? 'UNKNOWN'), protocol: typeof packet.protocol === 'string' ? packet.protocol : 'Not reported', hopCount: isNumber(packet.hops) ? packet.hops : undefined, rssiDbm: isNumber(packet.rssi_dbm) ? packet.rssi_dbm : undefined, status: 'Ingested', packetType: typeof packet.packet_type === 'string' ? packet.packet_type : undefined }];
+      });
+    } catch { return []; }
+  },
+  async pingDevice(_deviceId: string): Promise<{ success: false; latencyMs: null; message: string }> {
+    return { success: false, latencyMs: null, message: 'The gateway has no verified mesh ping endpoint for this device.' };
   },
 };
-
 export default devicesApi;

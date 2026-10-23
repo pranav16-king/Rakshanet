@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/profile_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/user_profile_provider.dart';
@@ -192,22 +193,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       _buildPolicyPoint(
                         icon: Icons.fingerprint_rounded,
                         title: 'Used Strictly as Your Unique ID',
-                        description:
-                            'This mobile IMEI identifier is used ONLY as your unique project ID to identify your emergency profile and prevent duplicate mesh packets.',
+                        description: 'This mobile IMEI identifier is used ONLY as your unique project ID to identify your emergency profile and prevent duplicate mesh packets.',
                       ),
                       const SizedBox(height: 10),
                       _buildPolicyPoint(
                         icon: Icons.lock_outline_rounded,
                         title: 'Local Session Store & Privacy Protection',
-                        description:
-                            'Stored securely in your device\'s local SQLite session store. It is never sold, shared for advertising, or used for unauthorized tracking.',
+                        description: 'Stored securely in your device\'s local SQLite session store. It is never sold, shared for advertising, or used for unauthorized tracking.',
                       ),
                       const SizedBox(height: 10),
                       _buildPolicyPoint(
                         icon: Icons.verified_user_outlined,
                         title: 'Tamper-Proof Auto-Detection',
-                        description:
-                            'Manual entry is disabled to guarantee authentic device identity during disaster rescue operations.',
+                        description: 'Manual entry is disabled to guarantee authentic device identity during disaster rescue operations.',
                       ),
                     ],
                   ),
@@ -237,8 +235,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             foregroundColor: AppColors.textSecondary,
                             side: const BorderSide(color: AppColors.border),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                           ),
                           child: const Text(
@@ -275,8 +272,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             foregroundColor: AppColors.background,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                           ),
                         ),
@@ -295,8 +291,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
     setState(() => _isDetectingImei = true);
     try {
-      final detectedImei =
-          await DeviceIdentityService.instance.detectAndConfirmHardwareImeiId();
+      final detectedImei = await DeviceIdentityService.instance
+          .detectAndConfirmHardwareImeiId();
       if (!mounted) return;
       setState(() {
         _imeiUniqueIdCtrl.text = detectedImei;
@@ -395,15 +391,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final userProfileProvider = context.read<UserProfileProvider>();
 
       final rawPhone = _emergencyPhoneCtrl.text.trim();
-      final formattedPhone =
-          rawPhone.isEmpty ? '' : '$_selectedDialCode $rawPhone'.trim();
+      final formattedPhone = rawPhone.isEmpty
+          ? ''
+          : '$_selectedDialCode $rawPhone'.trim();
 
       // Combine optional structured metadata cleanly into medicalNotes so all SQLite fields are preserved
       final List<String> notesParts = [];
       if (_emergencyContactNameCtrl.text.trim().isNotEmpty) {
-        notesParts.add(
-          'Contact: ${_emergencyContactNameCtrl.text.trim()}',
-        );
+        notesParts.add('Contact: ${_emergencyContactNameCtrl.text.trim()}');
       }
       if (_medicalIdCtrl.text.trim().isNotEmpty) {
         notesParts.add('Med ID: ${_medicalIdCtrl.text.trim()}');
@@ -476,10 +471,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
 
               // 2. Progress Indicator
-              StepIndicator(
-                currentStep: _currentStep,
-                totalSteps: 2,
-              ),
+              StepIndicator(currentStep: _currentStep, totalSteps: 2),
               const SizedBox(height: AppSpacing.xs),
 
               // 3. Scrollable Content Area
@@ -581,15 +573,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   // 2. MANDATORY: Mobile IMEI ID (Read-Only, No Manual Entry, Auto-Fill via Button after Privacy Confirmation)
                   AppTextField(
                     label: 'Unique Mobile IMEI ID',
-                    placeholder:
-                        'Tap button below to detect & auto-fill (No manual entry)',
+                    placeholder: 'Tap button below to detect & auto-fill (No manual entry)',
                     icon: Icons.perm_device_information_rounded,
                     controller: _imeiUniqueIdCtrl,
                     isRequired: true,
                     readOnly: true,
                     onTap: _promptPrivacyAndDetectImei,
-                    optionalLabel:
-                        hasImei ? 'Verified Hardware ID' : 'Read-Only • Required',
+                    optionalLabel: hasImei
+                        ? 'Verified Hardware ID'
+                        : 'Read-Only • Required',
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
                         return 'Please tap "Detect & Auto-Fill Mobile IMEI ID" below';
@@ -604,8 +596,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     width: double.infinity,
                     height: 44,
                     child: OutlinedButton.icon(
-                      onPressed:
-                          _isDetectingImei ? null : _promptPrivacyAndDetectImei,
+                      onPressed: _isDetectingImei
+                          ? null
+                          : _promptPrivacyAndDetectImei,
                       icon: _isDetectingImei
                           ? const SizedBox(
                               width: 18,
@@ -628,8 +621,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         _isDetectingImei
                             ? 'Detecting Hardware IMEI...'
                             : hasImei
-                                ? 'IMEI Auto-Filled (${_imeiUniqueIdCtrl.text}) • Tap to View Policy'
-                                : 'Detect & Auto-Fill Mobile IMEI ID',
+                            ? 'IMEI Auto-Filled (${_imeiUniqueIdCtrl.text}) • Tap to View Policy'
+                            : 'Detect & Auto-Fill Mobile IMEI ID',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -742,8 +735,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       if (val == null || val.trim().isEmpty) {
                         return null; // Optional
                       }
-                      final digitsOnly =
-                          val.replaceAll(RegExp(r'[^0-9]'), '');
+                      final digitsOnly = val.replaceAll(RegExp(r'[^0-9]'), '');
                       if (digitsOnly.length < 7 || digitsOnly.length > 15) {
                         return 'Enter a valid phone number (7–15 digits) or leave blank';
                       }
@@ -974,10 +966,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 label: 'Unique IMEI ID',
                 value: _imeiUniqueIdCtrl.text.trim(),
               ),
-              ReviewItemRow(
-                label: 'Email',
-                value: _emailCtrl.text.trim(),
-              ),
+              ReviewItemRow(label: 'Email', value: _emailCtrl.text.trim()),
               ReviewItemRow(
                 label: 'Emergency Contact',
                 value: _emergencyContactNameCtrl.text.trim().isNotEmpty
@@ -1016,10 +1005,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             categoryTitle: 'Preferences',
             onEdit: () => setState(() => _currentStep = 1),
             rows: [
-              ReviewItemRow(
-                label: 'Language',
-                value: _selectedLanguage,
-              ),
+              ReviewItemRow(label: 'Language', value: _selectedLanguage),
               ReviewItemRow(
                 label: 'Display Mode',
                 value: themeProvider.isLowPower
@@ -1126,9 +1112,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.secondarySurface,
-        border: Border(
-          top: BorderSide(color: AppColors.border, width: 1),
-        ),
+        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
         boxShadow: AppShadows.stickyBar,
       ),
       child: SafeArea(

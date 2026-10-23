@@ -150,7 +150,8 @@ export const LiveMapPage: React.FC = () => {
     devices.forEach((d) => {
       if (d.lat && d.lng) validCoords.push([d.lat, d.lng]);
     });
-    if (validCoords.length === 0) {
+    if (validCoords.length === 0) return 'Coordinates unavailable';
+    if (validCoords.length === -1) {
       return '13.0425° N, 80.2285° E · WGS84';
     }
     const avgLat = validCoords.reduce((a, b) => a + b[0], 0) / validCoords.length;

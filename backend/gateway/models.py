@@ -88,10 +88,10 @@ class UserCreateRequest(BaseModel):
     email: str
     name: str
     role: str = "Responder"
-    agency: str = "Disaster Response Force"
+    agency: Optional[str] = None
     phone: Optional[str] = None
     location: Optional[str] = None
-    password: Optional[str] = "RakshaNet@2026"
+    password: str = Field(min_length=12)
 
 
 class AssignTeamRequest(BaseModel):

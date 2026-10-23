@@ -29,8 +29,8 @@ export const IncidentOverviewTab: React.FC<IncidentOverviewTabProps> = ({
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
               Geofenced Area Telemetry & Mesh Map
             </h3>
-            <span className="text-[11px] font-mono text-[#0891B2] dark:text-[#06B6D4]">
-              {topology?.sos_beacons?.length || 3} Beacons • {topology?.mesh_relays?.length || 2} Relays
+            <span className="hidden" aria-hidden="true">
+              {topology?.sos_beacons?.length ?? 0} Beacons • {topology?.mesh_relays?.length ?? 0} Relays
             </span>
           </div>
           <IncidentAreaMeshMap

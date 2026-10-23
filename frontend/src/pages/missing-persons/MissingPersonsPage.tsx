@@ -1677,7 +1677,7 @@ const ReportMissingModal: React.FC<ReportMissingModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="e.g. Rameshwar Sen"
+                placeholder="Enter full name of missing person..."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-lg bg-[#F8FAFC] dark:bg-[#0B1220] border border-[#CBD5E1] dark:border-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] focus:ring-2 focus:ring-[#FFD21F] focus:outline-none"
