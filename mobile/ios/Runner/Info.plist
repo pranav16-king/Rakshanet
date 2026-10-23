@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Rakshanet Mobile</string>
+	<string>RakshaNet</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -65,6 +65,31 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!-- Disaster Mesh & Hardware Permissions -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>RakshaNet uses Bluetooth Low Energy to connect to nearby disaster mesh nodes and emergency beacons without internet access.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>RakshaNet uses Bluetooth peripheral mode to broadcast emergency distress signals and exchange mesh messages with nearby rescue devices.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>RakshaNet requires your location to attach emergency coordinates to distress calls and map nearby mesh resources.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>RakshaNet requires continuous background location access to trace emergency relays and track mesh peers during search and rescue operations.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>RakshaNet uses your camera to capture field disaster damage photos and missing persons identification photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RakshaNet accesses your photo library to select photos for missing persons reports and situational disaster updates.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>RakshaNet uses the microphone for emergency voice memos and field audio transmission.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>RakshaNet uses local peer-to-peer Wi-Fi Direct and local network protocols to transmit messages across offline disaster mesh clusters.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>bluetooth-peripheral</string>
+		<string>location</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>

@@ -1,0 +1,51 @@
+name: Build iOS IPA for iPhone
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/build-ios-ipa.yml'
+
+jobs:
+  build-ipa:
+    name: Build RakshaNet iOS IPA
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build iOS Application (Release, No CodeSign)
+        working-directory: mobile
+        run: |
+          flutter build ios --release --no-codesign
+
+      - name: Package Payload into IPA
+        working-directory: mobile
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -qr RakshaNet-iOS.ipa Payload
+          echo "IPA generated successfully:"
+          ls -lh RakshaNet-iOS.ipa
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RakshaNet-iOS-IPA
+          path: mobile/build/ios/ipa/RakshaNet-iOS.ipa
+          retention-days: 14

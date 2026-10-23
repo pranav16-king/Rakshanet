@@ -3646,5 +3646,17 @@
     "seen": 1792771149.2752674,
     "ast_hash": "e1c895eafb4597d6a3327f0392bef656",
     "semantic_hash": ""
+  },
+  "mobile/scripts/build_ipa.sh": {
+    "mtime": 1792771404.4504468,
+    "seen": 1792771466.7046778,
+    "ast_hash": "9c1138746a01f487303d8d18e39f8c8c",
+    "semantic_hash": ""
+  },
+  ".github/workflows/build-ios-ipa.yml": {
+    "mtime": 1792771413.5447505,
+    "seen": 1792771466.7046778,
+    "ast_hash": "08838a5a8a6fc95527f3fe787c678102",
+    "semantic_hash": ""
   }
 }
