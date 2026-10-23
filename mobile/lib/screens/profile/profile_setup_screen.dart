@@ -513,9 +513,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
-        AppSpacing.sm,
+        AppSpacing.xs,
         AppSpacing.md,
-        AppSpacing.xl,
+        AppSpacing.xxl + 40,
       ),
       child: Form(
         key: _formKey,
@@ -525,18 +525,27 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             // Page Title + Description
             const Text(
               'Emergency Profile Setup',
-              style: AppTypography.pageTitle,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
+              ),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: 3),
             const Text(
               'Only your Full Name and verified Mobile IMEI Unique ID are required. All other fields are optional.',
-              style: AppTypography.pageSubtitle,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12.5,
+                height: 1.35,
+              ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 10),
 
             // Offline Status Card
             const OfflineStatusCard(),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: 12),
 
             // =========================================================
             // SECTION 1: MANDATORY IDENTITY (NAME + MOBILE IMEI UNIQUE ID)
@@ -567,7 +576,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: 10),
 
                   // 2. MANDATORY: Mobile IMEI ID (Read-Only, No Manual Entry, Auto-Fill via Button after Privacy Confirmation)
                   AppTextField(
@@ -588,12 +597,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
                   // Dedicated Detect & Auto-Fill Mobile IMEI Button
                   SizedBox(
                     width: double.infinity,
-                    height: 48,
+                    height: 44,
                     child: OutlinedButton.icon(
                       onPressed:
                           _isDetectingImei ? null : _promptPrivacyAndDetectImei,
@@ -924,23 +933,32 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
-        AppSpacing.sm,
+        AppSpacing.xs,
         AppSpacing.md,
-        AppSpacing.xl,
+        AppSpacing.xxl + 40,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Review & Confirm',
-            style: AppTypography.pageTitle,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 3),
           const Text(
             'Verify your emergency profile details before saving them to your local device session store.',
-            style: AppTypography.pageSubtitle,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12.5,
+              height: 1.35,
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: 10),
 
           // PERSONAL Summary Card
           ReviewCard(
@@ -1093,10 +1111,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Widget _buildSectionCard({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border, width: 1),
         boxShadow: AppShadows.card,
       ),
@@ -1106,12 +1124,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Widget _buildStickyBottomBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.md,
-      ),
       decoration: const BoxDecoration(
         color: AppColors.secondarySurface,
         border: Border(
@@ -1119,47 +1131,58 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         ),
         boxShadow: AppShadows.stickyBar,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_currentStep == 1) ...[
-            PrimaryButton(
-              label: 'Continue',
-              onPressed: _handleContinueToReview,
-            ),
-            const SecurityNote(),
-          ] else ...[
-            PrimaryButton(
-              label: 'Save & Continue',
-              isLoading: _isSaving,
-              onPressed: _handleSaveAndContinue,
-              trailingIcon: Icons.check_rounded,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: TextButton(
-                onPressed: _isSaving
-                    ? null
-                    : () => setState(() => _currentStep = 1),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.xs + 2,
+            AppSpacing.md,
+            AppSpacing.xs + 2,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_currentStep == 1) ...[
+                PrimaryButton(
+                  label: 'Continue',
+                  onPressed: _handleContinueToReview,
+                ),
+                const SecurityNote(),
+              ] else ...[
+                PrimaryButton(
+                  label: 'Save & Continue',
+                  isLoading: _isSaving,
+                  onPressed: _handleSaveAndContinue,
+                  trailingIcon: Icons.check_rounded,
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  height: 42,
+                  child: TextButton(
+                    onPressed: _isSaving
+                        ? null
+                        : () => setState(() => _currentStep = 1),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                    ),
+                    child: const Text(
+                      'Back to Edit Profile',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
-                child: const Text(
-                  'Back to Edit Profile',
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
