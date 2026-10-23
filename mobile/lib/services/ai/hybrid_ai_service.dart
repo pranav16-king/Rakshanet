@@ -14,6 +14,8 @@ class AiResponse {
   final double confidence;
   final bool isOnline;
   final int latencyMs;
+  final String urgency; // 'critical' | 'high' | 'advisory'
+  final String? category;
 
   const AiResponse({
     required this.text,
@@ -23,6 +25,8 @@ class AiResponse {
     required this.confidence,
     required this.isOnline,
     required this.latencyMs,
+    this.urgency = 'high',
+    this.category,
   });
 }
 
@@ -208,6 +212,8 @@ class HybridAiService {
             final warning = parsedJson['warning']?.toString();
 
             final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+            final urgency = parsedJson['urgency']?.toString() ?? 'high';
+            final category = parsedJson['category']?.toString() ?? 'Emergency Assistance';
 
             return AiResponse(
               text: title,
@@ -217,6 +223,8 @@ class HybridAiService {
               confidence: 0.99,
               isOnline: true,
               latencyMs: elapsed,
+              urgency: urgency,
+              category: category,
             );
           }
         }
@@ -247,6 +255,8 @@ class HybridAiService {
         confidence: 0.99,
         isOnline: false,
         latencyMs: elapsed,
+        urgency: 'advisory',
+        category: 'Survival Tools & Math',
       );
     }
 
@@ -263,6 +273,8 @@ class HybridAiService {
         confidence: 0.99,
         isOnline: false,
         latencyMs: elapsed,
+        urgency: 'advisory',
+        category: 'Unit Conversion',
       );
     }
 
@@ -279,6 +291,8 @@ class HybridAiService {
         confidence: 0.98,
         isOnline: false,
         latencyMs: elapsed,
+        urgency: 'high',
+        category: 'Survival Skills & Rations',
       );
     }
 
@@ -320,6 +334,8 @@ class HybridAiService {
       final stepsDynamic = knowledge['steps'] as List<dynamic>? ?? [];
       final steps = stepsDynamic.map((e) => e.toString()).toList();
       final warning = knowledge['warning'] as String?;
+      final urgency = knowledge['urgency'] as String? ?? 'high';
+      final category = knowledge['category'] as String?;
 
       return AiResponse(
         text: title,
@@ -329,6 +345,8 @@ class HybridAiService {
         confidence: (0.80 + (bestScore * 0.19)).clamp(0.80, 0.98),
         isOnline: false,
         latencyMs: elapsed,
+        urgency: urgency,
+        category: category,
       );
     }
 
@@ -447,6 +465,79 @@ class HybridAiService {
         break;
       case 'common_medicines_otc':
         if (text.contains('medicine') || text.contains('paracetamol') || text.contains('tablet') || text.contains('ibuprofen')) return 0.50;
+        break;
+      // High-Priority Disaster Protocols
+      case 'mass_casualty_triage_start':
+        if (text.contains('triage') || text.contains('casualty') || text.contains('rpm') || text.contains('red yellow green')) return 0.55;
+        break;
+      case 'cbrn_decontamination':
+        if (text.contains('cbrn') || text.contains('chemical weapon') || text.contains('nerve agent') || text.contains('decontaminat') || text.contains('toxic spill')) return 0.55;
+        break;
+      case 'dam_burst_flash_flood':
+        if (text.contains('dam burst') || text.contains('dam break') || text.contains('reservoir breach') || text.contains('wall of water')) return 0.55;
+        break;
+      case 'swiftwater_rescue':
+        if (text.contains('swiftwater') || text.contains('river current') || text.contains('strainer') || text.contains('defensive swim') || text.contains('throw bag')) return 0.55;
+        break;
+      case 'structural_collapse_void_search':
+        if (text.contains('collapse') || text.contains('void space') || text.contains('rubble tapping') || text.contains('trapped under concrete') || text.contains('pancake collapse')) return 0.55;
+        break;
+      case 'avalanche_rescue_beacon':
+        if (text.contains('avalanche') || text.contains('transceiver') || text.contains('snow slide') || text.contains('probe and shovel') || text.contains('snow air pocket')) return 0.55;
+        break;
+      case 'extreme_heatwave_solar_still':
+        if (text.contains('solar still') || text.contains('desert water') || text.contains('condensation pit') || text.contains('drought')) return 0.55;
+        break;
+      case 'ground_to_air_rescue_signals':
+        if (text.contains('ground to air') || text.contains('heliograph') || text.contains('signal mirror') || text.contains('three fires triangle') || text.contains('distress marks')) return 0.55;
+        break;
+      case 'psychological_first_aid':
+        if (text.contains('psychological first aid') || text.contains('panic attack') || text.contains('hyperventilat') || text.contains('trauma grounding') || text.contains('5 4 3 2 1')) return 0.50;
+        break;
+      case 'waterborne_epidemic_prevention':
+        if (text.contains('cholera') || text.contains('bleach drop') || text.contains('sodis') || text.contains('dysentery') || text.contains('typhoid') || text.contains('waterborne')) return 0.55;
+        break;
+      case 'field_sanitation_latrine':
+        if (text.contains('latrine') || text.contains('trench toilet') || text.contains('camp sanitation') || text.contains('tippy tap') || text.contains('soakage pit')) return 0.50;
+        break;
+      case 'amputation_crush_syndrome':
+        if (text.contains('amputat') || text.contains('severed') || text.contains('crush syndrome') || text.contains('reperfusion') || text.contains('limb cut off')) return 0.55;
+        break;
+      case 'chest_trauma_flail_chest':
+        if (text.contains('sucking chest') || text.contains('pneumothorax') || text.contains('flail chest') || text.contains('flutter valve') || text.contains('chest wound')) return 0.55;
+        break;
+      case 'eye_injuries_chemical_splash':
+        if (text.contains('chemical in eye') || text.contains('acid in eye') || text.contains('eye flush') || text.contains('impaled eye') || text.contains('eye injury')) return 0.55;
+        break;
+      case 'industrial_toxic_gas_shelter_in_place':
+        if (text.contains('chlorine gas') || text.contains('ammonia leak') || text.contains('shelter in place') || text.contains('toxic gas cloud') || text.contains('toxic cloud')) return 0.55;
+        break;
+      case 'radioactive_fallout_shelter':
+        if (text.contains('nuclear fallout') || text.contains('radiation shielding') || text.contains('7 10 rule') || text.contains('fallout shelter') || text.contains('nuclear explosion')) return 0.55;
+        break;
+      case 'blizzard_winter_storm_entrapment':
+        if (text.contains('blizzard') || text.contains('snowstorm') || text.contains('stranded in car') || text.contains('exhaust tailpipe') || text.contains('snowbound')) return 0.50;
+        break;
+      case 'wildfire_burnover_entrapment':
+        if (text.contains('burnover') || text.contains('fire shelter') || text.contains('wildfire entrap') || text.contains('the black') || text.contains('bushfire')) return 0.55;
+        break;
+      case 'emergency_vehicle_submersion':
+        if (text.contains('sinking car') || text.contains('submerged vehicle') || text.contains('car in water') || text.contains('swco') || text.contains('car sinking')) return 0.55;
+        break;
+      case 'forest_signaling_whistle_code':
+        if (text.contains('whistle') || text.contains('three blasts') || text.contains('whistle code') || text.contains('whistle signal')) return 0.50;
+        break;
+      case 'emergency_ration_calorie_management':
+        if (text.contains('ration food') || text.contains('calorie management') || text.contains('survival calories') || text.contains('rule of threes')) return 0.50;
+        break;
+      case 'improvised_splints_slings':
+        if (text.contains('make a sling') || text.contains('improvised splint') || text.contains('buddy taping') || text.contains('triangular bandage')) return 0.50;
+        break;
+      case 'wilderness_food_edibility_test':
+        if (text.contains('universal edibility') || text.contains('test wild plant') || text.contains('edible plant') || text.contains('plant poison test')) return 0.50;
+        break;
+      case 'crevasse_extrication':
+        if (text.contains('crevasse') || text.contains('glacier fall') || text.contains('z pulley') || text.contains('deadman anchor') || text.contains('suspension trauma')) return 0.55;
         break;
     }
     return 0.0;
@@ -605,6 +696,8 @@ class HybridAiService {
       confidence: 0.85,
       isOnline: false,
       latencyMs: elapsed,
+      urgency: 'advisory',
+      category: 'General Guidance',
     );
   }
 }

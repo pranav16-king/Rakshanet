@@ -102,5 +102,50 @@ void main() {
       expect(res.text.isNotEmpty, isTrue);
       print('Hybrid Query Passed (source: ${res.source}, online: ${res.isOnline}): ${res.text}');
     });
+
+    test('11. Test On-Device START Mass Casualty Triage Intent', () async {
+      ai.forceOfflineMode = true;
+      final res = await ai.processQuery('How do I do mass casualty triage for multiple injured victims?');
+      expect(res.isOnline, isFalse);
+      expect(res.urgency, equals('critical'));
+      expect(res.text.toLowerCase().contains('triage'), isTrue);
+      expect(res.steps.length, greaterThanOrEqualTo(4));
+      print('START Triage Test Passed: ${res.text} (${res.steps.length} steps, urgency: ${res.urgency})');
+    });
+
+    test('12. Test On-Device CBRN Full Decontamination Intent', () async {
+      ai.forceOfflineMode = true;
+      final res = await ai.processQuery('What is the protocol for cbrn decontamination after a chemical gas attack?');
+      expect(res.isOnline, isFalse);
+      expect(res.urgency, equals('critical'));
+      expect(res.text.toLowerCase().contains('cbrn') || res.text.toLowerCase().contains('decontamination'), isTrue);
+      print('CBRN Decontamination Test Passed: ${res.text} (urgency: ${res.urgency})');
+    });
+
+    test('13. Test On-Device Swiftwater Defensive Swimming Intent', () async {
+      ai.forceOfflineMode = true;
+      final res = await ai.processQuery('How to survive strong river swiftwater current and river strainer?');
+      expect(res.isOnline, isFalse);
+      expect(res.urgency, equals('critical'));
+      expect(res.text.toLowerCase().contains('swiftwater') || res.text.toLowerCase().contains('river'), isTrue);
+      print('Swiftwater Test Passed: ${res.text} (urgency: ${res.urgency})');
+    });
+
+    test('14. Test On-Device Rubble Acoustic Tapping & Void Search Intent', () async {
+      ai.forceOfflineMode = true;
+      final res = await ai.processQuery('How do trapped victims signal under concrete rubble in building collapse?');
+      expect(res.isOnline, isFalse);
+      expect(res.urgency, equals('critical'));
+      expect(res.text.toLowerCase().contains('collapse') || res.text.toLowerCase().contains('void'), isTrue);
+      print('Rubble Signaling Test Passed: ${res.text} (urgency: ${res.urgency})');
+    });
+
+    test('15. Test On-Device Ground-to-Air Signals & Mirror Flash Intent', () async {
+      ai.forceOfflineMode = true;
+      final res = await ai.processQuery('What are the ground to air rescue signals and how to use heliograph signal mirror?');
+      expect(res.isOnline, isFalse);
+      expect(res.text.toLowerCase().contains('ground') || res.text.toLowerCase().contains('signal') || res.text.toLowerCase().contains('air'), isTrue);
+      print('Ground-to-Air Test Passed: ${res.text} (urgency: ${res.urgency})');
+    });
   });
 }
