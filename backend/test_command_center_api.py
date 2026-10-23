@@ -19,6 +19,10 @@ client = TestClient(app)
 
 
 def test_command_center_api_suite():
+    import os
+    os.environ["SEED_INITIAL_DATA"] = "true"
+    gateway_storage._seed_initial_data()
+
     print("\n======================================================================")
     print("   RAKSHANET COMMAND CENTER API & DUAL-PERSISTENCE TEST SUITE")
     print("======================================================================\n")

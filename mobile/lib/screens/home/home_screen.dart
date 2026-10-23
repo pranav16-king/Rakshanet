@@ -298,7 +298,9 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const Spacer(flex: 1),
+                  constraints.maxHeight < 620
+                      ? const SizedBox(height: 10)
+                      : const Spacer(flex: 1),
 
                   // 3. Subtle Readiness Label Above Red SOS Button
                   Container(
@@ -374,7 +376,9 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
 
-                  const Spacer(flex: 1),
+                  constraints.maxHeight < 620
+                      ? const SizedBox(height: 10)
+                      : const Spacer(flex: 1),
 
                   // 6. Offline Warning Banner when internet is disconnected
                   if (telemetryProvider.showOfflineBanner)

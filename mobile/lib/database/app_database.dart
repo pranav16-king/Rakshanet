@@ -50,6 +50,7 @@ class AppDatabase {
     'offline_map_regions': [],
     'location_history': [],
     'mesh_photo_queries': [],
+    'call_history': [],
   };
 
   AppDatabase._internal();
@@ -404,6 +405,25 @@ class AppDatabase {
         )
       ''');
     } catch (_) {}
+
+    // Nearby call history contains metadata only. The application never saves
+    // recorded audio or raw PCM frames.
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS call_history (
+          id TEXT PRIMARY KEY,
+          call_id TEXT NOT NULL,
+          peer_device_id TEXT NOT NULL,
+          peer_name TEXT NOT NULL,
+          direction TEXT NOT NULL,
+          status TEXT NOT NULL,
+          transport TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          ended_at INTEGER NOT NULL,
+          duration_seconds INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+    } catch (_) {}
   }
 
   void _activateInMemoryFallback() {
@@ -717,6 +737,22 @@ class AppDatabase {
         timestamp INTEGER NOT NULL,
         status TEXT NOT NULL,
         payload_json TEXT
+      )
+    ''');
+
+    // 19. Nearby call history (metadata only; audio is never persisted).
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS call_history (
+        id TEXT PRIMARY KEY,
+        call_id TEXT NOT NULL,
+        peer_device_id TEXT NOT NULL,
+        peer_name TEXT NOT NULL,
+        direction TEXT NOT NULL,
+        status TEXT NOT NULL,
+        transport TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        ended_at INTEGER NOT NULL,
+        duration_seconds INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }

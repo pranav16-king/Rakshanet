@@ -33,6 +33,10 @@ client = TestClient(app)
 
 
 def test_command_center_full_suite():
+    import os
+    os.environ["SEED_INITIAL_DATA"] = "true"
+    gateway_storage._seed_initial_data()
+
     print("\n========================================================")
     print(" RakshaNet Command Center — E2E Automated Verification")
     print("========================================================\n")

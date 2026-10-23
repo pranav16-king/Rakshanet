@@ -1919,10 +1919,10 @@ class GatewayStorage:
         # 3. Seed Incidents
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM incidents")
-            inc_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM incidents WHERE incident_id = 'INC-FLD-2026-001'")
+            has_fld = cursor.fetchone()[0] > 0
 
-        if inc_count == 0:
+        if not has_fld:
             now = int(time.time() * 1000)
             initial_incidents = [
                 {

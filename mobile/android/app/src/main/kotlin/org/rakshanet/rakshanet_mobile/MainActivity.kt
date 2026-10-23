@@ -8,22 +8,46 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioRecord
+import android.media.AudioTrack
+import android.media.MediaRecorder
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.security.MessageDigest
+import java.util.concurrent.ArrayBlockingQueue
 
 class MainActivity : FlutterActivity(), LocationListener {
     private val channelName = "org.rakshanet/telemetry"
+    private val offlineAudioChannelName = "org.rakshanet/offline_audio"
+    private val offlineAudioCaptureChannelName = "org.rakshanet/offline_audio_capture"
+    private val pcmSampleRate = 16_000
+    private val pcmFrameBytes = 640 // 20ms, mono, 16-bit PCM at 16kHz
     private var locationManager: LocationManager? = null
     private var lastGpsLocation: Location? = null
     private var isListeningToLocation = false
+
+    private var audioRecord: AudioRecord? = null
+    private var audioTrack: AudioTrack? = null
+    private var captureThread: Thread? = null
+    private var playbackThread: Thread? = null
+    @Volatile private var captureRunning = false
+    @Volatile private var playbackRunning = false
+    private var captureEventSink: EventChannel.EventSink? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val playbackFrames = ArrayBlockingQueue<ByteArray>(12)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -64,6 +88,236 @@ class MainActivity : FlutterActivity(), LocationListener {
                 }
             }
         }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, offlineAudioChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "startCapture" -> result.success(startOfflineCapture())
+                    "stopCapture" -> {
+                        stopOfflineCapture()
+                        result.success(null)
+                    }
+                    "startPlayback" -> result.success(startOfflinePlayback())
+                    "playFrame" -> {
+                        val pcm = call.arguments as? ByteArray
+                        if (pcm == null || pcm.isEmpty()) {
+                            result.error("invalid_pcm", "A PCM frame is required.", null)
+                        } else {
+                            enqueuePlaybackFrame(pcm)
+                            result.success(null)
+                        }
+                    }
+                    "setSpeakerphone" -> {
+                        val enabled = call.arguments as? Boolean
+                        if (enabled == null) {
+                            result.error("invalid_route", "A speakerphone value is required.", null)
+                        } else {
+                            setSpeakerphone(enabled)
+                            result.success(null)
+                        }
+                    }
+                    "stopAudio" -> {
+                        stopOfflineAudio()
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, offlineAudioCaptureChannelName)
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    captureEventSink = events
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    captureEventSink = null
+                }
+            })
+    }
+
+    private fun startOfflineCapture(): Boolean {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return false
+        }
+        if (captureRunning) return true
+        val minBuffer = AudioRecord.getMinBufferSize(
+            pcmSampleRate,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+        if (minBuffer <= 0) return false
+        return try {
+            prepareAudioRoute()
+            val recorder = AudioRecord(
+                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                pcmSampleRate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                maxOf(minBuffer, pcmFrameBytes * 10)
+            )
+            if (recorder.state != AudioRecord.STATE_INITIALIZED) {
+                recorder.release()
+                return false
+            }
+            recorder.startRecording()
+            audioRecord = recorder
+            captureRunning = true
+            captureThread = Thread {
+                val frame = ByteArray(pcmFrameBytes)
+                while (captureRunning) {
+                    val read = recorder.read(frame, 0, frame.size, AudioRecord.READ_BLOCKING)
+                    if (read > 0 && captureRunning) {
+                        val outbound = frame.copyOf(read)
+                        mainHandler.post { captureEventSink?.success(outbound) }
+                    }
+                }
+            }.apply {
+                name = "RakshaNetNearbyAudioCapture"
+                start()
+            }
+            true
+        } catch (_: Exception) {
+            stopOfflineCapture()
+            false
+        }
+    }
+
+    private fun stopOfflineCapture() {
+        captureRunning = false
+        try {
+            audioRecord?.stop()
+        } catch (_: Exception) {
+        }
+        try {
+            audioRecord?.release()
+        } catch (_: Exception) {
+        }
+        audioRecord = null
+        captureThread = null
+    }
+
+    private fun startOfflinePlayback(): Boolean {
+        if (playbackRunning) return true
+        val minBuffer = AudioTrack.getMinBufferSize(
+            pcmSampleRate,
+            AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+        if (minBuffer <= 0) return false
+        return try {
+            prepareAudioRoute()
+            val track = AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(pcmSampleRate)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build()
+                )
+                // A 240ms queue absorbs ordinary Nearby packet jitter. Excess
+                // frames are dropped rather than extending call latency.
+                .setBufferSizeInBytes(maxOf(minBuffer, pcmFrameBytes * 12))
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
+            if (track.state != AudioTrack.STATE_INITIALIZED) {
+                track.release()
+                return false
+            }
+            audioTrack = track
+            playbackRunning = true
+            track.play()
+            playbackThread = Thread {
+                val silence = ByteArray(pcmFrameBytes)
+                while (playbackRunning) {
+                    val pcm = playbackFrames.poll() ?: silence
+                    track.write(pcm, 0, pcm.size, AudioTrack.WRITE_BLOCKING)
+                }
+            }.apply {
+                name = "RakshaNetNearbyAudioPlayback"
+                start()
+            }
+            true
+        } catch (_: Exception) {
+            stopOfflinePlayback()
+            false
+        }
+    }
+
+    private fun enqueuePlaybackFrame(pcm: ByteArray) {
+        if (!playbackRunning) return
+        val copy = pcm.copyOf()
+        if (!playbackFrames.offer(copy)) {
+            playbackFrames.poll()
+            playbackFrames.offer(copy)
+        }
+    }
+
+    private fun stopOfflinePlayback() {
+        playbackRunning = false
+        playbackFrames.clear()
+        try {
+            audioTrack?.pause()
+            audioTrack?.flush()
+            audioTrack?.stop()
+        } catch (_: Exception) {
+        }
+        try {
+            audioTrack?.release()
+        } catch (_: Exception) {
+        }
+        audioTrack = null
+        playbackThread = null
+    }
+
+    @Suppress("DEPRECATION")
+    private fun prepareAudioRoute() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        audioManager.requestAudioFocus(
+            null,
+            AudioManager.STREAM_VOICE_CALL,
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+        )
+    }
+
+    @Suppress("DEPRECATION")
+    private fun setSpeakerphone(enabled: Boolean) {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        audioManager.isSpeakerphoneOn = enabled
+    }
+
+    @Suppress("DEPRECATION")
+    private fun stopOfflineAudio() {
+        stopOfflineCapture()
+        stopOfflinePlayback()
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        try {
+            audioManager?.isSpeakerphoneOn = false
+            audioManager?.mode = AudioManager.MODE_NORMAL
+            audioManager?.abandonAudioFocus(null)
+        } catch (_: Exception) {
+        }
+    }
+
+    override fun onPause() {
+        // There is intentionally no foreground call service in this offline
+        // implementation. Stop capture/playback rather than silently keeping
+        // the microphone active while the app is not visible.
+        stopOfflineAudio()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        stopOfflineAudio()
+        super.onDestroy()
     }
 
     private fun getHardwareImeiId(): String {

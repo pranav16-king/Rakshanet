@@ -682,6 +682,8 @@ class BluetoothRadioService extends ChangeNotifier {
     return null;
   }
 
+  MeshDevice? deviceForEndpoint(String endpointId) => _connectedPeers[endpointId];
+
   bool isEndpointConnected(String endpointId) =>
       _connectedPeers.containsKey(endpointId);
 
