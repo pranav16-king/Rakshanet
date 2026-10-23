@@ -1,23 +1,24 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/telemetry_provider.dart';
 import '../../providers/mesh_provider.dart';
-import '../../services/ai/hybrid_ai_service.dart';
+import '../../services/ai/ai_models.dart';
+import '../../services/ai/ai_orchestrator.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/app_bar_actions.dart';
 
-/// Screen 7: AI Assistant (Hybrid Groq Cloud + On-Device Trained ML Model)
+/// Screen 7: AI Assistant (Redesigned Production-Grade Hybrid Emergency Copilot)
 ///
 /// Features:
-/// 1. Groq Cloud Llama-3.3 70B LLM when network is available (Groq API Key integrated)
-/// 2. Trained On-Device Machine Learning NLP Model & Knowledge Base (sub-5ms offline inference)
-/// 3. Dynamic Math Evaluator, Unit Converter, and Disaster Ration Calculator
-/// 4. Interactive Mode Switcher (Auto vs Force Offline for testing)
-/// 5. Real-time Telemetry Context injection (battery, GPS, mesh peers)
-/// 6. Strict High-Visibility emergency design tokens (Light, Dark, OLED)
+/// 1. Dual-Engine Architecture:
+///    - Online: Groq Cloud (Llama 3.3 70B) via secure backend proxy (ZERO client API keys).
+///    - Offline: On-Device NLP / SLM model + Local Verified Knowledge Base (NDMA, NDRF, WHO, IFRC).
+/// 2. Automatic Online/Offline Routing with instant graceful fallback.
+/// 3. Clean, compact one-handed mobile UI without vertical competition or oversized cards.
+/// 4. Authoritative verified emergency citations with zero fabricated metrics or hallucinated numbers.
+/// 5. Safe markdown, step-by-step guidance, copy actions, and generation cancellation.
 class AiAssistantScreen extends StatefulWidget {
   const AiAssistantScreen({super.key});
 
@@ -30,11 +31,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
-  bool _isTyping = false;
-  bool _isOnline = false;
-  String _selectedCategoryFilter = 'All';
+  bool _isGenerating = false;
+  String _selectedCategory = 'All';
 
-  static const List<String> _categoryFilters = [
+  static const List<String> _categories = [
     'All',
     'Medical',
     'Hazards',
@@ -44,18 +44,17 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   ];
 
   // Chat message stream
-  final List<_ChatMessage> _messages = [
-    // Welcome message
-    _ChatMessage(
+  final List<AiChatMessage> _messages = [
+    AiChatMessage(
       text: 'RakshaNet Hybrid AI Assistant initialized and ready.',
       isUser: false,
-      timestamp: 'Just now',
+      timestamp: 'Ready',
       source: 'System Engine',
       urgency: 'advisory',
       category: 'System Architecture',
       steps: [
-        'Online Mode: Groq Cloud Llama-3.3 70B answers any question with high reasoning capacity.',
-        'Offline Mode: 69+ Pre-trained disaster models answer CPR, triage, CBRN, bleeding, trauma, and survival questions with 0 KB data (<5ms).',
+        'Online Mode: Groq Cloud Llama-3.3 70B provides deep reasoning when internet is reachable.',
+        'Offline Mode: 69+ Pre-trained disaster SOPs answer CPR, hemorrhage, CBRN, flood, and rubble questions with zero network.',
         'Automatic Fallback: Seamlessly transitions between Cloud and Device without losing chat context.',
       ],
       warningNotice:
@@ -63,196 +62,177 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     ),
   ];
 
-  // Quick prompt suggestions categorized across emergency disciplines
-  final List<_PromptSuggestion> _suggestions = [
-    // Medical
-    _PromptSuggestion(
-      icon: Icons.favorite_rounded,
-      label: 'CPR Protocol',
-      query: 'How to perform CPR on an unconscious adult who is not breathing?',
-      category: 'Medical',
-    ),
-    _PromptSuggestion(
-      icon: Icons.healing_rounded,
-      label: 'Severe Bleeding',
-      query: 'What is the immediate protocol for severe arterial bleeding and tourniquets?',
-      category: 'Medical',
-    ),
-    _PromptSuggestion(
-      icon: Icons.airline_seat_recline_extra_rounded,
-      label: 'Choking Heimlich',
-      query: 'How to save a choking person using back blows and abdominal thrusts?',
-      category: 'Medical',
-    ),
-    _PromptSuggestion(
-      icon: Icons.masks_rounded,
-      label: 'Chest Trauma',
-      query: 'What is the first aid for a sucking chest wound with flutter valve?',
-      category: 'Medical',
-    ),
-    _PromptSuggestion(
-      icon: Icons.cut_rounded,
-      label: 'Amputation & Crush',
-      query: 'What is the first aid for traumatic amputation and crush syndrome?',
-      category: 'Medical',
-    ),
-    _PromptSuggestion(
-      icon: Icons.pest_control_rounded,
-      label: 'Snake Bite',
-      query: 'What is the first aid protocol for a venomous snakebite?',
-      category: 'Medical',
-    ),
-    _PromptSuggestion(
-      icon: Icons.visibility_rounded,
-      label: 'Eye Chemical Burn',
-      query: 'How to flush chemical splash or treat impaled object in eye?',
-      category: 'Medical',
-    ),
-
-    // Hazards
-    _PromptSuggestion(
-      icon: Icons.waves_rounded,
-      label: 'Flood Survival',
-      query: 'What should I do immediately during sudden flash flooding and rising water?',
-      category: 'Hazards',
-    ),
-    _PromptSuggestion(
-      icon: Icons.terrain_rounded,
-      label: 'Earthquake Action',
-      query: 'What are the essential survival steps during an earthquake and if trapped under rubble?',
-      category: 'Hazards',
-    ),
-    _PromptSuggestion(
-      icon: Icons.water_rounded,
-      label: 'Dam Burst Surge',
-      query: 'How to survive a catastrophic dam burst flash flood and wall of water?',
-      category: 'Hazards',
-    ),
-    _PromptSuggestion(
-      icon: Icons.cyclone_rounded,
-      label: 'Cyclone Survival',
-      query: 'How to secure shelter and survive a category 5 cyclone or hurricane?',
-      category: 'Hazards',
-    ),
-    _PromptSuggestion(
-      icon: Icons.local_fire_department_rounded,
-      label: 'Wildfire Burnover',
-      query: 'How to survive a wildfire burnover and deploy emergency fire shelter?',
-      category: 'Hazards',
-    ),
-
-    // Rescue
-    _PromptSuggestion(
-      icon: Icons.crisis_alert_rounded,
-      label: 'START Triage',
-      query: 'How do I perform START mass casualty triage for multiple injured victims?',
-      category: 'Rescue',
-    ),
-    _PromptSuggestion(
-      icon: Icons.touch_app_rounded,
-      label: 'Rubble Tapping',
-      query: 'How do trapped victims signal under concrete rubble using acoustic tapping?',
-      category: 'Rescue',
-    ),
-    _PromptSuggestion(
-      icon: Icons.kayaking_rounded,
-      label: 'Swiftwater Rescue',
-      query: 'How to survive strong river swiftwater current and river strainer?',
-      category: 'Rescue',
-    ),
-    _PromptSuggestion(
-      icon: Icons.snowmobile_rounded,
-      label: 'Avalanche Transceiver',
-      query: 'What is the avalanche beacon search protocol and probe shoveling?',
-      category: 'Rescue',
-    ),
-    _PromptSuggestion(
-      icon: Icons.flight_takeoff_rounded,
-      label: 'Ground-to-Air Signals',
-      query: 'What are the ground to air rescue signals and heliograph mirror flash?',
-      category: 'Rescue',
-    ),
-    _PromptSuggestion(
-      icon: Icons.volume_up_rounded,
-      label: 'Whistle Codes',
-      query: 'What are the international emergency whistle signals for rescue?',
-      category: 'Rescue',
-    ),
-
-    // CBRN
-    _PromptSuggestion(
-      icon: Icons.science_rounded,
-      label: 'CBRN Decontamination',
-      query: 'What is the protocol for CBRN full decontamination after chemical gas attack?',
-      category: 'CBRN',
-    ),
-    _PromptSuggestion(
-      icon: Icons.air_rounded,
-      label: 'Toxic Gas Shelter',
-      query: 'How to shelter in place during industrial chlorine or ammonia leak?',
-      category: 'CBRN',
-    ),
-    _PromptSuggestion(
-      icon: Icons.dangerous_rounded,
-      label: 'Nuclear Fallout (7:10)',
-      query: 'How to survive nuclear fallout and apply the 7:10 rule of decay?',
-      category: 'CBRN',
-    ),
-
-    // Survival
-    _PromptSuggestion(
-      icon: Icons.wb_sunny_rounded,
-      label: 'Solar Water Still',
-      query: 'How to build a solar still to condense drinking water from soil in drought?',
-      category: 'Survival',
-    ),
-    _PromptSuggestion(
-      icon: Icons.water_drop_rounded,
-      label: 'Water Purification',
-      query: 'How can I purify contaminated water using boiling, bleach, or SODIS?',
-      category: 'Survival',
-    ),
-    _PromptSuggestion(
-      icon: Icons.calculate_rounded,
-      label: 'Ration Planning',
-      query: 'How much drinking water and food is needed for 4 people for 5 days in a disaster?',
-      category: 'Survival',
-    ),
-    _PromptSuggestion(
-      icon: Icons.cleaning_services_rounded,
-      label: 'Field Sanitation',
-      query: 'How to construct an emergency camp trench latrine and prevent cholera?',
-      category: 'Survival',
-    ),
-    _PromptSuggestion(
-      icon: Icons.grass_rounded,
-      label: 'Edibility Test',
-      query: 'What are the steps of the universal edibility test for wild survival plants?',
-      category: 'Survival',
-    ),
-  ];
+  // Categorized Suggested Prompts (max 3-4 suggestions per category)
+  final Map<String, List<_PromptSuggestion>> _categorySuggestions = {
+    'All': [
+      _PromptSuggestion(
+        icon: Icons.favorite_rounded,
+        label: 'CPR Protocol',
+        query: 'How do I perform CPR on an adult who collapsed?',
+        category: 'Medical',
+      ),
+      _PromptSuggestion(
+        icon: Icons.healing_rounded,
+        label: 'Severe Bleeding',
+        query: 'What is the immediate protocol for severe arterial bleeding and tourniquets?',
+        category: 'Medical',
+      ),
+      _PromptSuggestion(
+        icon: Icons.water_rounded,
+        label: 'Water Purification',
+        query: 'How can I purify dirty contaminated water without a filter?',
+        category: 'Survival',
+      ),
+      _PromptSuggestion(
+        icon: Icons.terrain_rounded,
+        label: 'Earthquake Action',
+        query: 'What are the essential survival steps during an earthquake and if trapped under rubble?',
+        category: 'Hazards',
+      ),
+    ],
+    'Medical': [
+      _PromptSuggestion(
+        icon: Icons.favorite_rounded,
+        label: 'CPR Protocol',
+        query: 'How do I perform CPR on an adult who collapsed?',
+        category: 'Medical',
+      ),
+      _PromptSuggestion(
+        icon: Icons.healing_rounded,
+        label: 'Severe Bleeding',
+        query: 'What is the immediate protocol for severe arterial bleeding and tourniquets?',
+        category: 'Medical',
+      ),
+      _PromptSuggestion(
+        icon: Icons.pest_control_rounded,
+        label: 'Snakebite Care',
+        query: 'What is the first aid protocol for a venomous snakebite?',
+        category: 'Medical',
+      ),
+      _PromptSuggestion(
+        icon: Icons.airline_seat_recline_extra_rounded,
+        label: 'Choking Heimlich',
+        query: 'How to save a choking person using back blows and abdominal thrusts?',
+        category: 'Medical',
+      ),
+    ],
+    'Hazards': [
+      _PromptSuggestion(
+        icon: Icons.waves_rounded,
+        label: 'Flood Safety',
+        query: 'What should I do immediately during sudden flash flooding and rising water?',
+        category: 'Hazards',
+      ),
+      _PromptSuggestion(
+        icon: Icons.terrain_rounded,
+        label: 'Earthquake Action',
+        query: 'What are the essential survival steps during an earthquake and if trapped under rubble?',
+        category: 'Hazards',
+      ),
+      _PromptSuggestion(
+        icon: Icons.cyclone_rounded,
+        label: 'Cyclone Defense',
+        query: 'How to secure shelter and survive a category 5 cyclone or hurricane?',
+        category: 'Hazards',
+      ),
+      _PromptSuggestion(
+        icon: Icons.local_fire_department_rounded,
+        label: 'Wildfire Burnover',
+        query: 'How to survive a wildfire burnover and deploy emergency fire shelter?',
+        category: 'Hazards',
+      ),
+    ],
+    'Rescue': [
+      _PromptSuggestion(
+        icon: Icons.crisis_alert_rounded,
+        label: 'START Triage',
+        query: 'How do I perform START mass casualty triage for multiple injured victims?',
+        category: 'Rescue',
+      ),
+      _PromptSuggestion(
+        icon: Icons.touch_app_rounded,
+        label: 'Rubble Tapping',
+        query: 'How do trapped victims signal under concrete rubble in building collapse?',
+        category: 'Rescue',
+      ),
+      _PromptSuggestion(
+        icon: Icons.pool_rounded,
+        label: 'Swiftwater Rescue',
+        query: 'How to survive strong river swiftwater current and river strainer?',
+        category: 'Rescue',
+      ),
+      _PromptSuggestion(
+        icon: Icons.flight_land_rounded,
+        label: 'Helo Landing Zone',
+        query: 'How to prepare and secure an emergency helicopter landing zone LZ?',
+        category: 'Rescue',
+      ),
+    ],
+    'CBRN': [
+      _PromptSuggestion(
+        icon: Icons.sanitizer_rounded,
+        label: 'CBRN Decontamination',
+        query: 'What is the protocol for cbrn decontamination after a chemical gas attack?',
+        category: 'CBRN',
+      ),
+      _PromptSuggestion(
+        icon: Icons.masks_rounded,
+        label: 'Toxic Gas Shelter',
+        query: 'How to shelter in place during a toxic chlorine or chemical gas leak?',
+        category: 'CBRN',
+      ),
+      _PromptSuggestion(
+        icon: Icons.warning_rounded,
+        label: 'Nuclear Fallout (7:10)',
+        query: 'How to survive nuclear fallout and what is the radiation 7:10 rule?',
+        category: 'CBRN',
+      ),
+    ],
+    'Survival': [
+      _PromptSuggestion(
+        icon: Icons.water_drop_rounded,
+        label: 'Water Purification',
+        query: 'How can I purify dirty contaminated water without a filter?',
+        category: 'Survival',
+      ),
+      _PromptSuggestion(
+        icon: Icons.restaurant_rounded,
+        label: 'Ration Planning',
+        query: 'How much water ration needed for 4 people for 5 days?',
+        category: 'Survival',
+      ),
+      _PromptSuggestion(
+        icon: Icons.clean_hands_rounded,
+        label: 'Sanitation Hygiene',
+        query: 'How to maintain camp sanitation and prevent cholera during a disaster?',
+        category: 'Survival',
+      ),
+      _PromptSuggestion(
+        icon: Icons.phone_in_talk_rounded,
+        label: 'Emergency Numbers',
+        query: 'What are the official emergency helpline numbers in India?',
+        category: 'Survival',
+      ),
+    ],
+  };
 
   @override
   void initState() {
     super.initState();
-    _checkInitialConnectivity();
-  }
-
-  Future<void> _checkInitialConnectivity() async {
-    final online = await HybridAiService.instance.checkConnectivity();
-    if (mounted) {
-      setState(() {
-        _isOnline = online;
-      });
-    }
+    AiOrchestrator.instance.addListener(_onOrchestratorUpdated);
   }
 
   @override
   void dispose() {
+    AiOrchestrator.instance.removeListener(_onOrchestratorUpdated);
     _textController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onOrchestratorUpdated() {
+    if (mounted) setState(() {});
   }
 
   void _scrollToBottom() {
@@ -260,8 +240,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutQuad,
         );
       }
     });
@@ -269,111 +249,114 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
 
   Future<void> _sendMessage(String query) async {
     final trimmed = query.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty || _isGenerating) return;
 
+    _textController.clear();
     final now = TimeOfDay.now();
     final timeStr =
-        '${now.hourOfPeriod}:${now.minute.toString().padLeft(2, '0')} ${now.period == DayPeriod.am ? 'AM' : 'PM'}';
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
     setState(() {
-      _messages.add(_ChatMessage(
+      _messages.add(AiChatMessage(
         text: trimmed,
         isUser: true,
         timestamp: timeStr,
       ));
-      _isTyping = true;
+      _isGenerating = true;
     });
-
-    _textController.clear();
     _scrollToBottom();
 
-    // Prepare conversation history
-    final history = <Map<String, String>>[];
-    for (final m in _messages.reversed.take(6).toList().reversed) {
-      if (m.isUser) {
-        history.add({'role': 'user', 'content': m.text});
-      } else {
-        history.add({'role': 'assistant', 'content': '${m.text} ${m.steps?.join(". ") ?? ""}'});
-      }
-    }
+    // Prepare anonymized conversation history (last 4 turns)
+    final history = _messages
+        .where((m) => m.text.isNotEmpty)
+        .take(6)
+        .map((m) => {
+              'role': m.isUser ? 'user' : 'assistant',
+              'content': m.text,
+            })
+        .toList();
 
-    // Prepare live device telemetry context
+    // Contextual device telemetry
     Map<String, dynamic>? telemetryContext;
     try {
       final telemetry = context.read<TelemetryProvider>();
       final mesh = context.read<MeshProvider>();
       telemetryContext = {
         'battery': telemetry.batteryLevel,
-        'latitude': telemetry.latitude,
-        'longitude': telemetry.longitude,
         'mesh_peers': mesh.connectedPeerCount,
       };
     } catch (_) {}
 
     try {
-      final aiResponse = await HybridAiService.instance.processQuery(
+      final aiResponse = await AiOrchestrator.instance.processQuery(
         trimmed,
         conversationHistory: history,
         telemetryContext: telemetryContext,
+        category: _selectedCategory == 'All' ? null : _selectedCategory,
       );
 
       if (!mounted) return;
 
       setState(() {
-        _isOnline = aiResponse.isOnline;
-        _messages.add(_ChatMessage(
+        _messages.add(AiChatMessage(
           text: aiResponse.text,
           isUser: false,
           timestamp: timeStr,
           steps: aiResponse.steps,
           warningNotice: aiResponse.warningNotice,
           source: aiResponse.source,
-          latencyMs: aiResponse.latencyMs,
-          confidence: aiResponse.confidence,
+          engineType: aiResponse.engineType,
+          sources: aiResponse.sources,
           urgency: aiResponse.urgency,
           category: aiResponse.category,
+          requestId: aiResponse.requestId,
         ));
-        _isTyping = false;
+        _isGenerating = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages.add(_ChatMessage(
-          text: 'RakshaNet Emergency Guidance:',
+        _messages.add(AiChatMessage(
+          text: 'Emergency Standard Procedures (Offline Fallback):',
           isUser: false,
           timestamp: timeStr,
           steps: [
-            'Assess immediate vital signs: Airway, Breathing, and Circulation (ABCs).',
-            'Avoid moving the injured if neck or spinal injury is suspected.',
-            'Press and hold the SOS Beacon for 1.5 seconds if rescue dispatch is required.',
+            'Maintain vital airway, breathing, and circulation (ABCs).',
+            'Do not move an injured person if spinal damage is suspected.',
+            'Press and hold the central SOS Beacon for 1.5 seconds if urgent dispatch is needed.',
           ],
-          source: 'Trained On-Device AI Model',
-          warningNotice: 'Emergency protocols are cached securely on this phone.',
+          source: 'Verified Knowledge Base',
+          engineType: AiEngineType.localKnowledge,
           urgency: 'critical',
           category: 'Disaster Protocol',
+          warningNotice: 'Request completed using on-device emergency guidelines.',
         ));
-        _isTyping = false;
+        _isGenerating = false;
       });
     }
 
     _scrollToBottom();
   }
 
-  void _toggleForceOffline() {
+  void _cancelGeneration() {
+    AiOrchestrator.instance.cancelCurrentRequest();
     setState(() {
-      HybridAiService.instance.forceOfflineMode =
-          !HybridAiService.instance.forceOfflineMode;
-      _isOnline = HybridAiService.instance.isOnlineMode;
+      _isGenerating = false;
     });
+  }
+
+  void _toggleForceOffline() {
+    final orchestrator = AiOrchestrator.instance;
+    orchestrator.forceOfflineMode = !orchestrator.forceOfflineMode;
 
     final snack = SnackBar(
       content: Text(
-        HybridAiService.instance.forceOfflineMode
-            ? 'Forced Offline Mode enabled: Using On-Device Trained AI Model'
+        orchestrator.forceOfflineMode
+            ? 'Forced Offline Mode enabled: Using On-Device AI Model'
             : 'Auto Mode enabled: Using Groq Cloud AI with Offline fallback',
       ),
       duration: const Duration(seconds: 2),
-      backgroundColor: HybridAiService.instance.forceOfflineMode
+      backgroundColor: orchestrator.forceOfflineMode
           ? AppTokens.darkWarning
           : AppTokens.beaconTeal,
     );
@@ -383,7 +366,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   void _clearChat() {
     setState(() {
       _messages.clear();
-      _messages.add(_ChatMessage(
+      _messages.add(AiChatMessage(
         text: 'Chat history cleared. How can I assist you?',
         isUser: false,
         timestamp: 'Just now',
@@ -392,7 +375,38 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     });
   }
 
-  void _showOfflineEngineInfo(ThemeProvider theme) {
+  void _copyToClipboard(AiChatMessage msg) {
+    final buffer = StringBuffer();
+    buffer.writeln(msg.text);
+    if (msg.category != null) {
+      buffer.writeln('Category: ${msg.category}');
+    }
+    if (msg.steps.isNotEmpty) {
+      buffer.writeln('\nAction Steps:');
+      for (int i = 0; i < msg.steps.length; i++) {
+        buffer.writeln('${i + 1}. ${msg.steps[i]}');
+      }
+    }
+    if (msg.warningNotice != null && msg.warningNotice!.isNotEmpty) {
+      buffer.writeln('\nSafety Notice: ${msg.warningNotice}');
+    }
+    if (msg.sources.isNotEmpty) {
+      buffer.writeln('\nSources:');
+      for (final s in msg.sources) {
+        buffer.writeln('• ${s.title} (${s.organization})');
+      }
+    }
+
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Protocol copied to clipboard'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showSourcesDialog(ThemeProvider theme) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -403,13 +417,106 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         ),
         title: Row(
           children: [
-            const Icon(Icons.bolt_rounded, color: AppTokens.signalYellow, size: 24),
+            const Icon(Icons.verified_rounded, color: AppTokens.beaconTeal, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              'Verified Knowledge Sources',
+              style: TextStyle(
+                color: theme.text,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'RakshaNet emergency guidance is grounded in official, peer-reviewed disaster management guidelines:',
+                style: TextStyle(color: theme.textMuted, fontSize: 12.5),
+              ),
+              const SizedBox(height: 12),
+              _buildSourceTile('NDMA India', 'National Guidelines: Floods & Earthquakes', 'ndma.gov.in', theme),
+              _buildSourceTile('NDRF India', 'Collapsed Structure Search & Rescue (CSSR) SOP', 'ndrf.gov.in', theme),
+              _buildSourceTile('MoHFW India', 'Trauma Care & Snakebite Envenomation Standards', 'mohfw.gov.in', theme),
+              _buildSourceTile('WHO', 'Emergency Trauma Care & Basic Life Support (BLS)', 'who.int', theme),
+              _buildSourceTile('IFRC', 'International First Aid & Disaster Guidelines', 'ifrc.org', theme),
+              _buildSourceTile('IMD India', 'Cyclone & Extreme Weather Preparedness SOP', 'mausam.imd.gov.in', theme),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: AppTokens.signalYellow)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSourceTile(String org, String title, String domain, ThemeProvider theme) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: theme.surfaceSunken,
+          borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+          border: Border.all(color: theme.border.withValues(alpha: 0.5)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  org,
+                  style: const TextStyle(
+                    color: AppTokens.beaconTeal,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11.5,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  domain,
+                  style: TextStyle(color: theme.textMuted, fontSize: 10),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              title,
+              style: TextStyle(color: theme.text, fontSize: 11),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showArchitectureDialog(ThemeProvider theme) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          side: BorderSide(color: theme.border),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: AppTokens.signalYellow, size: 22),
             const SizedBox(width: 8),
             Text(
               'Hybrid AI Architecture',
               style: TextStyle(
                 color: theme.text,
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -420,24 +527,24 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'RakshaNet AI operates a Dual-Engine intelligent pipeline:',
-              style: TextStyle(color: theme.text, fontSize: 13.5, fontWeight: FontWeight.w600),
+              'RakshaNet AI Dual-Engine System:',
+              style: TextStyle(color: theme.text, fontSize: 13, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             Text(
-              '1. Cloud LLM Engine (Groq Llama-3.3 70B):\n'
-              '• Ultra-fast sub-second cloud inference\n'
-              '• In-depth reasoning across every type of question\n'
-              '• Active whenever Wi-Fi or cellular network is detected\n\n'
-              '2. On-Device Trained ML Engine:\n'
-              '• 100% self-contained on your phone (0 KB mobile data)\n'
-              '• Pre-trained TF-IDF Cosine Classifier & Knowledge Base\n'
-              '• Covers CPR, Bleeding, Floods, Earthquakes, Fractures, Snakebites, Survival & Math\n'
-              '• Seamless sub-5ms instant response when cell towers are destroyed',
+              '1. Cloud Reasoning (Groq Llama 3.3 70B):\n'
+              '• Secure backend proxy — zero API keys in mobile bundle\n'
+              '• In-depth reasoning and complex explanations\n'
+              '• Active when network connectivity is available\n\n'
+              '2. On-Device Local Inference:\n'
+              '• 100% self-contained on device (0 KB mobile data)\n'
+              '• 69+ disaster classes, CPR, CBRN, hemorrhage, triage\n'
+              '• Grounded in local verified documents (NDMA, WHO, IFRC)\n'
+              '• Seamless instant response during total blackout',
               style: TextStyle(
                 color: theme.textMuted,
-                fontSize: 12.5,
-                height: 1.45,
+                fontSize: 12,
+                height: 1.4,
               ),
             ),
           ],
@@ -445,10 +552,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Close',
-              style: TextStyle(color: AppTokens.signalYellow, fontWeight: FontWeight.bold),
-            ),
+            child: const Text('Got It', style: TextStyle(color: AppTokens.signalYellow)),
           ),
         ],
       ),
@@ -458,74 +562,91 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
+    final orchestrator = AiOrchestrator.instance;
 
     return Scaffold(
       backgroundColor: theme.bg,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
-            // 1. Upgraded Non-Overflowing Header Bar
-            _buildHeaderBar(theme),
+            // 1. Redesigned Premium Header Bar
+            _buildHeaderBar(theme, orchestrator),
 
-            // 2. Chat Stream Area
+            // 2. Vertically Scrolling Conversation Area
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                itemCount: _messages.length + (_isTyping ? 1 : 0),
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                itemCount: _messages.length + (_isGenerating ? 1 : 0),
                 itemBuilder: (context, index) {
-                  if (index == _messages.length && _isTyping) {
-                    return _buildTypingIndicator(theme);
+                  if (index == _messages.length && _isGenerating) {
+                    return _buildGeneratingIndicator(theme);
                   }
                   final msg = _messages[index];
                   return msg.isUser
-                      ? _buildUserMessage(msg, theme)
-                      : _buildAiResponseCard(msg, theme);
+                      ? _buildUserBubble(msg, theme)
+                      : _buildAssistantCard(msg, theme);
                 },
               ),
             ),
 
-            // 3. Quick Prompt Suggestion Pills
-            _buildPromptSuggestions(theme),
+            // 3. Compact Horizontal Category & Prompt Suggestions
+            _buildSuggestionsSection(theme),
 
-            // 4. Bottom Input Bar
-            _buildInputBar(theme),
+            // 4. Responsive Multiline Message Composer
+            _buildMessageComposer(theme),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeaderBar(ThemeProvider theme) {
-    final isForcedOffline = HybridAiService.instance.forceOfflineMode;
-    final isOnlineActive = _isOnline && !isForcedOffline;
+  Widget _buildHeaderBar(ThemeProvider theme, AiOrchestrator orchestrator) {
+    final isForcedOffline = orchestrator.forceOfflineMode;
+    final isOnline = orchestrator.state == AiOrchestratorState.onlineReady && !isForcedOffline;
+    final canPop = Navigator.canPop(context);
+
+    // Dynamic dot color according to state
+    final Color dotColor;
+    if (isOnline) {
+      dotColor = const Color(0xFF35D07F); // Green
+    } else if (orchestrator.state == AiOrchestratorState.onlineDegraded) {
+      dotColor = const Color(0xFFFFA940); // Amber
+    } else {
+      dotColor = AppTokens.signalYellow; // Yellow / Gold for On-Device
+    }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: theme.bg,
         border: Border(
           bottom: BorderSide(
             color: theme.border,
-            width: 1,
+            width: 0.8,
           ),
         ),
       ),
       child: Row(
         children: [
-          // Back button
-          IconButton(
-            icon: Icon(Icons.arrow_back_rounded, color: theme.text, size: 22),
-            tooltip: 'Back',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-          const SizedBox(width: 4),
-          // Yellow Beacon Circle with AI icon
+          // Back button (shown if opened via push)
+          if (canPop)
+            IconButton(
+              icon: Icon(Icons.arrow_back_rounded, color: theme.text, size: 20),
+              tooltip: 'Back',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              onPressed: () => Navigator.of(context).maybePop(),
+            )
+          else
+            const SizedBox(width: 4),
+
+          // Yellow AI Icon Circle
           Container(
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             decoration: const BoxDecoration(
               color: AppTokens.signalYellow,
               shape: BoxShape.circle,
@@ -534,12 +655,13 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
               child: Icon(
                 Icons.auto_awesome,
                 color: AppTokens.lightOnPrimary,
-                size: 19,
+                size: 17,
               ),
             ),
           ),
           const SizedBox(width: 8),
-          // Title & Live Mode Status (Using Expanded to prevent RenderFlex overflow)
+
+          // Title & Accurate State Badge
           Expanded(
             child: GestureDetector(
               onTap: _toggleForceOffline,
@@ -551,7 +673,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                     'AI Assistant',
                     style: TextStyle(
                       color: theme.text,
-                      fontSize: 16,
+                      fontSize: 15.5,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.2,
                     ),
@@ -563,30 +685,28 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 7,
-                        height: 7,
+                        width: 6.5,
+                        height: 6.5,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isOnlineActive
-                              ? const Color(0xFF35D07F)
-                              : AppTokens.signalYellow,
+                          color: dotColor,
                         ),
                       ),
                       const SizedBox(width: 5),
                       Flexible(
                         child: Text(
-                          isOnlineActive
-                              ? 'Groq Cloud • Llama 3.3'
+                          isOnline
+                              ? 'ONLINE · GROQ'
                               : (isForcedOffline
                                   ? 'Forced Offline • On-Device'
-                                  : 'Offline • Trained Model'),
+                                  : 'OFFLINE · LOCAL AI'),
                           style: TextStyle(
-                            color: isOnlineActive
+                            color: isOnline
                                 ? const Color(0xFF35D07F)
                                 : (theme.isLightMode
                                     ? AppTokens.lightPrimaryInk
                                     : AppTokens.signalYellow),
-                            fontSize: 11.5,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
@@ -599,32 +719,35 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
               ),
             ),
           ),
-          // Toggle Offline/Online mode action chip
+
+          // Mode Switcher Action Chip (NO green cloud icon while offline!)
           IconButton(
             icon: Icon(
-              isForcedOffline ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
-              color: isForcedOffline ? AppTokens.signalYellow : const Color(0xFF35D07F),
-              size: 21,
+              isForcedOffline ? Icons.cloud_off_rounded : (isOnline ? Icons.cloud_done_rounded : Icons.offline_bolt_rounded),
+              color: isOnline ? const Color(0xFF35D07F) : AppTokens.signalYellow,
+              size: 20,
             ),
-            tooltip: isForcedOffline ? 'Forced Offline (Tap for Auto)' : 'Cloud Active (Tap to Force Offline)',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-            onPressed: _toggleForceOffline,
-          ),
-          // More options menu (Clear Chat, Info)
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert_rounded, color: theme.textMuted, size: 21),
+            tooltip: isForcedOffline ? 'Forced Offline (Tap for Auto)' : 'Tap to Force Offline',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            onPressed: _toggleForceOffline,
+          ),
+
+          // Overflow Menu
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert_rounded, color: theme.textMuted, size: 20),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
             color: theme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppTokens.radiusMd),
               side: BorderSide(color: theme.border),
             ),
             onSelected: (val) {
-              if (val == 'info') _showOfflineEngineInfo(theme);
-              if (val == 'clear') _clearChat();
               if (val == 'toggle') _toggleForceOffline();
+              if (val == 'info') _showArchitectureDialog(theme);
+              if (val == 'sources') _showSourcesDialog(theme);
+              if (val == 'clear') _clearChat();
             },
             itemBuilder: (ctx) => [
               PopupMenuItem(
@@ -634,12 +757,12 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                     Icon(
                       isForcedOffline ? Icons.cloud_queue_rounded : Icons.cloud_off_rounded,
                       color: theme.text,
-                      size: 18,
+                      size: 17,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Text(
                       isForcedOffline ? 'Switch to Auto Cloud' : 'Force Offline Mode',
-                      style: TextStyle(color: theme.text, fontSize: 13.5),
+                      style: TextStyle(color: theme.text, fontSize: 13),
                     ),
                   ],
                 ),
@@ -648,12 +771,19 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                 value: 'info',
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline_rounded, color: theme.text, size: 18),
-                    const SizedBox(width: 10),
-                    Text(
-                      'AI Engine Details',
-                      style: TextStyle(color: theme.text, fontSize: 13.5),
-                    ),
+                    Icon(Icons.info_outline_rounded, color: theme.text, size: 17),
+                    const SizedBox(width: 8),
+                    Text('Architecture Details', style: TextStyle(color: theme.text, fontSize: 13)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'sources',
+                child: Row(
+                  children: [
+                    const Icon(Icons.verified_outlined, color: AppTokens.beaconTeal, size: 17),
+                    const SizedBox(width: 8),
+                    Text('Verified Sources', style: TextStyle(color: theme.text, fontSize: 13)),
                   ],
                 ),
               ),
@@ -661,39 +791,38 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                 value: 'clear',
                 child: Row(
                   children: [
-                    const Icon(Icons.delete_outline_rounded, color: AppTokens.sosRed, size: 18),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Clear Chat',
-                      style: TextStyle(color: AppTokens.sosRed, fontSize: 13.5),
-                    ),
+                    const Icon(Icons.delete_outline_rounded, color: AppTokens.sosRed, size: 17),
+                    const SizedBox(width: 8),
+                    Text('Clear Conversation', style: TextStyle(color: AppTokens.sosRed, fontSize: 13)),
                   ],
                 ),
               ),
             ],
           ),
+
+          // Theme Switcher Button
           const ThemeToggleButton(compact: true),
         ],
       ),
     );
   }
 
-  Widget _buildUserMessage(_ChatMessage msg, ThemeProvider theme) {
+  Widget _buildUserBubble(AiChatMessage msg, ThemeProvider theme) {
     final bubbleColor = theme.isLightMode
         ? const Color(0xFFE8EEF5)
         : (theme.isLowPower ? const Color(0xFF161616) : AppTokens.darkSurfaceAlt);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Container(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.80,
+              maxWidth: MediaQuery.of(context).size.width * 0.82,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: BorderRadius.circular(AppTokens.radiusMd),
@@ -706,17 +835,17 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                   msg.text,
                   style: TextStyle(
                     color: theme.text,
-                    fontSize: 15,
+                    fontSize: 14.5,
                     fontWeight: FontWeight.w500,
                     height: 1.35,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   msg.timestamp,
                   style: TextStyle(
                     color: theme.textMuted,
-                    fontSize: 10.5,
+                    fontSize: 10,
                   ),
                 ),
               ],
@@ -727,38 +856,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     );
   }
 
-  void _copyProtocolToClipboard(_ChatMessage msg) {
-    final buffer = StringBuffer();
-    buffer.writeln(msg.text);
-    if (msg.category != null) {
-      buffer.writeln('Category: ${msg.category}');
-    }
-    if (msg.steps != null && msg.steps!.isNotEmpty) {
-      buffer.writeln('\nAction Steps:');
-      for (int i = 0; i < msg.steps!.length; i++) {
-        buffer.writeln('${i + 1}. ${msg.steps![i]}');
-      }
-    }
-    if (msg.warningNotice != null && msg.warningNotice!.isNotEmpty) {
-      buffer.writeln('\nSafety Notice: ${msg.warningNotice}');
-    }
-    Clipboard.setData(ClipboardData(text: buffer.toString()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Protocol copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-  Widget _buildAiResponseCard(_ChatMessage msg, ThemeProvider theme) {
-    final cardBg = theme.surface;
-    final isGroqSource = msg.source?.contains('Groq') ?? false;
-
-    // Urgency styling tokens
-    final urgency = msg.urgency;
-    final isCritical = urgency == 'critical';
-    final isHigh = urgency == 'high';
+  Widget _buildAssistantCard(AiChatMessage msg, ThemeProvider theme) {
+    final isCritical = msg.urgency == 'critical';
+    final isHigh = msg.urgency == 'high';
 
     final Color badgeColor;
     final String badgeLabel;
@@ -778,7 +878,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       badgeIcon = Icons.shield_outlined;
     }
 
-    // Warning box colors
+    // Warning callout colors
     final warningBg = theme.isLightMode
         ? const Color(0xFFFFF7E6)
         : (theme.isLowPower ? const Color(0xFF161204) : const Color(0xFF2A1E0A));
@@ -790,56 +890,44 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         : (theme.isLowPower ? const Color(0xFFFFCC80) : const Color(0xFFFFB74D));
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: cardBg,
+          color: theme.surface,
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           border: Border.all(
             color: isCritical
                 ? AppTokens.sosRed.withValues(alpha: 0.6)
                 : theme.border,
-            width: isCritical ? 1.5 : 1.0,
+            width: isCritical ? 1.4 : 1.0,
           ),
-          boxShadow: theme.isLowPower
-              ? null
-              : [
-                  BoxShadow(
-                    color: isCritical
-                        ? AppTokens.sosRed.withValues(alpha: 0.12)
-                        : Colors.black.withValues(alpha: theme.isLightMode ? 0.05 : 0.22),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Triage & Category Banner + Copy Action
+            // Top Badge & Category Header
             Row(
               children: [
-                // Urgency Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                   decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.15),
+                    color: badgeColor.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                    border: Border.all(color: badgeColor.withValues(alpha: 0.4), width: 1),
+                    border: Border.all(color: badgeColor.withValues(alpha: 0.35), width: 1),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(badgeIcon, color: badgeColor, size: 13),
+                      Icon(badgeIcon, color: badgeColor, size: 12),
                       const SizedBox(width: 4),
                       Text(
                         badgeLabel,
                         style: TextStyle(
                           color: badgeColor,
-                          fontSize: 10,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ],
@@ -852,7 +940,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                       '• ${msg.category}',
                       style: TextStyle(
                         color: theme.textMuted,
-                        fontSize: 10.5,
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 1,
@@ -861,51 +949,46 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                   ),
                 ],
                 const Spacer(),
-                // Copy Action Button
+                // Copy Action
                 IconButton(
-                  icon: Icon(Icons.copy_rounded, color: theme.textMuted, size: 16),
+                  icon: Icon(Icons.copy_rounded, color: theme.textMuted, size: 15),
                   tooltip: 'Copy protocol',
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                  onPressed: () => _copyProtocolToClipboard(msg),
+                  constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                  onPressed: () => _copyToClipboard(msg),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
-            // Title / Main Headline
+            // Headline Title
             Text(
               msg.text,
               style: TextStyle(
                 color: theme.text,
-                fontSize: 15.5,
+                fontSize: 14.5,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.2,
                 height: 1.35,
               ),
             ),
 
-            // Step-by-step layout (Card-based sequential presentation)
-            if (msg.steps != null && msg.steps!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              ...msg.steps!.asMap().entries.map((entry) {
+            // Compact Numbered Action Steps (Inline flow without oversized cards)
+            if (msg.steps.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ...msg.steps.asMap().entries.map((entry) {
                 final stepNum = entry.key + 1;
                 final stepText = entry.value;
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 7),
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: theme.surfaceSunken,
-                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                    border: Border.all(color: theme.border.withValues(alpha: 0.5)),
-                  ),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 22,
-                        height: 22,
+                        width: 19,
+                        height: 19,
+                        margin: const EdgeInsets.only(top: 1),
                         decoration: BoxDecoration(
                           color: theme.isLightMode
                               ? AppTokens.lightPrimaryInk
@@ -919,20 +1002,20 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                               color: theme.isLightMode
                                   ? Colors.white
                                   : AppTokens.lightOnPrimary,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w900,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           stepText,
                           style: TextStyle(
                             color: theme.text,
-                            fontSize: 13.5,
-                            height: 1.38,
+                            fontSize: 13,
+                            height: 1.35,
                           ),
                         ),
                       ),
@@ -942,15 +1025,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
               }),
             ],
 
-            // Safety Warning Callout Banner
-            if (msg.warningNotice != null) ...[
-              const SizedBox(height: 8),
+            // Safety Warning Callout
+            if (msg.warningNotice != null && msg.warningNotice!.isNotEmpty) ...[
+              const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: warningBg,
                   borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-                  border: Border.all(color: warningBorder, width: 1),
+                  border: Border.all(color: warningBorder, width: 0.8),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -958,17 +1041,17 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                     Icon(
                       Icons.warning_amber_rounded,
                       color: theme.isLightMode ? const Color(0xFFFA8C16) : AppTokens.darkWarning,
-                      size: 18,
+                      size: 16,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         msg.warningNotice!,
                         style: TextStyle(
                           color: warningText,
-                          fontSize: 12.5,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w600,
-                          height: 1.32,
+                          height: 1.3,
                         ),
                       ),
                     ),
@@ -977,46 +1060,88 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
               ),
             ],
 
-            const SizedBox(height: 10),
+            // Verified Knowledge Sources (Authoritative Citations)
+            if (msg.sources.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.verified_outlined, size: 12, color: AppTokens.beaconTeal),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Sources: ${msg.sources.map((s) => s.title).join(' • ')}',
+                      style: TextStyle(
+                        color: theme.textMuted,
+                        fontSize: 10,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
 
-            // Footer: Source + Speed Badge + Timestamp
+            const SizedBox(height: 6),
+
+            // Footer: Engine Attribution + Clean Timestamp (NO fake latency or fabricated scores)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
                     Icon(
-                      isGroqSource ? Icons.cloud_done_rounded : Icons.bolt_rounded,
-                      size: 13,
-                      color: isGroqSource ? const Color(0xFF35D07F) : AppTokens.signalYellow,
+                      msg.engineType == AiEngineType.groqCloud
+                          ? Icons.cloud_done_rounded
+                          : Icons.bolt_rounded,
+                      size: 12,
+                      color: msg.engineType == AiEngineType.groqCloud
+                          ? const Color(0xFF35D07F)
+                          : AppTokens.signalYellow,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      msg.source ?? 'Offline Edge Model',
+                      msg.source,
                       style: TextStyle(
                         color: theme.textMuted,
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (msg.latencyMs != null) ...[
-                      Text(
-                        ' • ${msg.latencyMs}ms instant',
-                        style: TextStyle(
-                          color: isGroqSource ? theme.textMuted : const Color(0xFF35D07F),
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-                Text(
-                  msg.timestamp,
-                  style: TextStyle(
-                    color: theme.textMuted,
-                    fontSize: 10.5,
-                  ),
+                Row(
+                  children: [
+                    // Helpful Feedback Action
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          msg.feedbackPositive = true;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Thank you for your feedback!'), duration: Duration(seconds: 1)),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          msg.feedbackPositive == true ? Icons.thumb_up_alt_rounded : Icons.thumb_up_alt_outlined,
+                          size: 13,
+                          color: msg.feedbackPositive == true ? AppTokens.beaconTeal : theme.textMuted,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      msg.timestamp,
+                      style: TextStyle(
+                        color: theme.textMuted,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1026,48 +1151,92 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     );
   }
 
-  Widget _buildTypingIndicator(ThemeProvider theme) {
-    return _NeuralRadarIndicator(
-      isOnline: _isOnline && !HybridAiService.instance.forceOfflineMode,
-      theme: theme,
+  Widget _buildGeneratingIndicator(ThemeProvider theme) {
+    final isOnline = AiOrchestrator.instance.state == AiOrchestratorState.onlineRequest;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          border: Border.all(color: theme.border),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: isOnline ? const Color(0xFF35D07F) : AppTokens.signalYellow,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                isOnline
+                    ? 'Consulting Groq Cloud Llama-3.3...'
+                    : 'Searching On-Device Verified Knowledge...',
+                style: TextStyle(
+                  color: theme.textMuted,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _cancelGeneration,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppTokens.sosRed, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildPromptSuggestions(ThemeProvider theme) {
-    final filtered = _selectedCategoryFilter == 'All'
-        ? _suggestions
-        : _suggestions
-            .where((s) => s.category == _selectedCategoryFilter)
-            .toList();
+  Widget _buildSuggestionsSection(ThemeProvider theme) {
+    final suggestions = _categorySuggestions[_selectedCategory] ?? _categorySuggestions['All']!;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: theme.bg,
-        border: Border(top: BorderSide(color: theme.border, width: 0.5)),
+        border: Border(
+          top: BorderSide(color: theme.border, width: 0.6),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Filter Tabs
+          // 1. Horizontal Category Filter Chips (Single Compact Row)
           SizedBox(
-            height: 30,
+            height: 28,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              itemCount: _categoryFilters.length,
+              itemCount: _categories.length,
               separatorBuilder: (context, index) => const SizedBox(width: 6),
               itemBuilder: (context, index) {
-                final cat = _categoryFilters[index];
-                final isSelected = _selectedCategoryFilter == cat;
+                final cat = _categories[index];
+                final isSelected = _selectedCategory == cat;
                 return GestureDetector(
                   onTap: () {
                     setState(() {
-                      _selectedCategoryFilter = cat;
+                      _selectedCategory = cat;
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? (theme.isLightMode
@@ -1076,9 +1245,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                           : theme.surface,
                       borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                       border: Border.all(
-                        color: isSelected
-                            ? Colors.transparent
-                            : theme.border,
+                        color: isSelected ? Colors.transparent : theme.border,
                       ),
                     ),
                     child: Center(
@@ -1086,13 +1253,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                         cat,
                         style: TextStyle(
                           color: isSelected
-                              ? (theme.isLightMode
-                                  ? Colors.white
-                                  : AppTokens.lightOnPrimary)
+                              ? (theme.isLightMode ? Colors.white : AppTokens.lightOnPrimary)
                               : theme.textMuted,
                           fontSize: 11,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.w600,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                         ),
                       ),
                     ),
@@ -1101,29 +1265,28 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
               },
             ),
           ),
-          const SizedBox(height: 6),
-          // Prompt Chips
+          const SizedBox(height: 5),
+
+          // 2. Filtered Suggested Prompts (Single Compact Horizontal Row, max 3-4 items)
           SizedBox(
-            height: 36,
+            height: 32,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              itemCount: filtered.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemCount: suggestions.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 6),
               itemBuilder: (context, index) {
-                final s = filtered[index];
+                final s = suggestions[index];
                 return Material(
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                     onTap: () => _sendMessage(s.query),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: theme.surface,
-                        borderRadius:
-                            BorderRadius.circular(AppTokens.radiusPill),
+                        borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                         border: Border.all(color: theme.border),
                       ),
                       child: Row(
@@ -1131,17 +1294,17 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                         children: [
                           Icon(
                             s.icon,
-                            size: 14,
+                            size: 13,
                             color: theme.isLightMode
                                 ? AppTokens.lightPrimaryInk
                                 : AppTokens.signalYellow,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 5),
                           Text(
                             s.label,
                             style: TextStyle(
                               color: theme.text,
-                              fontSize: 12,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1158,70 +1321,72 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     );
   }
 
-  Widget _buildInputBar(ThemeProvider theme) {
+  Widget _buildMessageComposer(ThemeProvider theme) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+      padding: const EdgeInsets.fromLTRB(14, 5, 14, 8),
       decoration: BoxDecoration(
         color: theme.bg,
         border: Border(
-          top: BorderSide(
-            color: theme.border,
-            width: 1,
-          ),
+          top: BorderSide(color: theme.border, width: 0.6),
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             child: Container(
-              height: AppTokens.inputHeight,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              constraints: const BoxConstraints(maxHeight: 100),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: theme.surfaceSunken,
-                borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: theme.border),
               ),
-              child: Center(
-                child: TextField(
-                  controller: _textController,
-                  focusNode: _focusNode,
-                  style: TextStyle(
-                    color: theme.text,
-                    fontSize: 14.5,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Ask any emergency or survival question...',
-                    hintStyle: TextStyle(
-                      color: theme.textMuted,
-                      fontSize: 14,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  onSubmitted: _sendMessage,
+              child: TextField(
+                controller: _textController,
+                focusNode: _focusNode,
+                maxLines: 4,
+                minLines: 1,
+                style: TextStyle(
+                  color: theme.text,
+                  fontSize: 14,
                 ),
+                decoration: InputDecoration(
+                  hintText: 'Ask any emergency or survival question...',
+                  hintStyle: TextStyle(
+                    color: theme.textMuted,
+                    fontSize: 13.5,
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onSubmitted: _sendMessage,
               ),
             ),
           ),
           const SizedBox(width: 8),
+
+          // Send / Cancel Action Button
           Container(
-            width: AppTokens.touchMin,
-            height: AppTokens.touchMin,
-            decoration: const BoxDecoration(
-              color: AppTokens.signalYellow,
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _isGenerating ? AppTokens.sosRed : AppTokens.signalYellow,
               shape: BoxShape.circle,
             ),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-                onTap: () => _sendMessage(_textController.text),
-                child: const Center(
+                borderRadius: BorderRadius.circular(21),
+                onTap: _isGenerating
+                    ? _cancelGeneration
+                    : () => _sendMessage(_textController.text),
+                child: Center(
                   child: Icon(
-                    Icons.arrow_forward_rounded,
-                    color: AppTokens.nightNavy,
-                    size: 21,
+                    _isGenerating ? Icons.stop_rounded : Icons.arrow_forward_rounded,
+                    color: _isGenerating ? Colors.white : AppTokens.nightNavy,
+                    size: 20,
                   ),
                 ),
               ),
@@ -1233,269 +1398,13 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   }
 }
 
-/// Custom Animated Neural Radar Loading Beacon
-class _NeuralRadarIndicator extends StatefulWidget {
-  final bool isOnline;
-  final ThemeProvider theme;
-
-  const _NeuralRadarIndicator({
-    required this.isOnline,
-    required this.theme,
-  });
-
-  @override
-  State<_NeuralRadarIndicator> createState() => _NeuralRadarIndicatorState();
-}
-
-class _NeuralRadarIndicatorState extends State<_NeuralRadarIndicator>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = widget.theme;
-    final isOnline = widget.isOnline;
-    final cardBg = theme.surface;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-          border: Border.all(
-            color: isOnline
-                ? const Color(0xFF35D07F).withValues(alpha: 0.35)
-                : AppTokens.signalYellow.withValues(alpha: 0.35),
-            width: 1,
-          ),
-          boxShadow: theme.isLowPower
-              ? null
-              : [
-                  BoxShadow(
-                    color: (isOnline ? const Color(0xFF35D07F) : AppTokens.signalYellow)
-                        .withValues(alpha: 0.10),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Row(
-          children: [
-            // Animated Custom Radar Canvas
-            SizedBox(
-              width: 36,
-              height: 36,
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) {
-                  return CustomPaint(
-                    painter: _NeuralRadarPainter(
-                      progress: _controller.value,
-                      isOnline: isOnline,
-                      isLowPower: theme.isLowPower,
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Text & Status
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        isOnline
-                            ? 'GROQ CLOUD AI REASONING'
-                            : 'NEURAL ON-DEVICE INFERENCE',
-                        style: TextStyle(
-                          color: isOnline
-                              ? const Color(0xFF35D07F)
-                              : (theme.isLightMode
-                                  ? AppTokens.lightPrimaryInk
-                                  : AppTokens.signalYellow),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                        decoration: BoxDecoration(
-                          color: (isOnline
-                                  ? const Color(0xFF35D07F)
-                                  : AppTokens.signalYellow)
-                              .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-                        ),
-                        child: Text(
-                          isOnline ? 'CLOUD LLM' : '<5ms EDGE',
-                          style: TextStyle(
-                            color: isOnline
-                                ? const Color(0xFF35D07F)
-                                : (theme.isLightMode
-                                    ? AppTokens.lightPrimaryInk
-                                    : AppTokens.signalYellow),
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    isOnline
-                        ? 'Llama-3.3 70B • High-Capacity Cognitive Processing'
-                        : 'Vector Space TF-IDF • Cosine Centroid Scan • 0 KB Data',
-                    style: TextStyle(
-                      color: theme.textMuted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NeuralRadarPainter extends CustomPainter {
-  final double progress;
-  final bool isOnline;
-  final bool isLowPower;
-
-  _NeuralRadarPainter({
-    required this.progress,
-    required this.isOnline,
-    required this.isLowPower,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final maxRadius = size.width / 2;
-    final primaryColor = isOnline
-        ? const Color(0xFF35D07F)
-        : (isLowPower ? const Color(0xFFFFD21F) : AppTokens.signalYellow);
-
-    // 1. Draw 3 expanding concentric radar wave ripples
-    for (int i = 0; i < 3; i++) {
-      final waveProgress = (progress + (i * 0.33)) % 1.0;
-      final waveRadius = maxRadius * waveProgress;
-      final waveAlpha = (1.0 - waveProgress) * 0.7;
-
-      final wavePaint = Paint()
-        ..color = primaryColor.withValues(alpha: waveAlpha)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4;
-
-      canvas.drawCircle(center, waveRadius, wavePaint);
-    }
-
-    // 2. Outer boundary ring
-    final ringPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.25)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawCircle(center, maxRadius, ringPaint);
-
-    // 3. Sweeping radar scan arc
-    final sweepAngle = math.pi * 0.6;
-    final startAngle = progress * 2 * math.pi;
-    final sweepPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.20)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: maxRadius),
-      startAngle,
-      sweepAngle,
-      true,
-      sweepPaint,
-    );
-
-    // 4. Center pulsing core dot
-    final coreRadius = 3.5 + (math.sin(progress * 2 * math.pi) * 1.0);
-    final corePaint = Paint()
-      ..color = primaryColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, coreRadius, corePaint);
-
-    // 5. Core ring
-    final coreRingPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawCircle(center, coreRadius, coreRingPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _NeuralRadarPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.isOnline != isOnline ||
-        oldDelegate.isLowPower != isLowPower;
-  }
-}
-
-class _ChatMessage {
-  final String text;
-  final bool isUser;
-  final String timestamp;
-  final List<String>? steps;
-  final String? warningNotice;
-  final String? source;
-  final int? latencyMs;
-  final double? confidence;
-  final String urgency;
-  final String? category;
-
-  _ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-    this.steps,
-    this.warningNotice,
-    this.source,
-    this.latencyMs,
-    this.confidence,
-    this.urgency = 'high',
-    this.category,
-  });
-}
-
 class _PromptSuggestion {
   final IconData icon;
   final String label;
   final String query;
   final String category;
 
-  _PromptSuggestion({
+  const _PromptSuggestion({
     required this.icon,
     required this.label,
     required this.query,
