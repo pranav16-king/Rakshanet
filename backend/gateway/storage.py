@@ -147,6 +147,23 @@ class GatewayStorage:
                     total_packets_carried INTEGER DEFAULT 0
                 )
             """)
+            # Commands authored in the command center remain explicitly queued
+            # until a real field gateway claims them for radio delivery.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS field_command_queue (
+                    command_id TEXT PRIMARY KEY,
+                    incident_id TEXT NOT NULL,
+                    recipient_device_id TEXT,
+                    recipient_encryption_key TEXT,
+                    payload TEXT NOT NULL,
+                    priority TEXT,
+                    channel TEXT,
+                    status TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    claimed_by_device_id TEXT,
+                    claimed_at INTEGER
+                )
+            """)
             # Users / Responders
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -758,7 +775,9 @@ class GatewayStorage:
 
     def upsert_incident(self, incident: Dict[str, Any]) -> Dict[str, Any]:
         now = int(time.time() * 1000)
-        inc_id = incident.get("incident_id") or f"INC-{secrets.token_hex(4).upper()}"
+        inc_id = incident.get("incident_id") or incident.get("id")
+        if not inc_id:
+            raise ValueError("incident_id is required")
         res_json = json.dumps(incident.get("resources_needed") or [])
         ai_exp_json = json.dumps(incident.get("ai_explainability") or {})
         msg_json = json.dumps(incident.get("associated_messages") or [])
@@ -793,14 +812,15 @@ class GatewayStorage:
                     associated_devices_json = excluded.associated_devices_json,
                     updated_at = excluded.updated_at
             """, (
-                inc_id, incident.get("title", "Disaster Alert"), incident.get("disaster_type", "Flood"),
-                incident.get("severity", "HIGH"), incident.get("status", "ACTIVE"),
-                incident.get("lat", 0.0), incident.get("lng", 0.0),
-                incident.get("affected_area", "Zone Unknown"),
-                incident.get("casualty_estimate", 0), incident.get("people_count", 0),
-                incident.get("devices_count", 0), incident.get("assigned_team"),
-                res_json, incident.get("ai_confidence", 0.92), ai_exp_json, msg_json,
-                dev_json, incident.get("created_at", now), now
+                inc_id, incident.get("title") or inc_id,
+                incident.get("disaster_type") or incident.get("category") or "UNSPECIFIED",
+                incident.get("severity") or incident.get("urgency") or "UNKNOWN",
+                incident.get("status") or "UNCLASSIFIED",
+                incident.get("lat"), incident.get("lng"), incident.get("affected_area"),
+                incident.get("casualty_estimate"), incident.get("people_count"),
+                incident.get("devices_count"), incident.get("assigned_team"),
+                res_json, incident.get("ai_confidence"), ai_exp_json, msg_json,
+                dev_json, incident.get("created_at") or now, now
             ))
             conn.commit()
 
@@ -817,6 +837,39 @@ class GatewayStorage:
             mongo_doc
         )
         return self.get_incident(inc_id)
+
+    def queue_field_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
+        """Persist a command without claiming it was transmitted over mesh."""
+        now = int(time.time() * 1000)
+        record = {
+            "command_id": command["command_id"],
+            "incident_id": command["incident_id"],
+            "recipient_device_id": command.get("recipient_device_id"),
+            "recipient_encryption_key": command.get("recipient_encryption_key"),
+            "payload": command["payload"],
+            "priority": command.get("priority"),
+            "channel": command.get("channel"),
+            "status": "QUEUED_FOR_FIELD_GATEWAY",
+            "created_at": now,
+        }
+        with self._get_sqlite_conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO field_command_queue (
+                    command_id, incident_id, recipient_device_id,
+                    recipient_encryption_key, payload, priority, channel,
+                    status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record["command_id"], record["incident_id"],
+                    record["recipient_device_id"], record["recipient_encryption_key"],
+                    record["payload"], record["priority"], record["channel"],
+                    record["status"], record["created_at"],
+                ),
+            )
+            conn.commit()
+        return record
 
     def assign_incident_team(self, incident_id: str, team_name: str) -> Optional[Dict[str, Any]]:
         now = int(time.time() * 1000)
