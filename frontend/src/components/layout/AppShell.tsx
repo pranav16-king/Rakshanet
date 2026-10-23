@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { EmergencyToastContainer } from '../common/EmergencyDispatchToast';
 
 export const AppShell: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -10,6 +11,9 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1220] text-[#0F172A] dark:text-[#EEF2F8] transition-colors duration-200">
+      {/* High-Visibility Emergency Dispatch Toast Container */}
+      <EmergencyToastContainer />
+
       {/* Sidebar Navigation */}
       <Sidebar
         isCollapsed={isCollapsed}

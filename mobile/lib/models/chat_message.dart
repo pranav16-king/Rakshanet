@@ -7,6 +7,7 @@ enum MessageDeliveryStatus {
   sentNearby,
   relayed,
   delivered,
+  syncedToServer,
   failed,
 }
 
@@ -26,6 +27,8 @@ extension MessageDeliveryStatusExtension on MessageDeliveryStatus {
         return 'Relayed';
       case MessageDeliveryStatus.delivered:
         return '✓ Reached recipient';
+      case MessageDeliveryStatus.syncedToServer:
+        return '☁ Synced to server';
       case MessageDeliveryStatus.failed:
         return 'Failed';
     }
@@ -55,6 +58,11 @@ extension MessageDeliveryStatusExtension on MessageDeliveryStatus {
       case 'DELIVERED':
       case 'MESSAGEDELIVERYSTATUS.DELIVERED':
         return MessageDeliveryStatus.delivered;
+      case 'SYNCED':
+      case 'SYNCEDTOSERVER':
+      case 'SYNCED_TO_SERVER':
+      case 'MESSAGEDELIVERYSTATUS.SYNCEDTOSERVER':
+        return MessageDeliveryStatus.syncedToServer;
       case 'FAILED':
       case 'MESSAGEDELIVERYSTATUS.FAILED':
         return MessageDeliveryStatus.failed;
@@ -206,6 +214,7 @@ class ChatMessage {
   bool get isSentNearby => status == MessageDeliveryStatus.sentNearby;
   bool get isRelayed => status == MessageDeliveryStatus.relayed;
   bool get isDelivered => status == MessageDeliveryStatus.delivered;
+  bool get isSyncedToServer => status == MessageDeliveryStatus.syncedToServer;
   bool get hasImageAttachment =>
       attachment != null && attachment!.mimeType.startsWith('image/');
 
@@ -228,6 +237,13 @@ class ChatMessage {
       case MessageDeliveryStatus.delivered:
         // 2 green ticks (delivered to rescue team/cloud)
         return const Icon(Icons.done_all, size: 14, color: Color(0xFF4CD08A));
+      case MessageDeliveryStatus.syncedToServer:
+        // Cloud checkmark (synced to server)
+        return const Icon(
+          Icons.cloud_done_rounded,
+          size: 14,
+          color: Color(0xFF3B82F6),
+        );
       case MessageDeliveryStatus.failed:
         return const Icon(
           Icons.error_outline,

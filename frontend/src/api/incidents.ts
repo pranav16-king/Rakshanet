@@ -48,7 +48,7 @@ function normalizeIncident(raw: any): Incident {
 export const incidentsApi = {
   async getIncidents(epsMeters = 120.0, minSamples = 2): Promise<Incident[]> {
     try {
-      const { data } = await apiClient.get<any[]>('/api/v1/incidents', { params: { eps_meters: epsMeters, min_samples: minSamples } });
+      const { data } = await apiClient.get<any[]>('/api/v1/incidents', { params: { source: 'db' } });
       return (Array.isArray(data) ? data : []).filter((item) => item?.incident_id || item?.id).map(normalizeIncident);
     } catch { return []; }
   },

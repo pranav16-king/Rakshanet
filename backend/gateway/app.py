@@ -1825,6 +1825,15 @@ async def sync_telemetry_batch(batch: SyncBatchRequest):
                 "timestamp": int(time.time() * 1000)
             })
 
+            # Broadcast immediate incident update when an emergency SOS packet is ingested
+            p_type_upper = str(packet.type).upper()
+            if p_type_upper in ("SOS", "EMERGENCY_SOS", "DISTRESS"):
+                await ws_manager.broadcast({
+                    "event": "INCIDENTS_UPDATED",
+                    "sos_packet": packet_dict,
+                    "timestamp": int(time.time() * 1000)
+                })
+
         else:
             duplicate_count += 1
 

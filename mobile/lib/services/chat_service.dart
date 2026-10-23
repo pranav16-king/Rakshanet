@@ -25,13 +25,16 @@ class ChatService extends ChangeNotifier {
   final Uuid _uuid = const Uuid();
 
   static const String _prefBookmarksKey = 'rakshanet_bookmarked_messages';
+  static const String _prefBlockedUsersKey = 'blocked_peer_ids';
 
   List<ChatMessage> _messages = [];
   bool _isLoading = true;
   String _activeFilter = 'Nearby'; // 'Nearby', 'Group', 'Rescue', 'Saved'
   String? _activeGroupConversationId; // e.g., 'CONV_GRP-XXXX' when a specific group is selected
+  String? _activeDirectConversationId; // e.g., 'DIRECT_<peerId>' when in 1:1 chat
   String _searchQuery = '';
   final Set<String> _bookmarkedMessageIds = <String>{};
+  final Set<String> _blockedUserIds = <String>{};
   bool _isSyncing = false;
 
   // Deduplication structures (Bloom filter + in-memory Set)
@@ -47,9 +50,12 @@ class ChatService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get activeFilter => _activeFilter;
   String? get activeGroupConversationId => _activeGroupConversationId;
+  String? get activeDirectConversationId => _activeDirectConversationId;
   String get searchQuery => _searchQuery;
   Set<String> get bookmarkedMessageIds =>
       Set.unmodifiable(_bookmarkedMessageIds);
+  Set<String> get blockedUserIds =>
+      Set.unmodifiable(_blockedUserIds);
   int get onlineDevices => _radioService.connectedCount;
   bool get isSyncing => _isSyncing;
 
@@ -62,6 +68,7 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
 
     await _loadBookmarks();
+    await _loadBlockedUsers();
     await _meshEngine.initialize();
     await _radioService.initialize(
       deviceId: DatabaseService.myDeviceId,
@@ -76,7 +83,7 @@ class ChatService extends ChangeNotifier {
     }
 
     // 1. MeshEngine is the only radio consumer.
-    _statusSubscription = _meshEngine.messageStatusUpdates.listen((updatedMsg) {
+    _statusSubscription = _meshEngine.statusUpdates.listen((updatedMsg) {
       final index = _messages.indexWhere(
         (m) => m.messageId == updatedMsg.messageId,
       );
@@ -111,6 +118,47 @@ class ChatService extends ChangeNotifier {
     } catch (e) {
       debugPrint('[ChatService] Failed to load bookmarks: $e');
     }
+  }
+
+  Future<void> _loadBlockedUsers() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList(_prefBlockedUsersKey) ?? const <String>[];
+      _blockedUserIds
+        ..clear()
+        ..addAll(saved);
+    } catch (e) {
+      debugPrint('[ChatService] Failed to load blocked users: $e');
+    }
+  }
+
+  Future<void> reloadBlockedUsers() async {
+    await _loadBlockedUsers();
+    notifyListeners();
+  }
+
+  bool isUserBlocked(String userId) => _blockedUserIds.contains(userId);
+
+  Future<bool> toggleBlockUser(String userId) async {
+    final bool blocked;
+    if (_blockedUserIds.contains(userId)) {
+      _blockedUserIds.remove(userId);
+      blocked = false;
+    } else {
+      _blockedUserIds.add(userId);
+      blocked = true;
+    }
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _prefBlockedUsersKey,
+        _blockedUserIds.toList(),
+      );
+    } catch (e) {
+      debugPrint('[ChatService] Failed to persist blocked users: $e');
+    }
+    return blocked;
   }
 
   Future<void> _persistBookmarks() async {
@@ -199,6 +247,11 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setActiveDirectConversation(String? conversationId) {
+    _activeDirectConversationId = conversationId;
+    notifyListeners();
+  }
+
   void setSearchQuery(String query) {
     _searchQuery = query.trim();
     notifyListeners();
@@ -217,19 +270,40 @@ class ChatService extends ChangeNotifier {
   List<ChatMessage> get communityMessages {
     List<ChatMessage> filtered;
 
-    if (_activeFilter == 'Group') {
+    if (_activeDirectConversationId != null &&
+        _activeDirectConversationId!.isNotEmpty) {
+      final peerId = _activeDirectConversationId!.startsWith('DIRECT_')
+          ? _activeDirectConversationId!.substring(7)
+          : _activeDirectConversationId!;
+      filtered = _messages
+          .where(
+            (m) =>
+                !_blockedUserIds.contains(m.senderId) &&
+                (m.conversationId == _activeDirectConversationId ||
+                    (m.recipientTarget == peerId && m.isMine) ||
+                    (m.senderId == peerId &&
+                        (m.recipientTarget == DatabaseService.myDeviceId ||
+                            m.recipientTarget == null))),
+          )
+          .toList();
+    } else if (_activeFilter == 'Group') {
       if (_activeGroupConversationId != null &&
           _activeGroupConversationId!.isNotEmpty) {
         filtered = _messages
-            .where((m) => m.conversationId == _activeGroupConversationId)
+            .where(
+              (m) =>
+                  !_blockedUserIds.contains(m.senderId) &&
+                  m.conversationId == _activeGroupConversationId,
+            )
             .toList();
       } else {
         filtered = _messages
             .where(
               (m) =>
-                  m.conversationId.startsWith('CONV_GRP-') ||
-                  m.category == 'Group' ||
-                  m.messageType == 'GROUP',
+                  !_blockedUserIds.contains(m.senderId) &&
+                  (m.conversationId.startsWith('CONV_GRP-') ||
+                      m.category == 'Group' ||
+                      m.messageType == 'GROUP'),
             )
             .toList();
       }
@@ -237,36 +311,40 @@ class ChatService extends ChangeNotifier {
       filtered = _messages
           .where(
             (m) =>
-                m.content.toLowerCase().contains('help') ||
-                m.content.toLowerCase().contains('safe') ||
-                m.content.toLowerCase().contains('blocked') ||
-                m.content.toLowerCase().contains('water') ||
-                m.content.toLowerCase().contains('trapped') ||
-                m.content.toLowerCase().contains('sos') ||
-                m.messageType == 'SOS' ||
-                m.messageType == 'LOCATION' ||
-                (m.category != null &&
-                    m.category!.toLowerCase().contains('rescue')),
+                !_blockedUserIds.contains(m.senderId) &&
+                (m.content.toLowerCase().contains('help') ||
+                    m.content.toLowerCase().contains('safe') ||
+                    m.content.toLowerCase().contains('blocked') ||
+                    m.content.toLowerCase().contains('water') ||
+                    m.content.toLowerCase().contains('trapped') ||
+                    m.content.toLowerCase().contains('sos') ||
+                    m.messageType == 'SOS' ||
+                    m.messageType == 'LOCATION' ||
+                    (m.category != null &&
+                        m.category!.toLowerCase().contains('rescue'))),
           )
           .toList();
     } else if (_activeFilter == 'Saved') {
       filtered = _messages
           .where(
             (m) =>
-                _bookmarkedMessageIds.contains(m.messageId) ||
-                m.status == MessageDeliveryStatus.saved,
+                !_blockedUserIds.contains(m.senderId) &&
+                (_bookmarkedMessageIds.contains(m.messageId) ||
+                    m.status == MessageDeliveryStatus.saved),
           )
           .toList();
     } else {
-      // 'Nearby' tab: community broadcast + general mesh messages
+      // 'Nearby' tab: community broadcast + general mesh messages (excluding direct chat messages)
       filtered = _messages
           .where(
             (m) =>
-                m.conversationId == 'CONV_COMMUNITY' ||
-                m.conversationId == 'COMMUNITY_MESH' ||
-                m.conversationId == 'community' ||
-                m.conversationId == 'global_emergency' ||
-                m.conversationId.isEmpty,
+                !_blockedUserIds.contains(m.senderId) &&
+                !m.conversationId.startsWith('DIRECT_') &&
+                (m.conversationId == 'CONV_COMMUNITY' ||
+                    m.conversationId == 'COMMUNITY_MESH' ||
+                    m.conversationId == 'community' ||
+                    m.conversationId == 'global_emergency' ||
+                    m.conversationId.isEmpty),
           )
           .toList();
     }
@@ -279,6 +357,10 @@ class ChatService extends ChangeNotifier {
 
   /// Resolves the target conversationId based on the current tab & selected group
   String get currentTargetConversationId {
+    if (_activeDirectConversationId != null &&
+        _activeDirectConversationId!.isNotEmpty) {
+      return _activeDirectConversationId!;
+    }
     if (_activeFilter == 'Group' &&
         _activeGroupConversationId != null &&
         _activeGroupConversationId!.isNotEmpty) {
@@ -292,8 +374,9 @@ class ChatService extends ChangeNotifier {
     return _messages
         .where(
           (m) =>
-              m.status == MessageDeliveryStatus.saved ||
-              m.status == MessageDeliveryStatus.queued,
+              !_blockedUserIds.contains(m.senderId) &&
+              (m.status == MessageDeliveryStatus.saved ||
+                  m.status == MessageDeliveryStatus.queued),
         )
         .toList();
   }
@@ -312,7 +395,9 @@ class ChatService extends ChangeNotifier {
 
   /// Received messages for Screen 10
   List<ChatMessage> get receivedMessages {
-    return _messages.where((m) => !m.isMine).toList();
+    return _messages
+        .where((m) => !m.isMine && !_blockedUserIds.contains(m.senderId))
+        .toList();
   }
 
   /// Save-Before-Send Guarantee:
@@ -336,11 +421,16 @@ class ChatService extends ChangeNotifier {
     final resolvedConversationId =
         conversationId ?? currentTargetConversationId;
     final resolvedSenderName = senderName ?? DatabaseService.myDisplayName;
+    final isDirect = resolvedConversationId.startsWith('DIRECT_');
+    final directPeer = isDirect ? resolvedConversationId.substring(7) : null;
+    final resolvedRecipientTarget = recipientTarget ?? directPeer;
     final resolvedCategory =
         category ??
-        (resolvedConversationId.startsWith('CONV_GRP-')
-            ? 'Group'
-            : _activeFilter);
+        (isDirect
+            ? 'Nearby'
+            : (resolvedConversationId.startsWith('CONV_GRP-')
+                ? 'Group'
+                : _activeFilter));
 
     // 1. Construct local chat message object with status SAVED (Single grey tick)
     final chatMsg = ChatMessage(
@@ -355,7 +445,7 @@ class ChatService extends ChangeNotifier {
       hopCount: 0,
       ttl: 5,
       messageType: messageType,
-      recipientTarget: recipientTarget,
+      recipientTarget: resolvedRecipientTarget,
       location: location,
       category: resolvedCategory,
       attachment: attachment,
@@ -389,7 +479,7 @@ class ChatService extends ChangeNotifier {
       hops: 0,
       type: messageType,
       payload: content,
-      recipientTarget: recipientTarget,
+      recipientTarget: resolvedRecipientTarget,
       metadata: {
         ...?metadata,
         if (location != null) ...location.toJson(),
@@ -443,12 +533,20 @@ class ChatService extends ChangeNotifier {
   }
 
   /// Sends an offline voice note message with duration metadata
-  Future<ChatMessage> sendVoiceNote(int durationSeconds) async {
+  Future<ChatMessage> sendVoiceNote(
+    int durationSeconds, {
+    String? conversationId,
+    String? recipientTarget,
+    String? category,
+  }) async {
     final mins = (durationSeconds ~/ 60).toString().padLeft(2, '0');
     final secs = (durationSeconds % 60).toString().padLeft(2, '0');
     return sendMessage(
       content: '🎤 Offline Voice Note ($mins:$secs)',
       messageType: 'VOICE',
+      conversationId: conversationId,
+      recipientTarget: recipientTarget,
+      category: category,
       metadata: {'voice_duration_sec': durationSeconds},
     );
   }

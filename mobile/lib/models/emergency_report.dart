@@ -33,6 +33,8 @@ class EmergencyReport {
   final String location;
   final bool syncPending;
   final String severity;
+  final String? senderDeviceId;
+  final bool isLocal;
 
   const EmergencyReport({
     required this.id,
@@ -46,6 +48,8 @@ class EmergencyReport {
     this.location = 'Unknown',
     this.syncPending = false,
     this.severity = 'HIGH',
+    this.senderDeviceId,
+    this.isLocal = false,
   });
 
   /// Flexible factory for either category string or enum
@@ -64,6 +68,8 @@ class EmergencyReport {
     String? location,
     bool syncPending = false,
     String severity = 'HIGH',
+    String? senderDeviceId,
+    bool isLocal = false,
   }) {
     final resolvedType = type ?? (category != null ? EmergencyType.fromString(category) : EmergencyType.customSituation);
     final resolvedNotes = notes ?? description ?? '';
@@ -88,6 +94,8 @@ class EmergencyReport {
       location: resolvedLocation,
       syncPending: syncPending,
       severity: severity,
+      senderDeviceId: senderDeviceId,
+      isLocal: isLocal,
     );
   }
 
@@ -96,7 +104,7 @@ class EmergencyReport {
   DateTime get timestamp => DateTime.fromMillisecondsSinceEpoch(createdAt);
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       'id': id,
       'type': type.label,
       'description': notes,
@@ -111,6 +119,13 @@ class EmergencyReport {
       'notes': notes,
       'created_at': createdAt,
     };
+    if (senderDeviceId != null) {
+      map['sender_device_id'] = senderDeviceId;
+    }
+    if (isLocal) {
+      map['is_local'] = 1;
+    }
+    return map;
   }
 
   factory EmergencyReport.fromMap(Map<String, dynamic> map) {
@@ -134,6 +149,12 @@ class EmergencyReport {
       location: map['location']?.toString(),
       syncPending: map['status'] == 'PENDING' || map['status'] == 'QUEUED' || map['sync_pending'] == 1,
       severity: map['severity']?.toString() ?? 'HIGH',
+      senderDeviceId: map['sender_device_id']?.toString() ??
+          map['senderDeviceId']?.toString() ??
+          map['sender_id']?.toString(),
+      isLocal: map['is_local'] == 1 ||
+          map['is_local'] == true ||
+          map['isLocal'] == true,
     );
   }
 }

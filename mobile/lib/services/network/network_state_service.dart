@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import '../../config/app_config.dart';
 import '../../database/app_database.dart';
 import '../device_identity_service.dart';
+import '../location/location_service.dart';
+import '../mesh_engine.dart';
 import '../transport/transport_manager.dart';
 
 /// The 6 distinct physical and operational transport states recognized by RakshaNet.
@@ -46,7 +48,9 @@ class SyncResult {
   final bool success;
   final int syncedMeshPackets;
   final int syncedSosEvents;
+  final int syncedEmergencyReports;
   final int syncedLocationPoints;
+  final int syncedMissingPersons;
   final int totalSynced;
   final String? errorMessage;
   final DateTime timestamp;
@@ -55,7 +59,9 @@ class SyncResult {
     required this.success,
     this.syncedMeshPackets = 0,
     this.syncedSosEvents = 0,
+    this.syncedEmergencyReports = 0,
     this.syncedLocationPoints = 0,
+    this.syncedMissingPersons = 0,
     this.totalSynced = 0,
     this.errorMessage,
     required this.timestamp,
@@ -64,7 +70,8 @@ class SyncResult {
   @override
   String toString() =>
       'SyncResult(success: $success, totalSynced: $totalSynced '
-      '[mesh: $syncedMeshPackets, sos: $syncedSosEvents, loc: $syncedLocationPoints], '
+      '[mesh: $syncedMeshPackets, sos: $syncedSosEvents, reports: $syncedEmergencyReports, '
+      'loc: $syncedLocationPoints, missing: $syncedMissingPersons], '
       'ts: ${timestamp.toIso8601String()})';
 }
 
@@ -138,7 +145,8 @@ class NetworkStateService extends ChangeNotifier {
   bool get noTransport => currentState == TransportState.noTransport;
 
   // Convenience aliases
-  bool get isInternetAvailable => internetAvailable;
+  bool get isInternetAvailable =>
+      _currentState == TransportState.internetAvailable;
   bool get isWifiNoInternet => wifiNoInternet;
   bool get isCellularData => cellularData;
   bool get isP2pTransportAvailable => p2pTransportAvailable;
@@ -151,6 +159,7 @@ class NetworkStateService extends ChangeNotifier {
   Stream<TransportState> get onTransportStateChanged => _stateController.stream;
   Stream<DateTime> get onLastSyncTimestamp =>
       _lastSyncTimestampController.stream;
+  Stream<DateTime> get lastSyncTimestampStream => onLastSyncTimestamp;
 
   // ---------------------------------------------------------------------------
   // Lifecycle & Periodic Monitoring
@@ -328,13 +337,15 @@ class NetworkStateService extends ChangeNotifier {
 
   /// Executes idempotent auto-recovery synchronization:
   /// 1. Queries unsynced SQLite records (`encrypted_mesh_packets` where status != 'SYNCED',
-  ///    `sos_events`, `location_history`).
-  /// 2. Posts to FastAPI gateway `/api/v1/packets` with unique idempotency keys (`messageId`).
+  ///    `sos_events`, `emergency_reports`, `location_history`, `missing_persons`).
+  /// 2. Posts to FastAPI gateway `${AppConfig.backendBaseUrl}/api/v1/telemetry/sync`
+  ///    with GPS coordinates, device_id, timestamp, and metadata.
   /// 3. Retries using exponential backoff with jitter (initial 1s, max 30s, jitter ±20%).
-  /// 4. On 200 OK, marks records as `syncedToServer`.
-  /// 5. Emits `lastSyncTimestamp`.
+  /// 4. On 200/201 OK, marks records as `syncedToServer` and `SYNCED`.
+  /// 5. Notifies `MeshEngine.instance.notifyPacketSynced(messageId)` for each synced message.
+  /// 6. Emits `lastSyncTimestamp`.
   Future<SyncResult> triggerAutoRecoverySync({
-    String gatewayPacketsUrl = AppConfig.packetsUrl,
+    String? gatewayPacketsUrl,
     int maxRetries = 5,
   }) async {
     if (_isSyncing) {
@@ -343,6 +354,20 @@ class NetworkStateService extends ChangeNotifier {
         errorMessage: 'Sync cycle already in progress',
         timestamp: DateTime.now(),
       );
+    }
+
+    // Strict Offline Resilience Guard:
+    // Never perform blocking HTTP calls or throw uncaught SocketException when offline.
+    if (!testModeNoDelays && currentState != TransportState.internetAvailable) {
+      final state = await evaluateTransportState();
+      if (state != TransportState.internetAvailable) {
+        return SyncResult(
+          success: false,
+          errorMessage:
+              'No verified gateway connection on this device ($state)',
+          timestamp: DateTime.now(),
+        );
+      }
     }
 
     _isSyncing = true;
@@ -354,12 +379,16 @@ class NetworkStateService extends ChangeNotifier {
       // 1. Query unsynced records
       final unsyncedPackets = await _queryUnsyncedMeshPackets();
       final unsyncedSos = await _queryUnsyncedSosEvents();
+      final unsyncedReports = await _queryUnsyncedEmergencyReports();
       final unsyncedLocations = await _queryUnsyncedLocations();
+      final unsyncedMissingPersons = await _queryUnsyncedMissingPersons();
 
       final totalRecords =
           unsyncedPackets.length +
           unsyncedSos.length +
-          unsyncedLocations.length;
+          unsyncedReports.length +
+          unsyncedLocations.length +
+          unsyncedMissingPersons.length;
 
       if (totalRecords == 0) {
         debugPrint(
@@ -376,7 +405,9 @@ class NetworkStateService extends ChangeNotifier {
 
       debugPrint(
         '[NetworkStateService] Auto-recovery sync starting for $totalRecords records '
-        '(${unsyncedPackets.length} mesh packets, ${unsyncedSos.length} SOS, ${unsyncedLocations.length} locations)',
+        '(${unsyncedPackets.length} mesh packets, ${unsyncedSos.length} SOS, '
+        '${unsyncedReports.length} reports, ${unsyncedLocations.length} locations, '
+        '${unsyncedMissingPersons.length} missing persons)',
       );
 
       // 2. Prepare payload and track IDs
@@ -384,7 +415,9 @@ class NetworkStateService extends ChangeNotifier {
       final payloadList = <Map<String, dynamic>>[];
       final packetIds = <String>[];
       final sosIds = <String>[];
+      final reportIds = <String>[];
       final locationIds = <String>[];
+      final missingPersonIds = <String>[];
       final uploadedMessageIds = <String>{};
 
       for (final p in unsyncedPackets) {
@@ -460,9 +493,9 @@ class NetworkStateService extends ChangeNotifier {
             'notes': s['notes'],
           }),
           'meta': {
-            'urgency': s['urgency'],
-            'category': s['category'],
-            'peopleCount': s['people_count'],
+            'urgency': s['urgency'] ?? 'CRITICAL',
+            'category': s['category'] ?? 'Emergency SOS',
+            'peopleCount': s['people_count'] ?? 1,
             'location_source': s['location_source'],
             'location_is_stale': s['location_is_stale'] == 1,
             'synced_via': 'auto_recovery',
@@ -477,6 +510,46 @@ class NetworkStateService extends ChangeNotifier {
             if (s['location_accuracy'] != null)
               'accuracy': s['location_accuracy'],
             if (s['location_source'] != null) 'fix_type': s['location_source'],
+          };
+        }
+        payloadList.add(packet);
+      }
+
+      for (final r in unsyncedReports) {
+        final id = (r['id'] ?? r['message_id'] ?? '').toString();
+        if (id.isEmpty) continue;
+        reportIds.add(id);
+        if (uploadedMessageIds.contains(id)) continue;
+        uploadedMessageIds.add(id);
+        final packet = <String, dynamic>{
+          'ver': 1,
+          'msg_id': id,
+          'message_id': id,
+          'sender_id': r['sender_device_id'] ?? myDeviceId,
+          'conv_id': 'CONV_COMMUNITY',
+          'ts':
+              r['timestamp'] ??
+              r['created_at'] ??
+              DateTime.now().millisecondsSinceEpoch,
+          'ttl': 5,
+          'hops': 0,
+          'type': 'SOS',
+          'payload':
+              r['description']?.toString() ??
+              r['notes']?.toString() ??
+              'Emergency Report',
+          'meta': {
+            'urgency': r['severity'] ?? 'CRITICAL',
+            'category': r['type'] ?? 'Emergency SOS',
+            'peopleCount': r['people_affected'] ?? 1,
+            'synced_via': 'auto_recovery',
+          },
+        };
+        if (r['latitude'] != null && r['longitude'] != null) {
+          packet['location'] = {
+            'lat': r['latitude'],
+            'lng': r['longitude'],
+            'fix_type': 'STORED_GPS',
           };
         }
         payloadList.add(packet);
@@ -509,15 +582,64 @@ class NetworkStateService extends ChangeNotifier {
         });
       }
 
+      for (final m in unsyncedMissingPersons) {
+        final id = (m['id'] ?? '').toString();
+        if (id.isEmpty) continue;
+        missingPersonIds.add(id);
+        if (uploadedMessageIds.contains(id)) continue;
+        uploadedMessageIds.add(id);
+        final packet = <String, dynamic>{
+          'ver': 1,
+          'msg_id': id,
+          'message_id': id,
+          'sender_id': myDeviceId,
+          'conv_id': 'CONV_COMMUNITY',
+          'ts':
+              m['reported_at'] ??
+              m['last_seen_time'] ??
+              DateTime.now().millisecondsSinceEpoch,
+          'ttl': 5,
+          'hops': 0,
+          'type': 'MISSING_PERSON',
+          'payload': jsonEncode(m),
+          'meta': {
+            'synced_via': 'auto_recovery',
+            'name': m['name'],
+            'age': m['age'],
+          },
+        };
+        if (m['lat'] != null && m['lng'] != null) {
+          packet['location'] = {'lat': m['lat'], 'lng': m['lng']};
+        }
+        payloadList.add(packet);
+      }
+
+      final locationFix = LocationService.instance.currentLocation;
       final batchBody = jsonEncode({
         'device_id': myDeviceId,
         'sync_timestamp': DateTime.now().millisecondsSinceEpoch,
+        if (locationFix != null) ...{
+          'lat': locationFix.latitude,
+          'lng': locationFix.longitude,
+          'accuracy': locationFix.horizontalAccuracyMeters,
+          'location': {
+            'lat': locationFix.latitude,
+            'lng': locationFix.longitude,
+            'accuracy': locationFix.horizontalAccuracyMeters,
+            'fix_type': locationFix.source,
+          },
+        },
+        'metadata': {
+          'client': 'rakshanet_mobile',
+          'synced_via': 'auto_recovery',
+        },
         'packets': payloadList,
       });
 
       // 3. Post with exponential backoff & jitter
       bool uploadSuccess = false;
       String? lastError;
+      final targetUrl = gatewayPacketsUrl ?? AppConfig.telemetrySyncUrl;
 
       for (int attempt = 1; attempt <= maxRetries; attempt++) {
         try {
@@ -525,9 +647,9 @@ class NetworkStateService extends ChangeNotifier {
               ? payloadList.first['msg_id']
               : 'IDEMP-${DateTime.now().millisecondsSinceEpoch}';
 
-          final response = await _httpClient
+          http.Response response = await _httpClient
               .post(
-                Uri.parse(gatewayPacketsUrl),
+                Uri.parse(targetUrl),
                 headers: {
                   'Content-Type': 'application/json',
                   'X-Idempotency-Key': idempotencyKey,
@@ -535,6 +657,28 @@ class NetworkStateService extends ChangeNotifier {
                 body: batchBody,
               )
               .timeout(const Duration(seconds: 10));
+
+          // If 404 on default telemetry/sync, fallback to packetsUrl (for older mock test servers)
+          if (response.statusCode == 404 &&
+              gatewayPacketsUrl == null &&
+              targetUrl != AppConfig.packetsUrl) {
+            try {
+              final fallbackResponse = await _httpClient
+                  .post(
+                    Uri.parse(AppConfig.packetsUrl),
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-Idempotency-Key': idempotencyKey,
+                    },
+                    body: batchBody,
+                  )
+                  .timeout(const Duration(seconds: 10));
+              if (fallbackResponse.statusCode >= 200 &&
+                  fallbackResponse.statusCode < 300) {
+                response = fallbackResponse;
+              }
+            } catch (_) {}
+          }
 
           if (response.statusCode >= 200 && response.statusCode < 300) {
             uploadSuccess = true;
@@ -568,8 +712,15 @@ class NetworkStateService extends ChangeNotifier {
         );
       }
 
-      // 4. Mark records as syncedToServer in SQLite
-      await _markRecordsSynced(packetIds, sosIds, locationIds);
+      // 4. Mark records as syncedToServer in SQLite and notify MeshEngine
+      await _markRecordsSynced(
+        packetIds,
+        sosIds,
+        reportIds,
+        locationIds,
+        missingPersonIds,
+        uploadedMessageIds,
+      );
 
       // 5. Emit lastSyncTimestamp
       _lastSyncTimestamp = DateTime.now();
@@ -581,7 +732,9 @@ class NetworkStateService extends ChangeNotifier {
         success: true,
         syncedMeshPackets: packetIds.length,
         syncedSosEvents: sosIds.length,
+        syncedEmergencyReports: reportIds.length,
         syncedLocationPoints: locationIds.length,
+        syncedMissingPersons: missingPersonIds.length,
         totalSynced: totalRecords,
         timestamp: _lastSyncTimestamp!,
       );
@@ -667,6 +820,41 @@ class NetworkStateService extends ChangeNotifier {
             is_stale INTEGER DEFAULT 0
           )
         ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS emergency_reports (
+            id TEXT PRIMARY KEY,
+            type TEXT NOT NULL,
+            description TEXT NOT NULL,
+            status TEXT NOT NULL,
+            timestamp INTEGER NOT NULL,
+            location TEXT NOT NULL,
+            latitude REAL,
+            longitude REAL,
+            people_affected INTEGER DEFAULT 1,
+            severity TEXT DEFAULT 'HIGH'
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS missing_persons (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            age INTEGER NOT NULL,
+            gender TEXT DEFAULT 'Unspecified',
+            description TEXT NOT NULL,
+            last_seen_location TEXT NOT NULL,
+            lat REAL,
+            lng REAL,
+            last_seen_time INTEGER NOT NULL,
+            reported_at INTEGER,
+            photo_url TEXT,
+            photo_path TEXT,
+            status TEXT NOT NULL,
+            contact_phone TEXT,
+            reported_by TEXT DEFAULT 'Anonymous'
+          )
+        ''');
       }
     } catch (e) {
       debugPrint('[NetworkStateService] Notice on table creation: $e');
@@ -699,6 +887,19 @@ class NetworkStateService extends ChangeNotifier {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _queryUnsyncedEmergencyReports() async {
+    try {
+      final rows = await _db.query(
+        'emergency_reports',
+        where: "status != ? AND status != ?",
+        whereArgs: const ['SYNCED', 'syncedToServer'],
+      );
+      return rows;
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<List<Map<String, dynamic>>> _queryUnsyncedLocations() async {
     try {
       final rows = await _db.query(
@@ -712,10 +913,26 @@ class NetworkStateService extends ChangeNotifier {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _queryUnsyncedMissingPersons() async {
+    try {
+      final rows = await _db.query(
+        'missing_persons',
+        where: "status != ? AND status != ? AND status != ?",
+        whereArgs: const ['SYNCED', 'syncedToServer', 'RESOLVED'],
+      );
+      return rows;
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<void> _markRecordsSynced(
     List<String> packetIds,
     List<String> sosIds,
+    List<String> reportIds,
     List<String> locationIds,
+    List<String> missingPersonIds,
+    Set<String> uploadedMessageIds,
   ) async {
     for (final id in packetIds) {
       await _db.update(
@@ -747,6 +964,21 @@ class NetworkStateService extends ChangeNotifier {
       );
     }
 
+    for (final id in reportIds) {
+      await _db.update(
+        'emergency_reports',
+        {'status': 'SYNCED'},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await _db.update(
+        'sos_events',
+        {'status': 'syncedToServer', 'synced_to_server': 1},
+        where: 'message_id = ? OR id = ?',
+        whereArgs: [id, id],
+      );
+    }
+
     for (final id in locationIds) {
       await _db.update(
         'location_history',
@@ -754,6 +986,26 @@ class NetworkStateService extends ChangeNotifier {
         where: 'message_id = ? OR id = ?',
         whereArgs: [id, id],
       );
+    }
+
+    for (final id in missingPersonIds) {
+      await _db.update(
+        'missing_persons',
+        {'status': 'SYNCED'},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+
+    // Notify MeshEngine for each synced message ID so that in-memory ChatService and UI instantly update
+    for (final id in uploadedMessageIds) {
+      try {
+        MeshEngine.instance.notifyPacketSynced(id);
+      } catch (e) {
+        debugPrint(
+          '[NetworkStateService] Error notifying MeshEngine for $id: $e',
+        );
+      }
     }
   }
 

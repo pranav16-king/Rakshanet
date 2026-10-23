@@ -8,6 +8,8 @@ import 'package:rakshanet_mobile/database/app_database.dart';
 import 'package:rakshanet_mobile/services/network/network_state_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('NetworkStateService - Transport States & Auto-Recovery Sync', () {
     late AppDatabase db;
 

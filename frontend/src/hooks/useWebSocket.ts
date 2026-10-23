@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { WebSocketEventMessage } from '../types';
+import { useEmergencyAlertStore } from '../store/emergencyAlertStore';
 
 export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 
@@ -52,15 +53,87 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
           // Handle query cache invalidation based on backend event types
           switch (parsed.event) {
-            case 'NEW_PACKET_INGESTED':
-              queryClient.invalidateQueries({ queryKey: ['packets'] });
-              queryClient.invalidateQueries({ queryKey: ['telemetryStats'] });
-              queryClient.invalidateQueries({ queryKey: ['analytics'] });
+            case 'NEW_PACKET_INGESTED': {
+              const packet = parsed.packet;
+              const isSos =
+                packet?.type === 'SOS' ||
+                (packet?.meta as Record<string, unknown> | undefined)?.category === 'SOS' ||
+                (packet as Record<string, unknown> | undefined)?.category === 'SOS';
+
+              if (isSos) {
+                const senderName = packet?.sender_name || packet?.sender_id || 'Survivor / Distress Node';
+                const senderId = packet?.sender_id;
+                const rawMeta = (packet?.meta as Record<string, unknown> | undefined) || {};
+                const urgency = String(rawMeta.urgency || rawMeta.priority || 'CRITICAL');
+
+                let coordinates: { lat: number; lng: number } | null = null;
+                if (
+                  packet?.location &&
+                  typeof packet.location.lat === 'number' &&
+                  typeof packet.location.lng === 'number' &&
+                  Number.isFinite(packet.location.lat) &&
+                  Number.isFinite(packet.location.lng)
+                ) {
+                  coordinates = { lat: packet.location.lat, lng: packet.location.lng };
+                } else if (
+                  typeof rawMeta.lat === 'number' &&
+                  typeof rawMeta.lng === 'number' &&
+                  Number.isFinite(rawMeta.lat) &&
+                  Number.isFinite(rawMeta.lng)
+                ) {
+                  coordinates = { lat: rawMeta.lat, lng: rawMeta.lng };
+                }
+
+                // Trigger high-visibility emergency dispatch notification / toast on the command center console
+                useEmergencyAlertStore.getState().addAlert({
+                  senderName,
+                  senderId,
+                  coordinates,
+                  urgency,
+                  hops: packet?.hops,
+                  payload: packet?.payload,
+                });
+
+                const coordStr = coordinates
+                  ? `${coordinates.lat.toFixed(4)}° N, ${coordinates.lng.toFixed(4)}° E`
+                  : 'Pending GPS lock';
+                console.warn(
+                  `🚨 [EMERGENCY SOS DISPATCH] Sender: ${senderName} (${senderId || 'N/A'}) | Urgency: ${urgency} | Coordinates: ${coordStr}`
+                );
+
+                // Invalidate query caches as required by Task 1
+                queryClient.invalidateQueries({ queryKey: ['mapIncidents'] });
+                queryClient.invalidateQueries({ queryKey: ['liveDevices'] });
+                queryClient.invalidateQueries({ queryKey: ['deviceStats'] });
+                queryClient.invalidateQueries({ queryKey: ['incidents'] });
+                queryClient.invalidateQueries({ queryKey: ['incident'] });
+                queryClient.invalidateQueries({ queryKey: ['communications'] });
+                queryClient.invalidateQueries({ queryKey: ['telemetryStats'] });
+                queryClient.invalidateQueries({ queryKey: ['packets'] });
+
+                // Invalidate kebab-case and linked queries for map & incident synchronization
+                queryClient.invalidateQueries({ queryKey: ['map-incidents'] });
+                queryClient.invalidateQueries({ queryKey: ['live-devices'] });
+                queryClient.invalidateQueries({ queryKey: ['device-stats'] });
+                queryClient.invalidateQueries({ queryKey: ['rescue-teams'] });
+                queryClient.invalidateQueries({ queryKey: ['incidentComms'] });
+                queryClient.invalidateQueries({ queryKey: ['analytics'] });
+              } else {
+                queryClient.invalidateQueries({ queryKey: ['packets'] });
+                queryClient.invalidateQueries({ queryKey: ['telemetryStats'] });
+                queryClient.invalidateQueries({ queryKey: ['analytics'] });
+              }
               break;
+            }
 
             case 'INCIDENTS_UPDATED':
               queryClient.invalidateQueries({ queryKey: ['incidents'] });
+              queryClient.invalidateQueries({ queryKey: ['mapIncidents'] });
+              queryClient.invalidateQueries({ queryKey: ['liveDevices'] });
               queryClient.invalidateQueries({ queryKey: ['analytics'] });
+              // Also sync kebab-case queries
+              queryClient.invalidateQueries({ queryKey: ['map-incidents'] });
+              queryClient.invalidateQueries({ queryKey: ['live-devices'] });
               break;
 
             case 'BLACK_HOLE_ALERT':

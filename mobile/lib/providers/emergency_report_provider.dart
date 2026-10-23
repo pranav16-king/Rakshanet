@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
 import '../models/emergency_report.dart';
+import '../services/device_identity_service.dart';
 
 class EmergencyReportProvider extends ChangeNotifier {
   final List<EmergencyReport> _reports = [];
@@ -53,6 +54,8 @@ class EmergencyReportProvider extends ChangeNotifier {
       status: 'relayed', // simulated initial mesh broadcast
       timestamp: DateTime.now(),
       syncPending: true,
+      senderDeviceId: DeviceIdentityService.instance.deviceId,
+      isLocal: true,
     );
 
     // 1. Save to SQLite database (Source of Truth)

@@ -149,7 +149,7 @@ enum MeshDeliveryState {
       case MeshDeliveryState.deliveredToRecipient:
         return MessageDeliveryStatus.delivered;
       case MeshDeliveryState.syncedToServer:
-        return MessageDeliveryStatus.delivered;
+        return MessageDeliveryStatus.syncedToServer;
       case MeshDeliveryState.failed:
         return MessageDeliveryStatus.failed;
       case MeshDeliveryState.expired:

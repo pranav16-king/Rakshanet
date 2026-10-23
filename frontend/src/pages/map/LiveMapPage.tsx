@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Search,
   Layers,
@@ -9,7 +9,6 @@ import {
   EyeOff,
   RefreshCw,
   ShieldAlert,
-  Wifi,
   Users,
   CheckCircle2,
   AlertTriangle,
@@ -30,9 +29,27 @@ import type {
   RescueTeam,
   MapLayersState,
 } from '../../types/map';
+import { isValidCoordinate } from '../../utils/geoNavigation';
 
 export const LiveMapPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // URL query parameter coordinates for direct map panning from toast/external links
+  const queryLat = searchParams.get('lat') ? parseFloat(searchParams.get('lat')!) : null;
+  const queryLng = searchParams.get('lng') ? parseFloat(searchParams.get('lng')!) : null;
+  const queryFocus = searchParams.get('focus');
+
+  const mapCenter = useMemo((): [number, number] | undefined => {
+    if (
+      queryLat !== null &&
+      queryLng !== null &&
+      isValidCoordinate(queryLat, queryLng)
+    ) {
+      return [queryLat, queryLng];
+    }
+    return undefined;
+  }, [queryLat, queryLng]);
 
   // Active Layers State
   const [activeLayers, setActiveLayers] = useState<MapLayersState>({
@@ -94,6 +111,18 @@ export const LiveMapPage: React.FC = () => {
     refetchInterval: 15000,
   });
 
+  // Focus node synchronization if specified in URL query
+  useEffect(() => {
+    if (queryFocus && incidents.length > 0) {
+      const match = incidents.find((i) => i.id === queryFocus);
+      if (match) {
+        setSelectedIncident(match);
+        setSelectedDevice(null);
+        setSelectedRescueTeam(null);
+      }
+    }
+  }, [queryFocus, incidents]);
+
   const handleRefreshAll = () => {
     refetchIncidents();
     refetchDevices();
@@ -141,19 +170,28 @@ export const LiveMapPage: React.FC = () => {
     });
   }, [incidents, searchQuery, severityFilter]);
 
+  // Active SOS Beacon count
+  const activeSosCount = useMemo(() => {
+    return incidents.filter(
+      (inc) =>
+        inc.type === 'sos' ||
+        inc.severity === 'CRITICAL' ||
+        inc.badgeLabel.toLowerCase().includes('sos') ||
+        inc.title.toLowerCase().includes('sos')
+    ).length;
+  }, [incidents]);
+
   // Dynamic Sector Centroid Readout
   const sectorCoordinates = useMemo(() => {
     const validCoords: [number, number][] = [];
     incidents.forEach((i) => {
-      if (i.lat && i.lng) validCoords.push([i.lat, i.lng]);
+      if (isValidCoordinate(i.lat, i.lng)) validCoords.push([i.lat, i.lng]);
     });
     devices.forEach((d) => {
-      if (d.lat && d.lng) validCoords.push([d.lat, d.lng]);
+      if (isValidCoordinate(d.lat, d.lng)) validCoords.push([d.lat, d.lng]);
     });
     if (validCoords.length === 0) return 'Coordinates unavailable';
-    if (validCoords.length === -1) {
-      return '13.0425° N, 80.2285° E · WGS84';
-    }
+
     const avgLat = validCoords.reduce((a, b) => a + b[0], 0) / validCoords.length;
     const avgLng = validCoords.reduce((a, b) => a + b[1], 0) / validCoords.length;
     return `${avgLat.toFixed(4)}° N, ${avgLng.toFixed(4)}° E · WGS84`;
@@ -189,9 +227,15 @@ export const LiveMapPage: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Live Telemetry
             </span>
+            {activeSosCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-red-600 text-white animate-pulse shadow-md">
+                <ShieldAlert size={12} />
+                {activeSosCount} ACTIVE SOS
+              </span>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#9FADC2]">
-            Real-time geospatial locations of mesh nodes, rescue units, and AI-clustered disaster incidents
+            Real-time geospatial locations of mesh nodes, rescue units, rapid response direction vectors & disaster incidents
           </p>
         </div>
 
@@ -261,6 +305,8 @@ export const LiveMapPage: React.FC = () => {
           <div className="relative h-[650px] w-full rounded-2xl bg-[#0B1220] border-2 border-slate-200 dark:border-[#26344F] overflow-hidden shadow-xl">
             {/* Interactive Real MapCanvas */}
             <MapCanvas
+              center={mapCenter}
+              zoom={mapCenter ? 15 : 13}
               incidents={filteredIncidents}
               devices={filteredDevices}
               rescueTeams={rescueTeams}
@@ -304,6 +350,12 @@ export const LiveMapPage: React.FC = () => {
                   </strong>{' '}
                   ({deviceStats.online} Online, {deviceStats.relay} Relaying)
                 </span>
+                {activeSosCount > 0 && (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600/30 text-red-300 border border-red-500/50 font-bold text-[11px] animate-pulse">
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                    {activeSosCount} Active SOS Vector{activeSosCount > 1 ? 's' : ''} Synced
+                  </span>
+                )}
               </div>
               <div className="text-[11px] text-[#9FADC2] font-mono flex items-center gap-2">
                 <span>Sector Centroid: {sectorCoordinates}</span>

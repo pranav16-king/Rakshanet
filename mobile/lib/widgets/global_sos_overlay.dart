@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/telemetry_provider.dart';
 import '../screens/tools/live_map_screen.dart';
+import '../services/device_identity_service.dart';
 import '../services/location/location_service.dart';
 import '../services/sos_alert_service.dart';
 import '../theme/app_tokens.dart';
@@ -73,14 +74,18 @@ class _GlobalSosOverlayState extends State<GlobalSosOverlay>
   }
 
   void _onViewOnMap(BuildContext context, EmergencyAlertEvent alert) {
+    final myDeviceId = DeviceIdentityService.instance.deviceId;
+    final isSelf = alert.isLocal ||
+        (alert.senderDeviceId.isNotEmpty && alert.senderDeviceId == myDeviceId);
+
     if (alert.lat != null && alert.lng != null) {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => LiveMapScreen(
             initialCenter: LatLng(alert.lat!, alert.lng!),
-            initialZoom: 16.5,
-            initialNavTarget: LatLng(alert.lat!, alert.lng!),
-            initialNavTargetName: 'SOS: ${alert.formattedSender}',
+            initialZoom: isSelf ? 17.0 : 16.5,
+            initialNavTarget: isSelf ? null : LatLng(alert.lat!, alert.lng!),
+            initialNavTargetName: isSelf ? null : 'SOS: ${alert.formattedSender}',
           ),
         ),
       );
@@ -98,27 +103,53 @@ class _GlobalSosOverlayState extends State<GlobalSosOverlay>
     EmergencyAlertEvent alert,
   ) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final myDeviceId = DeviceIdentityService.instance.deviceId;
+    final isSelf = alert.isLocal ||
+        (alert.senderDeviceId.isNotEmpty && alert.senderDeviceId == myDeviceId);
+
     await SosAlertService.instance.acknowledgeAndRespond(alert);
 
-    messenger?.showSnackBar(
-      SnackBar(
-        backgroundColor: AppTokens.beaconTeal,
-        behavior: SnackBarBehavior.floating,
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Distress ACK dispatched via mesh radio to ${alert.formattedSender}.',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+    if (isSelf) {
+      messenger?.showSnackBar(
+        const SnackBar(
+          backgroundColor: AppTokens.beaconTeal,
+          behavior: SnackBarBehavior.floating,
+          content: Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Distress beacon active & broadcasting. Overlay dismissed.',
+                  style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          duration: Duration(seconds: 4),
         ),
-        duration: const Duration(seconds: 4),
-      ),
-    );
+      );
+    } else {
+      messenger?.showSnackBar(
+        SnackBar(
+          backgroundColor: AppTokens.beaconTeal,
+          behavior: SnackBarBehavior.floating,
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Distress ACK dispatched via mesh radio to ${alert.formattedSender}.',
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override
@@ -183,6 +214,10 @@ class _EmergencyBannerOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final myDeviceId = DeviceIdentityService.instance.deviceId;
+    final isSelf = alert.isLocal ||
+        (alert.senderDeviceId.isNotEmpty && alert.senderDeviceId == myDeviceId);
+
     // Read current user GPS from LocationService & TelemetryProvider for real distance calculation
     final telemetry = Provider.of<TelemetryProvider?>(context, listen: true);
     final localFix = LocationService.instance.currentFix;
@@ -310,7 +345,7 @@ class _EmergencyBannerOverlay extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  alert.isLocal
+                                  isSelf
                                       ? 'LOCAL DISTRESS BEACON ACTIVE'
                                       : 'GLOBAL SOS DISTRESS ALERT',
                                   style: const TextStyle(
@@ -403,7 +438,9 @@ class _EmergencyBannerOverlay extends StatelessWidget {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          alert.formattedSender,
+                                          isSelf
+                                              ? 'You (My Distress Beacon)'
+                                              : alert.formattedSender,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
@@ -417,7 +454,7 @@ class _EmergencyBannerOverlay extends StatelessWidget {
                                         Text(
                                           'Category: ${alert.category} • ${alert.casualties} ${alert.casualties == 1 ? 'Person' : 'People'}',
                                           style: TextStyle(
-                                            color: alert.isLocal
+                                            color: isSelf
                                                 ? AppTokens.signalYellow
                                                 : const Color(0xFFFF8A80),
                                             fontSize: 12.5,
@@ -523,11 +560,15 @@ class _EmergencyBannerOverlay extends StatelessWidget {
                                           Padding(
                                             padding: const EdgeInsets.only(top: 2),
                                             child: Text(
-                                              'Distance: ${geoResult.summaryLabel}',
+                                              isSelf
+                                                  ? "Origin: Your Location (Distress Beacon)"
+                                                  : "Distance: ${geoResult.summaryLabel}",
                                               style: TextStyle(
-                                                color: geoResult.isCoordinatesAvailable
-                                                    ? AppTokens.signalYellow
-                                                    : AppTokens.darkTextMuted,
+                                                color: isSelf
+                                                    ? AppTokens.beaconTeal
+                                                    : (geoResult.isCoordinatesAvailable
+                                                        ? AppTokens.signalYellow
+                                                        : AppTokens.darkTextMuted),
                                                 fontSize: 11.5,
                                                 fontWeight: FontWeight.w600,
                                               ),
@@ -590,12 +631,12 @@ class _EmergencyBannerOverlay extends StatelessWidget {
                               // 3. Action Buttons Row (Acknowledge & Respond, View on Map, Silence)
                               Row(
                                 children: [
-                                  // Primary Action: Acknowledge & Respond
+                                  // Primary Action: Acknowledge & Respond (or Acknowledge Status for self)
                                   Expanded(
                                     flex: 6,
                                     child: ElevatedButton.icon(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTokens.sosRed,
+                                        backgroundColor: isSelf ? AppTokens.beaconTeal : AppTokens.sosRed,
                                         foregroundColor: Colors.white,
                                         minimumSize: const Size.fromHeight(46),
                                         elevation: 2,
@@ -610,8 +651,8 @@ class _EmergencyBannerOverlay extends StatelessWidget {
                                         Icons.check_circle_outline_rounded,
                                         size: 18,
                                       ),
-                                      label: const Text(
-                                        'Acknowledge & Respond',
+                                      label: Text(
+                                        isSelf ? "Acknowledge Status" : "Acknowledge & Respond",
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(

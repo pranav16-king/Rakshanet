@@ -27,7 +27,7 @@ export async function fetchLiveDevices(): Promise<LiveDevice[]> {
 
 export async function fetchMapIncidents(): Promise<MapIncidentNode[]> {
   try {
-    const { data } = await apiClient.get<any[]>('/api/v1/incidents');
+    const { data } = await apiClient.get<any[]>('/api/v1/incidents', { params: { source: 'db' } });
     return (Array.isArray(data) ? data : []).flatMap((raw): MapIncidentNode[] => {
       const id = raw?.incident_id ?? raw?.id;
       const lat = raw?.centroid_lat ?? raw?.lat;

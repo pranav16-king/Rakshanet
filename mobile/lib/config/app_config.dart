@@ -18,6 +18,9 @@ class AppConfig {
   /// Gateway telemetry and store-and-forward mesh packet upload endpoint
   static const String packetsUrl = '$backendUrl/api/v1/packets';
 
+  /// Gateway telemetry sync endpoint
+  static const String telemetrySyncUrl = '$backendUrl/api/v1/telemetry/sync';
+
   /// Missing persons registry endpoint
   static const String missingPersonsUrl = '$backendUrl/api/v1/missing-persons';
 

@@ -15,6 +15,7 @@ import '../../providers/theme_provider.dart';
 import '../../services/chat_service.dart';
 import '../../services/group_service.dart';
 import '../../services/location/location_service.dart';
+import '../../services/mesh_engine.dart';
 import '../../theme/app_tokens.dart';
 import '../../utils/haversine_distance.dart';
 import '../../widgets/chat_image_viewer.dart';
@@ -24,7 +25,18 @@ import 'my_messages_screen.dart';
 /// Screen 5: Community Chat & Mesh Groups (Offline Mesh Chat)
 /// Hi-vis beacon design system strictly adhered to design.md and Screen 5 visual mockup.
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({
+    super.key,
+    this.conversationId,
+    this.initialFilter,
+    this.targetRecipient,
+    this.recipientName,
+  });
+
+  final String? conversationId;
+  final String? initialFilter;
+  final String? targetRecipient;
+  final String? recipientName;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -76,12 +88,31 @@ class _ChatScreenState extends State<ChatScreen> {
   int _previousMessageCount = 0;
   String? _previousFilter;
   String? _previousGroupId;
+  StreamSubscription<ChatMessage>? _engineStatusSub;
 
   @override
   void initState() {
     super.initState();
     _recoverLostImagePick();
     _focusNode.addListener(_onFocusChange);
+
+    _engineStatusSub = MeshEngine.instance.statusUpdates.listen((msg) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final chatService = context.read<ChatService>();
+      if (widget.initialFilter != null) {
+        chatService.setActiveFilter(widget.initialFilter!);
+      }
+      if (widget.conversationId != null &&
+          widget.conversationId!.startsWith('DIRECT_')) {
+        chatService.setActiveDirectConversation(widget.conversationId);
+      }
+    });
   }
 
   void _onFocusChange() {
@@ -285,7 +316,19 @@ class _ChatScreenState extends State<ChatScreen> {
       _isRecordingVoice = false;
       _voiceSeconds = 0;
     });
-    await context.read<ChatService>().sendVoiceNote(duration);
+
+    final isDirect = widget.conversationId != null &&
+        widget.conversationId!.startsWith('DIRECT_');
+    final directPeer = isDirect
+        ? (widget.targetRecipient ?? widget.conversationId!.substring(7))
+        : null;
+
+    await context.read<ChatService>().sendVoiceNote(
+      duration,
+      conversationId: isDirect ? widget.conversationId : null,
+      recipientTarget: directPeer,
+      category: isDirect ? 'Nearby' : null,
+    );
     _scrollToBottom();
   }
 
@@ -312,6 +355,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _engineStatusSub?.cancel();
     _voiceTimer?.cancel();
     _voicePlaybackTimer?.cancel();
     _textController.dispose();
@@ -350,12 +394,27 @@ class _ChatScreenState extends State<ChatScreen> {
     final groupService = context.read<GroupService>();
 
     String? targetConvId;
-    if (chatService.activeFilter == 'Group' &&
+    String? targetRecipient;
+    String? targetCategory;
+
+    if (widget.conversationId != null &&
+        widget.conversationId!.startsWith('DIRECT_')) {
+      targetConvId = widget.conversationId;
+      targetRecipient = widget.targetRecipient ??
+          widget.conversationId!.substring(7);
+      targetCategory = 'Nearby';
+    } else if (chatService.activeFilter == 'Group' &&
         groupService.selectedGroup != null) {
       targetConvId = groupService.selectedGroup!.conversationId;
+      targetCategory = 'Group';
     }
 
-    await chatService.sendMessage(content: text, conversationId: targetConvId);
+    await chatService.sendMessage(
+      content: text,
+      conversationId: targetConvId,
+      recipientTarget: targetRecipient,
+      category: targetCategory,
+    );
     _scrollToBottom();
   }
 
@@ -907,8 +966,12 @@ class _ChatScreenState extends State<ChatScreen> {
             // Expandable Live Search Bar
             if (_isSearching) _buildSearchBar(theme, chatService),
 
-            // Filter Tabs: "Nearby", "Group", "Rescue", "Saved"
-            _buildFilterTabs(theme, chatService, groupService),
+            // Filter Tabs: "Nearby", "Group", "Rescue", "Saved" or Direct Session Banner
+            if (widget.conversationId != null &&
+                widget.conversationId!.startsWith('DIRECT_'))
+              _buildDirectChatBanner(theme)
+            else
+              _buildFilterTabs(theme, chatService, groupService),
 
             // WhatsApp Style Group Breadcrumb when inside an active group
             if (currentFilter == 'Group' && groupService.selectedGroup != null)
@@ -965,6 +1028,39 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDirectChatBanner(ThemeProvider theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTokens.beaconTeal.withValues(alpha: 0.12),
+        border: Border(
+          bottom: BorderSide(color: theme.border, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.lock_outline_rounded,
+            size: 15,
+            color: AppTokens.beaconTeal,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Direct peer session with ${widget.recipientName ?? "Peer"} • Zero internet required',
+              style: TextStyle(
+                color: theme.text,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1026,7 +1122,12 @@ class _ChatScreenState extends State<ChatScreen> {
     String subtitle = 'Broadcasts from nearby devices will appear here';
     IconData icon = Icons.chat_bubble_outline_rounded;
 
-    if (chatService.searchQuery.isNotEmpty) {
+    if (widget.conversationId != null &&
+        widget.conversationId!.startsWith('DIRECT_')) {
+      title = 'No direct messages with ${widget.recipientName ?? "this peer"}';
+      subtitle = 'Send a message below to establish direct 1:1 mesh contact.';
+      icon = Icons.chat_bubble_outline_rounded;
+    } else if (chatService.searchQuery.isNotEmpty) {
       title = 'No matching messages';
       subtitle = 'No messages matched "${chatService.searchQuery}"';
       icon = Icons.search_off_rounded;
@@ -1107,6 +1208,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final isGroupFilter = chatService.activeFilter == 'Group';
     final activeGroup = isGroupFilter ? groupService.selectedGroup : null;
+    final isDirectMode = widget.conversationId != null &&
+        widget.conversationId!.startsWith('DIRECT_');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1116,8 +1219,19 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       child: Row(
         children: [
-          // Back button when inside an active group room
-          if (activeGroup != null) ...[
+          // Back button when inside an active group room or direct chat
+          if (isDirectMode) ...[
+            IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              color: theme.text,
+              tooltip: 'Back',
+              onPressed: () {
+                context.read<ChatService>().setActiveDirectConversation(null);
+                Navigator.maybePop(context);
+              },
+            ),
+            const SizedBox(width: 2),
+          ] else if (activeGroup != null) ...[
             IconButton(
               icon: const Icon(Icons.arrow_back_rounded),
               color: theme.text,
@@ -1127,8 +1241,32 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(width: 2),
           ],
 
-          // Avatar: Group initials when in active group, else Yellow Beacon Icon
-          if (activeGroup != null)
+          // Avatar: Direct peer initials, Group initials, or Yellow Beacon Icon
+          if (isDirectMode)
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppTokens.beaconTeal.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppTokens.beaconTeal,
+                  width: 1.5,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                (widget.recipientName?.isNotEmpty == true)
+                    ? widget.recipientName![0].toUpperCase()
+                    : 'P',
+                style: const TextStyle(
+                  color: AppTokens.beaconTeal,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            )
+          else if (activeGroup != null)
             Container(
               width: 40,
               height: 40,
@@ -1177,7 +1315,7 @@ class _ChatScreenState extends State<ChatScreen> {
               onTap: () {
                 if (activeGroup != null) {
                   _showGroupMembersSheet(theme, groupService, activeGroup);
-                } else {
+                } else if (!isDirectMode) {
                   mesh.startScan();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -1195,9 +1333,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    activeGroup != null
-                        ? activeGroup.name
-                        : (isGroupFilter ? 'Mesh Groups' : 'Community Chat'),
+                    isDirectMode
+                        ? (widget.recipientName ?? 'Direct Mesh Chat')
+                        : (activeGroup != null
+                            ? activeGroup.name
+                            : (isGroupFilter ? 'Mesh Groups' : 'Community Chat')),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -1221,11 +1361,15 @@ class _ChatScreenState extends State<ChatScreen> {
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          activeGroup != null
-                              ? '${activeGroup.memberCount} members • Tap for details'
-                              : (isGroupFilter
-                                    ? '${groupService.groups.length} groups joined • $peerCount online'
-                                    : 'Nearby devices • $peerCount online'),
+                          isDirectMode
+                              ? (peerCount > 0
+                                    ? '$peerCount peers online • 1:1 Mesh'
+                                    : 'Nearby RF • 1:1 Mesh link')
+                              : (activeGroup != null
+                                    ? '${activeGroup.memberCount} members • Tap for details'
+                                    : (isGroupFilter
+                                          ? '${groupService.groups.length} groups joined • $peerCount online'
+                                          : 'Nearby devices • $peerCount online')),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -2099,6 +2243,10 @@ class _ChatScreenState extends State<ChatScreen> {
         ? AppTokens.lightSuccess
         : AppTokens.darkSuccess;
     final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
+    final mesh = context.watch<MeshProvider>();
+    final peerCount = mesh.connectedPeerCount > 0
+        ? mesh.connectedPeerCount
+        : chatService.onlineDevices;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -2187,6 +2335,44 @@ class _ChatScreenState extends State<ChatScreen> {
                     _buildLocationPreviewCard(theme, msg.location!),
                   ],
 
+                  // When peerCount == 0, message is saved and broadcasting via BLE advertisement
+                  if (peerCount == 0 &&
+                      (msg.status == MessageDeliveryStatus.queued ||
+                          msg.status == MessageDeliveryStatus.saved))
+                    Container(
+                      margin: const EdgeInsets.only(top: 6, bottom: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTokens.beaconTeal.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                        border: Border.all(
+                          color: AppTokens.beaconTeal.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.sensors_rounded,
+                            size: 12,
+                            color: AppTokens.beaconTeal,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Stored on phone • BLE mesh broadcasting',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppTokens.beaconTeal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   const SizedBox(height: 6),
 
                   // Bottom row: Timestamp + Delivery Status Ticks
@@ -2202,18 +2388,20 @@ class _ChatScreenState extends State<ChatScreen> {
                       _buildStatusTickWidget(theme, msg.status),
                       const SizedBox(width: 4),
                       Text(
-                        _formatStatusLabel(msg),
+                        _formatStatusLabel(msg, peerCount: peerCount),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
-                          color: msg.status == MessageDeliveryStatus.delivered
-                              ? successColor
-                              : (msg.status ==
-                                            MessageDeliveryStatus.sentNearby ||
-                                        msg.status ==
-                                            MessageDeliveryStatus.relayed
-                                    ? infoColor
-                                    : theme.textMuted),
+                          color: msg.status == MessageDeliveryStatus.syncedToServer
+                              ? const Color(0xFF3B82F6)
+                              : (msg.status == MessageDeliveryStatus.delivered
+                                  ? successColor
+                                  : (msg.status ==
+                                                MessageDeliveryStatus.sentNearby ||
+                                            msg.status ==
+                                                MessageDeliveryStatus.relayed
+                                        ? infoColor
+                                        : theme.textMuted)),
                         ),
                       ),
                     ],
@@ -2282,18 +2470,20 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  String _formatStatusLabel(ChatMessage msg) {
+  String _formatStatusLabel(ChatMessage msg, {int peerCount = 0}) {
     switch (msg.status) {
+      case MessageDeliveryStatus.syncedToServer:
+        return 'Synced to cloud';
       case MessageDeliveryStatus.relayed:
         final count = msg.hopCount > 0 ? msg.hopCount : 1;
         return '↗ Relayed by $count devices';
       case MessageDeliveryStatus.delivered:
         return '✓ Reached recipient';
       case MessageDeliveryStatus.saved:
-        return '✓ Saved on this phone';
+        return peerCount == 0 ? 'Stored on phone' : '✓ Saved on this phone';
       case MessageDeliveryStatus.queued:
       case MessageDeliveryStatus.sending:
-        return 'Queued in outbox';
+        return peerCount == 0 ? 'Stored on phone' : 'Queued in outbox';
       case MessageDeliveryStatus.sentNearby:
         return 'Sent to nearby';
       case MessageDeliveryStatus.failed:
@@ -2314,6 +2504,12 @@ class _ChatScreenState extends State<ChatScreen> {
     final sosColor = theme.isLightMode ? AppTokens.lightSos : AppTokens.darkSos;
 
     switch (status) {
+      case MessageDeliveryStatus.syncedToServer:
+        return const Icon(
+          Icons.cloud_done_rounded,
+          size: 14,
+          color: Color(0xFF3B82F6),
+        );
       case MessageDeliveryStatus.saved:
         return const Icon(Icons.check, size: 14, color: Color(0xFF9E9E9E));
       case MessageDeliveryStatus.queued:

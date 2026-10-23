@@ -342,9 +342,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/models/chat_message.dart": {
-    "mtime": 1791028960.02803,
-    "seen": 1791029332.0254529,
-    "ast_hash": "46d3dcaf11843172d9b87a8cce59e59a",
+    "mtime": 1792767043.873988,
+    "seen": 1792767332.0766408,
+    "ast_hash": "4ce151cdb2bcba10deb3ee6f8194bfbe",
     "semantic_hash": ""
   },
   "mobile/lib/models/conversation.dart": {
@@ -354,9 +354,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/models/emergency_report.dart": {
-    "mtime": 1790945690.5672958,
-    "seen": 1790947980.1218746,
-    "ast_hash": "62d993e2a84b625ab78e15fa8df866ae",
+    "mtime": 1792767094.0613909,
+    "seen": 1792767332.0766408,
+    "ast_hash": "13314c3810d0eb49091da9b02a4f0d05",
     "semantic_hash": ""
   },
   "mobile/lib/models/mesh_device.dart": {
@@ -432,9 +432,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/providers/emergency_report_provider.dart": {
-    "mtime": 1792762589.4064395,
-    "seen": 1792764406.8218813,
-    "ast_hash": "4de9807be04511a25566180f60a0b2d5",
+    "mtime": 1792767130.6164322,
+    "seen": 1792767332.0766408,
+    "ast_hash": "45c337b46411c68b23ceba39be5b5ed5",
     "semantic_hash": ""
   },
   "mobile/lib/providers/mesh_provider.dart": {
@@ -468,9 +468,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/chat/chat_screen.dart": {
-    "mtime": 1792757240.2245553,
-    "seen": 1792759397.5284603,
-    "ast_hash": "eb083c533cdfc6fd7efbc04d4f15dc0c",
+    "mtime": 1792767687.8195455,
+    "seen": 1792768030.4576657,
+    "ast_hash": "e15abaf2b9cc160410182377d4fbc441",
     "semantic_hash": ""
   },
   "mobile/lib/screens/chat/my_messages_screen.dart": {
@@ -576,9 +576,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/live_map_screen.dart": {
-    "mtime": 1792259943.2004552,
-    "seen": 1792759397.5284603,
-    "ast_hash": "d60b28ed043735afbf8e852bd3af7193",
+    "mtime": 1792768002.4253964,
+    "seen": 1792768030.4576657,
+    "ast_hash": "fe62747899edb0bc5c625da01a430671",
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/missing_person_screen.dart": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/chat_service.dart": {
-    "mtime": 1792762589.164312,
-    "seen": 1792764406.8218813,
-    "ast_hash": "b3065cbeff94c4ef500c1e3973027621",
+    "mtime": 1792767260.8637116,
+    "seen": 1792767332.0766408,
+    "ast_hash": "9a0d8323ab55f75b43eb9685d0b99270",
     "semantic_hash": ""
   },
   "mobile/lib/services/database_service.dart": {
@@ -612,9 +612,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/mesh_engine.dart": {
-    "mtime": 1792762589.1890113,
-    "seen": 1792764406.8218813,
-    "ast_hash": "8ffba84e8e52de531340e68db397a8b3",
+    "mtime": 1792767660.9888604,
+    "seen": 1792768030.4576657,
+    "ast_hash": "a0cdd8217da2dcc5219d30fe625e201e",
     "semantic_hash": ""
   },
   "mobile/lib/services/mesh_router.dart": {
@@ -1062,9 +1062,9 @@
     "semantic_hash": ""
   },
   "backend/gateway/app.py": {
-    "mtime": 1792764234.5587747,
-    "seen": 1792764406.8139088,
-    "ast_hash": "b3d34d0a64c0f270b9ed2d1fc5d50edd",
+    "mtime": 1792766475.9674902,
+    "seen": 1792767332.0766408,
+    "ast_hash": "9d45d406bd6d9ac7e1da30b3dc27927c",
     "semantic_hash": ""
   },
   "backend/gateway/models.py": {
@@ -1212,15 +1212,15 @@
     "semantic_hash": ""
   },
   "frontend/src/api/incidents.ts": {
-    "mtime": 1792762458.3629296,
-    "seen": 1792764406.8139088,
-    "ast_hash": "00243be5390eff866e0f832732127637",
+    "mtime": 1792764929.847588,
+    "seen": 1792767332.0766408,
+    "ast_hash": "e9819a76fb128ab58a9c7b55919beeb5",
     "semantic_hash": ""
   },
   "frontend/src/api/map.ts": {
-    "mtime": 1792761849.044564,
-    "seen": 1792764406.8139088,
-    "ast_hash": "2b66d2db37d372becb3b67dcdbf6c0c2",
+    "mtime": 1792764929.8544402,
+    "seen": 1792767332.0766408,
+    "ast_hash": "5fb87b4bc21fc4055b278856f0ef1b4c",
     "semantic_hash": ""
   },
   "frontend/src/api/messages.ts": {
@@ -1434,9 +1434,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentKeyInfoCard.tsx": {
-    "mtime": 1792764067.6745808,
-    "seen": 1792764406.8218813,
-    "ast_hash": "f05d501a51df37c4029781592d3123b6",
+    "mtime": 1792764796.0635111,
+    "seen": 1792767332.0766408,
+    "ast_hash": "79a767eee70a4bc0baa5d600318a7372",
     "semantic_hash": ""
   },
   "frontend/src/components/incidents/IncidentLeafletMap.tsx": {
@@ -1494,9 +1494,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/layout/AppShell.tsx": {
-    "mtime": 1792729840.8024268,
-    "seen": 1792759397.5284603,
-    "ast_hash": "aea30da654f5cdd88454c4c640ab08cb",
+    "mtime": 1792766715.76898,
+    "seen": 1792767332.0766408,
+    "ast_hash": "6b7fe964da07b7847447711cc462323d",
     "semantic_hash": ""
   },
   "frontend/src/components/layout/CommandCenterLayout.tsx": {
@@ -1560,9 +1560,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/map/MapCanvas.tsx": {
-    "mtime": 1792761810.263414,
-    "seen": 1792764406.8218813,
-    "ast_hash": "030e5e2e95893cce96000afb1e53ff17",
+    "mtime": 1792767146.847062,
+    "seen": 1792767332.0766408,
+    "ast_hash": "f4fa49267698b2e573043a7f3e5b5678",
     "semantic_hash": ""
   },
   "frontend/src/components/map/MapControlBar.tsx": {
@@ -1800,9 +1800,9 @@
     "semantic_hash": ""
   },
   "frontend/src/hooks/useWebSocket.ts": {
-    "mtime": 1791017663.151669,
-    "seen": 1791018120.5689185,
-    "ast_hash": "2540cf7d9ee0636c44228fe29cf69d13",
+    "mtime": 1792766748.15448,
+    "seen": 1792767332.0766408,
+    "ast_hash": "74e6c8d820809d6c00abfe4dc7741000",
     "semantic_hash": ""
   },
   "frontend/src/main.tsx": {
@@ -1872,9 +1872,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/map/LiveMapPage.tsx": {
-    "mtime": 1792762854.6511135,
-    "seen": 1792764406.8218813,
-    "ast_hash": "77762ccccdcfabdb99874b9ed6baae2c",
+    "mtime": 1792767262.2858083,
+    "seen": 1792767332.0766408,
+    "ast_hash": "c91afb52e061471bdf94f9a32196338e",
     "semantic_hash": ""
   },
   "frontend/src/pages/messages/MessagesPage.tsx": {
@@ -2274,9 +2274,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/models/delivery_state.dart": {
-    "mtime": 1791027779.606832,
-    "seen": 1791028023.8635626,
-    "ast_hash": "858360e6a6bf268ffbfe1d8c518cd07a",
+    "mtime": 1792767077.7541006,
+    "seen": 1792767332.0766408,
+    "ast_hash": "904cd2a4f7fe2d7c5d6d9ec99a5b53c6",
     "semantic_hash": ""
   },
   "mobile/lib/models/encrypted_location_payload.dart": {
@@ -2562,9 +2562,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/providers/sos_provider.dart": {
-    "mtime": 1792252608.1075737,
-    "seen": 1792252649.6864681,
-    "ast_hash": "f20bb750d092d3d58109885bb202120b",
+    "mtime": 1792767679.9187622,
+    "seen": 1792768030.4576657,
+    "ast_hash": "c26aef6ed113a3064cd9643e3e41ac61",
     "semantic_hash": ""
   },
   "mobile/lib/services/sos_alert_service.dart": {
@@ -2880,15 +2880,15 @@
     "semantic_hash": ""
   },
   "mobile/lib/services/location/location_service.dart": {
-    "mtime": 1792726080.7133222,
-    "seen": 1792759397.5284603,
-    "ast_hash": "a53c9cbe01563c26036f14d4a246cbc7",
+    "mtime": 1792767581.347536,
+    "seen": 1792768030.4576657,
+    "ast_hash": "a2c32311717047f3b18d32686253b8de",
     "semantic_hash": ""
   },
   "mobile/lib/services/network/network_state_service.dart": {
-    "mtime": 1792762589.210721,
-    "seen": 1792764406.8218813,
-    "ast_hash": "1df45584eff9798aca0bb069b07c5d90",
+    "mtime": 1792767605.7480576,
+    "seen": 1792768030.4576657,
+    "ast_hash": "84f7fe1df302f15356d954b0ecbca843",
     "semantic_hash": ""
   },
   "mobile/lib/services/offline_map_manager.dart": {
@@ -2904,15 +2904,15 @@
     "semantic_hash": ""
   },
   "mobile/lib/widgets/global_sos_overlay.dart": {
-    "mtime": 1792259915.7773345,
-    "seen": 1792759397.5284603,
-    "ast_hash": "59b72c4762d191d914b10701cdc30fb6",
+    "mtime": 1792767419.0175505,
+    "seen": 1792768030.4576657,
+    "ast_hash": "0aeade825ca535ceae61664da3506bcd",
     "semantic_hash": ""
   },
   "mobile/test/network_state_service_test.dart": {
-    "mtime": 1792253336.8486893,
-    "seen": 1792253456.1618483,
-    "ast_hash": "9121814c8a3447d416935ce175723c5c",
+    "mtime": 1792767770.8972757,
+    "seen": 1792768030.4576657,
+    "ast_hash": "ec7b752805a1d0890d4da528b48cd726",
     "semantic_hash": ""
   },
   "mobile/test/peer_range_estimator_test.dart": {
@@ -3348,9 +3348,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/config/app_config.dart": {
-    "mtime": 1792258888.1459045,
-    "seen": 1792759397.5284603,
-    "ast_hash": "f6146a5e75007dcfe85a5821fc53cfa8",
+    "mtime": 1792767166.3332987,
+    "seen": 1792767332.0766408,
+    "ast_hash": "942a6817f9b1bf80cfbad0bec76cea53",
     "semantic_hash": ""
   },
   "backend/ai_engine/source_registry.py": {
@@ -3462,9 +3462,9 @@
     "semantic_hash": ""
   },
   "mobile/lib/screens/profile/remote_profile_details_screen.dart": {
-    "mtime": 1792757239.8646176,
-    "seen": 1792759397.5284603,
-    "ast_hash": "9ed06703c543c953b4e54a55355f0857",
+    "mtime": 1792767872.5456,
+    "seen": 1792768030.4576657,
+    "ast_hash": "84ddbc1006db3c0373c888a73bd25a07",
     "semantic_hash": ""
   },
   "mobile/lib/screens/tools/match_found_person_dialog.dart": {
@@ -3609,6 +3609,36 @@
     "mtime": 1792762589.152248,
     "seen": 1792764406.8218813,
     "ast_hash": "ea8ed3b06a6e8f1c6ef7ae949e2e4042",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/common/EmergencyDispatchToast.tsx": {
+    "mtime": 1792766706.2570393,
+    "seen": 1792767332.0766408,
+    "ast_hash": "7ae97157888df31c489a4e79a5700fdc",
+    "semantic_hash": ""
+  },
+  "frontend/src/store/emergencyAlertStore.ts": {
+    "mtime": 1792766691.1764717,
+    "seen": 1792767332.0766408,
+    "ast_hash": "78337f562a4e736c246e918eb1ae234c",
+    "semantic_hash": ""
+  },
+  "frontend/src/utils/geoNavigation.ts": {
+    "mtime": 1792766771.7225811,
+    "seen": 1792767332.0766408,
+    "ast_hash": "361f95cb6c42d7b211fbae0e512c2ab5",
+    "semantic_hash": ""
+  },
+  "mobile/test/direct_chat_and_profile_actions_test.dart": {
+    "mtime": 1792768058.8726475,
+    "seen": 1792768104.2333312,
+    "ast_hash": "d5c05552e1cbbe1bdd275d3ab440c96b",
+    "semantic_hash": ""
+  },
+  "mobile/test/offline_first_sos_and_mesh_sync_test.dart": {
+    "mtime": 1792767861.950082,
+    "seen": 1792768030.4576657,
+    "ast_hash": "81ba75151cfc2176c761d71c8f6c1809",
     "semantic_hash": ""
   }
 }

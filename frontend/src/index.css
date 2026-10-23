@@ -136,3 +136,43 @@
   background: rgba(255, 255, 255, 0.35);
 }
 
+/* Dynamic glowing neon response polyline with directional dashed animation */
+@keyframes leafletNeonFlow {
+  from {
+    stroke-dashoffset: 48;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.leaflet-sos-neon-path {
+  animation: leafletNeonFlow 1.2s linear infinite;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 8px rgba(255, 54, 93, 0.85));
+}
+
+.leaflet-sos-neon-glow {
+  filter: drop-shadow(0 0 12px rgba(255, 54, 93, 0.5));
+}
+
+/* Pulsing radar ring for SOS beacons */
+@keyframes beaconRadarPing {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.animate-beacon-radar {
+  animation: beaconRadarPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+

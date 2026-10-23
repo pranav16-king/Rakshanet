@@ -80,6 +80,7 @@ class BloomFilter {
 class MeshEngine extends ChangeNotifier {
   static final MeshEngine _instance = MeshEngine._internal();
   factory MeshEngine() => _instance;
+  static MeshEngine get instance => _instance;
   MeshEngine._internal();
 
   final DatabaseService _dbService = DatabaseService();
@@ -113,6 +114,7 @@ class MeshEngine extends ChangeNotifier {
   final _statusUpdateController = StreamController<ChatMessage>.broadcast();
   Stream<ChatMessage> get messageStatusUpdates =>
       _statusUpdateController.stream;
+  Stream<ChatMessage> get statusUpdates => _statusUpdateController.stream;
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -220,6 +222,10 @@ class MeshEngine extends ChangeNotifier {
         unawaited(uploadQueuedPacketsToGateway());
       });
     }
+
+    NetworkStateService.instance.lastSyncTimestampStream.listen((_) {
+      _notifySyncedMessages();
+    });
 
     notifyListeners();
   }
@@ -934,6 +940,80 @@ class MeshEngine extends ChangeNotifier {
     }
   }
 
+  /// Notifies that a packet has been synced to the cloud server.
+  /// Updates local message status to SYNCED and emits updated ChatMessage with
+  /// MessageDeliveryStatus.syncedToServer so UI updates instantly.
+  void notifyPacketSynced(String messageId) {
+    unawaited(() async {
+      try {
+        await _dbService.updateMessageStatus(
+          messageId: messageId,
+          status: 'SYNCED',
+        );
+        final persisted = await _dbService.getMessageById(messageId);
+        if (persisted != null) {
+          _statusUpdateController.add(
+            persisted.copyWith(status: MessageDeliveryStatus.syncedToServer),
+          );
+        }
+        notifyListeners();
+      } catch (e) {
+        debugPrint('[MeshEngine] notifyPacketSynced error for $messageId: $e');
+      }
+    }());
+  }
+
+  /// Broadcast an Emergency SOS packet over BLE/RF mesh
+  Future<void> broadcastSos({
+    String? messageId,
+    String category = 'SOS',
+    int peopleCount = 1,
+    double? latitude,
+    double? longitude,
+    double? accuracy,
+    String? notes,
+    EmergencyReport? report,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final myDeviceId = DatabaseService.myDeviceId;
+    final id = messageId ?? report?.id ?? 'SOS-$now';
+    final sosCat = report?.type.label ?? category;
+    final count = report?.peopleCount ?? peopleCount;
+    final desc = report?.description ?? notes ?? 'Emergency SOS';
+    final lat = report?.latitude ?? latitude;
+    final lng = report?.longitude ?? longitude;
+
+    final metadata = <String, dynamic>{
+      'incident_schema': 'rakshanet_sos_v2',
+      'urgency': 'CRITICAL',
+      'category': sosCat,
+      'peopleCount': count,
+      'synced_via': 'mesh_broadcast',
+      'latitude': ?lat,
+      'longitude': ?lng,
+      'accuracy_m': ?accuracy,
+    };
+
+    final envelope = MessageEnvelope(
+      uuid: id,
+      senderId: myDeviceId,
+      senderName: DatabaseService.myDisplayName,
+      conversationId: 'CONV_COMMUNITY',
+      timestamp: now,
+      ttl: 7,
+      hops: 0,
+      type: 'SOS',
+      payload: jsonEncode({
+        'category': sosCat,
+        'people_count': count,
+        'notes': desc,
+      }),
+      metadata: metadata,
+    );
+
+    queueOutboxMessage(envelope);
+  }
+
   /// Broadcast a Missing Person report to all nearby mesh peers
   Future<void> broadcastMissingPerson(MissingPerson person) async {
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -1040,11 +1120,27 @@ class MeshEngine extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _notifySyncedMessages() async {
+    try {
+      final allMsgs = await _dbService.getAllMessages();
+      for (final msg in allMsgs) {
+        if (msg.status == MessageDeliveryStatus.syncedToServer) {
+          _statusUpdateController.add(msg);
+        }
+      }
+    } catch (e) {
+      debugPrint('[MeshEngine] Error notifying synced messages: $e');
+    }
+  }
+
   /// Requests the shared recovery synchronizer to upload the local durable
   /// outbox. It never treats a peer's advertised gateway capability or a
   /// localhost DNS result as proof of internet access.
   Future<int> uploadQueuedPacketsToGateway() async {
     final result = await NetworkStateService.instance.syncIfInternetAvailable();
+    if (result.success) {
+      await _notifySyncedMessages();
+    }
     return result.success ? result.syncedMeshPackets : 0;
   }
 

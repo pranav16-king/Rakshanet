@@ -295,6 +295,8 @@ class LocationService {
   ValueListenable<DeviceLocationFix?> get currentFixListenable =>
       _currentFixNotifier;
   DeviceLocationFix? get currentFix => _resolveBestFix();
+  DeviceLocationFix? get currentLocation => currentFix;
+  DeviceLocationFix? get lastKnownPosition => _lastKnownFix ?? _resolveBestFix();
 
   final StreamController<DeviceLocationFix> _locationStreamController =
       StreamController<DeviceLocationFix>.broadcast();

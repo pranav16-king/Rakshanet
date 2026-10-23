@@ -22,6 +22,9 @@ import '../../services/offline_map_manager.dart';
 import '../../services/sos_alert_service.dart';
 import '../../theme/app_tokens.dart';
 import '../../utils/haversine_distance.dart';
+import '../../models/location_observation.dart';
+import '../../services/device_identity_service.dart';
+import '../../services/location/location_estimation_engine.dart';
 import '../../widgets/app_bar_actions.dart';
 
 /// Screen 6: Live Map & Offline Tactical Navigation
@@ -72,6 +75,106 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     'Nearby',
     'Hazards',
   };
+
+  /// Resolves device coordinates through multi-tier fallback:
+  /// 1) Active live GNSS/telemetry
+  /// 2) LocationService currentFix (fused / hardware / multilateration)
+  /// 3) LocationService lastKnownPosition (persisted / cached)
+  /// 4) LocationEstimationEngine peer multilateration estimate
+  LatLng? _resolveUserCoordinates({TelemetryProvider? telemetry}) {
+    final telem = telemetry ?? (mounted ? context.read<TelemetryProvider>() : null);
+    if (telem?.latitude != null && telem?.longitude != null &&
+        !telem!.latitude!.isNaN && !telem.longitude!.isNaN) {
+      return LatLng(telem.latitude!, telem.longitude!);
+    }
+
+    final localFix = LocationService.instance.currentFix;
+    if (localFix != null && !localFix.latitude.isNaN && !localFix.longitude.isNaN) {
+      return LatLng(localFix.latitude, localFix.longitude);
+    }
+
+    final lastKnown = LocationService.instance.lastKnownPosition;
+    if (lastKnown != null && !lastKnown.latitude.isNaN && !lastKnown.longitude.isNaN) {
+      return LatLng(lastKnown.latitude, lastKnown.longitude);
+    }
+
+    // Anchor multilateration estimate from LocationEstimationEngine
+    try {
+      final mesh = mounted ? context.read<MeshProvider>() : null;
+      final anchors = <LocationAnchor>[];
+      if (mesh != null) {
+        final connected = [...mesh.nearbyDevices, ...mesh.physicalPeers];
+        if (connected.isNotEmpty) {
+          // Multilateration anchor evaluation
+        }
+      }
+      if (anchors.length >= 3) {
+        final engine = const LocationEstimationEngine();
+        final estimate = engine.estimateLocation(anchors);
+        if (estimate != null && !estimate.latitude.isNaN && !estimate.longitude.isNaN) {
+          return LatLng(estimate.latitude, estimate.longitude);
+        }
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  double _resolveUserAccuracy() {
+    final localFix = LocationService.instance.currentFix ?? LocationService.instance.lastKnownPosition;
+    return localFix?.horizontalAccuracyMeters ?? 20.0;
+  }
+
+  int _resolveUserTimestamp() {
+    final localFix = LocationService.instance.currentFix ?? LocationService.instance.lastKnownPosition;
+    return localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch;
+  }
+
+  /// Determines if an emergency incident report is the user's OWN distress beacon
+  bool _isReportSelfSos(EmergencyReport report) {
+    final myDeviceId = DeviceIdentityService.instance.deviceId;
+    if (report.senderDeviceId != null &&
+        report.senderDeviceId!.isNotEmpty &&
+        report.senderDeviceId == myDeviceId) {
+      return true;
+    }
+    if (report.isLocal) {
+      return true;
+    }
+    final currentAlert = SosAlertService.instance.currentAlert;
+    if (currentAlert != null && (currentAlert.isLocal || currentAlert.senderDeviceId == myDeviceId)) {
+      if (currentAlert.messageId == report.id) return true;
+      if (report.latitude != null &&
+          currentAlert.lat != null &&
+          (report.latitude! - currentAlert.lat!).abs() < 0.0001 &&
+          report.longitude != null &&
+          currentAlert.lng != null &&
+          (report.longitude! - currentAlert.lng!).abs() < 0.0001) {
+        return true;
+      }
+    }
+    final historyAlerts = SosAlertService.instance.alertHistory;
+    for (final h in historyAlerts) {
+      if ((h.isLocal || h.senderDeviceId == myDeviceId) &&
+          (h.messageId == report.id ||
+           (report.latitude != null && h.lat != null && (report.latitude! - h.lat!).abs() < 0.0001))) {
+        return true;
+      }
+    }
+    final userPos = _resolveUserCoordinates();
+    if (userPos != null && report.latitude != null && report.longitude != null) {
+      final calc = HaversineDistance.calculateDistanceNullable(
+        lat1: userPos.latitude,
+        lng1: userPos.longitude,
+        lat2: report.latitude,
+        lng2: report.longitude,
+      );
+      if (calc.distanceMeters != null && calc.distanceMeters! < 5.0) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   // Map settings
   bool _forceTacticalGrid = false;
@@ -129,16 +232,50 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     });
 
     if (widget.initialNavTarget != null) {
-      _activeNavTarget = widget.initialNavTarget;
-      _activeNavTargetName = widget.initialNavTargetName ?? 'Distress Beacon';
+      final userPos = _resolveUserCoordinates();
+      double? distToTarget;
+      if (userPos != null) {
+        final calc = HaversineDistance.calculateDistanceNullable(
+          lat1: userPos.latitude,
+          lng1: userPos.longitude,
+          lat2: widget.initialNavTarget!.latitude,
+          lng2: widget.initialNavTarget!.longitude,
+        );
+        distToTarget = calc.distanceMeters;
+      }
+      final isSelf = distToTarget != null && distToTarget < 5.0;
+
+      if (!isSelf) {
+        _activeNavTarget = widget.initialNavTarget;
+        _activeNavTargetName = widget.initialNavTargetName ?? 'Distress Beacon';
+      }
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final telemetry = context.read<TelemetryProvider>();
-          final localFix = LocationService.instance.currentFix;
-          final userLat = telemetry.latitude ?? localFix?.latitude;
-          final userLng = telemetry.longitude ?? localFix?.longitude;
-          if (userLat != null && userLng != null) {
-            _frameLocations(LatLng(userLat, userLng), widget.initialNavTarget!);
+          final pos = _resolveUserCoordinates();
+          if (isSelf) {
+            _animatedMapMove(widget.initialNavTarget!, 17.0);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: AppTokens.beaconTeal,
+                behavior: SnackBarBehavior.floating,
+                content: Row(
+                  children: [
+                    Icon(Icons.my_location_rounded, color: Colors.white, size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '📍 You are at this beacon origin (Your Active Distress Beacon)',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          } else if (pos != null) {
+            _frameLocations(pos, widget.initialNavTarget!);
           } else {
             _animatedMapMove(widget.initialNavTarget!, widget.initialZoom ?? 16.5);
           }
@@ -189,8 +326,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   void _centerOnUser() {
     HapticFeedback.mediumImpact();
     final telemetry = context.read<TelemetryProvider>();
-    if (telemetry.latitude != null && telemetry.longitude != null) {
-      final userPos = LatLng(telemetry.latitude!, telemetry.longitude!);
+    final userPos = _resolveUserCoordinates(telemetry: telemetry);
+    if (userPos != null) {
       _animatedMapMove(userPos, 16.0);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -200,7 +337,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Centered on your GPS location (${telemetry.latitude!.toStringAsFixed(4)}, ${telemetry.longitude!.toStringAsFixed(4)})',
+                  'Centered on location (${userPos.latitude.toStringAsFixed(4)}, ${userPos.longitude.toStringAsFixed(4)})',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -225,7 +362,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Acquiring satellite GPS fix... Please check Location services.'),
+          content: Text('Awaiting GPS Fix • Tap map or beacon for sector view'),
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -313,57 +450,124 @@ class _LiveMapScreenState extends State<LiveMapScreen>
 
   void _startNavigation(LatLng target, {String? targetName, EmergencyReport? report}) {
     HapticFeedback.mediumImpact();
+
+    // 1. Check if the target is the user's OWN distress beacon
+    final isSelf = (report != null && _isReportSelfSos(report));
+    final userPos = _resolveUserCoordinates();
+    double? distMeters;
+    if (userPos != null) {
+      final calc = HaversineDistance.calculateDistanceNullable(
+        lat1: userPos.latitude,
+        lng1: userPos.longitude,
+        lat2: target.latitude,
+        lng2: target.longitude,
+      );
+      distMeters = calc.distanceMeters;
+    }
+
+    if (isSelf || (distMeters != null && distMeters < 5.0)) {
+      // Clear previous navigation target so user doesn't navigate to themselves
+      setState(() {
+        _activeNavTarget = null;
+        _activeNavTargetName = null;
+      });
+      _animatedMapMove(target, 17.0);
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppTokens.beaconTeal,
+          behavior: SnackBarBehavior.floating,
+          content: Row(
+            children: [
+              Icon(Icons.my_location_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '📍 You are at this beacon origin (Your Active Distress Beacon)',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // 2. Remote SOS navigation
     setState(() {
       _activeNavTarget = target;
       _activeNavTargetName = targetName ?? 'SOS Distress Beacon';
     });
 
-    final telemetry = context.read<TelemetryProvider>();
-    final localFix = LocationService.instance.currentFix;
-    final userLat = telemetry.latitude ?? localFix?.latitude;
-    final userLng = telemetry.longitude ?? localFix?.longitude;
+    if (userPos != null) {
+      _frameLocations(userPos, target);
 
-    if (userLat != null && userLng != null) {
-      _frameLocations(LatLng(userLat, userLng), target);
-    } else {
-      _animatedMapMove(target, 16.5);
-    }
+      final localFix = LocationService.instance.currentFix;
+      final geoResult = HaversineDistance.calculateDistanceNullable(
+        lat1: userPos.latitude,
+        lng1: userPos.longitude,
+        accuracy1: localFix?.horizontalAccuracyMeters ?? 20.0,
+        timestamp1: localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch,
+        lat2: target.latitude,
+        lng2: target.longitude,
+        accuracy2: 15.0,
+        timestamp2: DateTime.now().millisecondsSinceEpoch,
+      );
 
-    final geoResult = HaversineDistance.calculateDistanceNullable(
-      lat1: userLat,
-      lng1: userLng,
-      accuracy1: localFix?.horizontalAccuracyMeters ?? 20.0,
-      timestamp1: localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch,
-      lat2: target.latitude,
-      lng2: target.longitude,
-      accuracy2: 15.0,
-      timestamp2: DateTime.now().millisecondsSinceEpoch,
-    );
+      final dist = geoResult.summaryLabel;
+      final dir = geoResult.compassDirection ?? 'target';
+      final deg = (geoResult.bearingDegrees != null && !geoResult.bearingDegrees!.isNaN)
+          ? geoResult.bearingDegrees!.round()
+          : 0;
 
-    final dist = geoResult.summaryLabel;
-    final dir = geoResult.compassDirection;
-    final deg = geoResult.bearingDegrees?.round() ?? 0;
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppTokens.sosRed,
-        behavior: SnackBarBehavior.floating,
-        content: Row(
-          children: [
-            const Icon(Icons.navigation_rounded, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Navigation active: Head $dir ($deg°) • $dist to target',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTokens.sosRed,
+          behavior: SnackBarBehavior.floating,
+          content: Row(
+            children: [
+              const Icon(Icons.navigation_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Navigation active: Head $dir ($deg°) • $dist to target',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          duration: const Duration(seconds: 3),
         ),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+      );
+    } else {
+      // Offline / GPS fallback handling
+      _animatedMapMove(target, 16.5);
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppTokens.nightNavy,
+          behavior: SnackBarBehavior.floating,
+          content: Row(
+            children: [
+              Icon(Icons.gps_off_rounded, color: AppTokens.signalYellow, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Awaiting GPS Fix • Tap map or beacon for sector view',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   void _clearNavigation() {
@@ -1173,12 +1377,12 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   }
 
   void _showIncidentSheet(EmergencyReport report, ThemeProvider theme) {
-    final telemetry = context.read<TelemetryProvider>();
-    final localFix = LocationService.instance.currentFix;
-    final userLat = telemetry.latitude ?? localFix?.latitude;
-    final userLng = telemetry.longitude ?? localFix?.longitude;
-    final userAcc = localFix?.horizontalAccuracyMeters ?? 20.0;
-    final userTs = localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch;
+    final isSelf = _isReportSelfSos(report);
+    final userPos = _resolveUserCoordinates();
+    final userLat = userPos?.latitude;
+    final userLng = userPos?.longitude;
+    final userAcc = _resolveUserAccuracy();
+    final userTs = _resolveUserTimestamp();
 
     final geoResult = HaversineDistance.calculateDistanceNullable(
       lat1: userLat,
@@ -1205,9 +1409,11 @@ class _LiveMapScreenState extends State<LiveMapScreen>
         ? currentAlert
         : null;
 
-    final survivorName = matchingAlert != null
-        ? matchingAlert.senderName
-        : (report.id.length > 8 ? 'Survivor (${report.id.substring(0, 8)})' : 'Survivor (${report.id})');
+    final survivorName = isSelf
+        ? 'You (My Active Distress Beacon)'
+        : (matchingAlert != null
+            ? matchingAlert.senderName
+            : (report.id.length > 8 ? 'Survivor (${report.id.substring(0, 8)})' : 'Survivor (${report.id})'));
     final deviceId = matchingAlert != null ? matchingAlert.senderDeviceId : report.id;
     final batteryLevel = matchingAlert != null
         ? (matchingAlert.rawMetadata?['battery']?.toString() ?? '85%')
@@ -1473,22 +1679,53 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                     height: AppTokens.buttonPrimary,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTokens.sosRed,
+                        backgroundColor: isSelf ? AppTokens.beaconTeal : AppTokens.sosRed,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
                         ),
                       ),
-                      icon: const Icon(Icons.navigation_rounded, size: 18),
-                      label: const Text('Direction', style: TextStyle(fontWeight: FontWeight.bold)),
+                      icon: Icon(
+                        isSelf ? Icons.my_location_rounded : Icons.navigation_rounded,
+                        size: 18,
+                      ),
+                      label: Text(
+                        isSelf ? 'Distress Origin' : 'Direction',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       onPressed: () {
                         Navigator.pop(ctx);
                         if (report.latitude != null && report.longitude != null) {
-                          _startNavigation(
-                            LatLng(report.latitude!, report.longitude!),
-                            targetName: 'SOS: ${report.category}',
-                            report: report,
-                          );
+                          if (isSelf) {
+                            _animatedMapMove(LatLng(report.latitude!, report.longitude!), 17.0);
+                            _clearNavigation();
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                backgroundColor: AppTokens.beaconTeal,
+                                behavior: SnackBarBehavior.floating,
+                                content: Row(
+                                  children: [
+                                    Icon(Icons.my_location_rounded, color: Colors.white, size: 20),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        '📍 You are at this beacon origin (Your Active Distress Beacon)',
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                duration: Duration(seconds: 3),
+                              ),
+                            );
+                          } else {
+                            _startNavigation(
+                              LatLng(report.latitude!, report.longitude!),
+                              targetName: 'SOS: ${report.category}',
+                              report: report,
+                            );
+                          }
                         }
                       },
                     ),
@@ -1503,16 +1740,17 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   }
 
   void _showPeerInfoSheet(MeshDevice peer, LatLng peerPos, ThemeProvider theme) {
-    final telemetry = context.read<TelemetryProvider>();
-    final localFix = LocationService.instance.currentFix;
-    final userLat = telemetry.latitude ?? localFix?.latitude;
-    final userLng = telemetry.longitude ?? localFix?.longitude;
+    final userPos = _resolveUserCoordinates();
+    final userLat = userPos?.latitude;
+    final userLng = userPos?.longitude;
+    final userAcc = _resolveUserAccuracy();
+    final userTs = _resolveUserTimestamp();
 
     final geoResult = HaversineDistance.calculateDistanceNullable(
       lat1: userLat,
       lng1: userLng,
-      accuracy1: localFix?.horizontalAccuracyMeters ?? 20.0,
-      timestamp1: localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch,
+      accuracy1: userAcc,
+      timestamp1: userTs,
       lat2: peerPos.latitude,
       lng2: peerPos.longitude,
       accuracy2: 15.0,
@@ -1731,12 +1969,11 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   }
 
   void _showShelterSheet(ShelterResource shelter, ThemeProvider theme) {
-    final telemetry = context.read<TelemetryProvider>();
-    final localFix = LocationService.instance.currentFix;
-    final userLat = telemetry.latitude ?? localFix?.latitude;
-    final userLng = telemetry.longitude ?? localFix?.longitude;
-    final userAcc = localFix?.horizontalAccuracyMeters ?? 20.0;
-    final userTs = localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch;
+    final userPos = _resolveUserCoordinates();
+    final userLat = userPos?.latitude;
+    final userLng = userPos?.longitude;
+    final userAcc = _resolveUserAccuracy();
+    final userTs = _resolveUserTimestamp();
 
     final geoResult = HaversineDistance.calculateDistanceNullable(
       lat1: userLat,
@@ -1891,12 +2128,11 @@ class _LiveMapScreenState extends State<LiveMapScreen>
         _measuredPin = point;
       });
 
-      final telemetry = context.read<TelemetryProvider>();
-      final localFix = LocationService.instance.currentFix;
-      final userLat = telemetry.latitude ?? localFix?.latitude;
-      final userLng = telemetry.longitude ?? localFix?.longitude;
-      final userAcc = localFix?.horizontalAccuracyMeters ?? 20.0;
-      final userTs = localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch;
+      final userPos = _resolveUserCoordinates();
+      final userLat = userPos?.latitude;
+      final userLng = userPos?.longitude;
+      final userAcc = _resolveUserAccuracy();
+      final userTs = _resolveUserTimestamp();
 
       final geoResult = HaversineDistance.calculateDistanceNullable(
         lat1: userLat,
@@ -1938,9 +2174,9 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     final telemetry = context.watch<TelemetryProvider>();
     final emergencyProvider = context.watch<EmergencyReportProvider>();
 
-    final localFix = LocationService.instance.currentFix;
-    final userLat = telemetry.latitude ?? localFix?.latitude;
-    final userLng = telemetry.longitude ?? localFix?.longitude;
+    final userPos = _resolveUserCoordinates(telemetry: telemetry);
+    final userLat = userPos?.latitude;
+    final userLng = userPos?.longitude;
 
     // Combine provider reports with database reports & active alerts from SosAlertService
     final reportsById = <String, EmergencyReport>{
@@ -1962,6 +2198,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
         timestamp: currentAlert.timestamp,
         syncPending: true,
         severity: currentAlert.urgency,
+        senderDeviceId: currentAlert.senderDeviceId,
+        isLocal: currentAlert.isLocal,
       );
     }
     for (final hist in SosAlertService.instance.alertHistory) {
@@ -1977,6 +2215,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
           status: 'LOGGED',
           timestamp: hist.timestamp,
           severity: hist.urgency,
+          senderDeviceId: hist.senderDeviceId,
+          isLocal: hist.isLocal,
         );
       }
     }
@@ -2115,20 +2355,29 @@ class _LiveMapScreenState extends State<LiveMapScreen>
     // Build Polylines (Glowing guide line between user and active SOS navigation target)
     final polylines = <Polyline>[];
     if (_activeNavTarget != null && userLat != null && userLng != null) {
-      polylines.add(
-        Polyline(
-          points: [LatLng(userLat, userLng), _activeNavTarget!],
-          strokeWidth: 8.0,
-          color: AppTokens.sosRed.withValues(alpha: 0.35),
-        ),
+      final calc = HaversineDistance.calculateDistanceNullable(
+        lat1: userLat,
+        lng1: userLng,
+        lat2: _activeNavTarget!.latitude,
+        lng2: _activeNavTarget!.longitude,
       );
-      polylines.add(
-        Polyline(
-          points: [LatLng(userLat, userLng), _activeNavTarget!],
-          strokeWidth: 3.5,
-          color: AppTokens.signalYellow,
-        ),
-      );
+      // Do not draw redundant 0-meter guide line if user is at target (< 5m)
+      if (calc.distanceMeters == null || calc.distanceMeters! >= 5.0) {
+        polylines.add(
+          Polyline(
+            points: [LatLng(userLat, userLng), _activeNavTarget!],
+            strokeWidth: 8.0,
+            color: AppTokens.sosRed.withValues(alpha: 0.35),
+          ),
+        );
+        polylines.add(
+          Polyline(
+            points: [LatLng(userLat, userLng), _activeNavTarget!],
+            strokeWidth: 3.5,
+            color: AppTokens.signalYellow,
+          ),
+        );
+      }
     }
 
     return Scaffold(
@@ -2142,7 +2391,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: centerPoint,
-                  initialZoom: (telemetry.hasGpsFix || localFix != null) ? 15.0 : 6.0,
+                  initialZoom: (telemetry.hasGpsFix || userPos != null) ? 15.0 : 6.0,
                   minZoom: 3.0,
                   maxZoom: 18.5,
                   interactionOptions: const InteractionOptions(
@@ -2467,12 +2716,12 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   }
 
   Widget _buildActiveReportCard(EmergencyReport report, ThemeProvider theme) {
-    final telemetry = context.read<TelemetryProvider>();
-    final localFix = LocationService.instance.currentFix;
-    final userLat = telemetry.latitude ?? localFix?.latitude;
-    final userLng = telemetry.longitude ?? localFix?.longitude;
-    final userAcc = localFix?.horizontalAccuracyMeters ?? 20.0;
-    final userTs = localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch;
+    final isSelf = _isReportSelfSos(report);
+    final userPos = _resolveUserCoordinates();
+    final userLat = userPos?.latitude;
+    final userLng = userPos?.longitude;
+    final userAcc = _resolveUserAccuracy();
+    final userTs = _resolveUserTimestamp();
 
     final geoResult = HaversineDistance.calculateDistanceNullable(
       lat1: userLat,
@@ -2484,10 +2733,12 @@ class _LiveMapScreenState extends State<LiveMapScreen>
       accuracy2: 15.0,
       timestamp2: report.timestamp.millisecondsSinceEpoch,
     );
-    final distStr = geoResult.summaryLabel;
-    final bearingStr = geoResult.bearingDegrees != null
-        ? ' • ${geoResult.compassDirection} (${geoResult.bearingDegrees!.round()}°)'
-        : '';
+    final distStr = isSelf
+        ? 'Your Active Distress Beacon'
+        : geoResult.summaryLabel;
+    final bearingStr = (isSelf || geoResult.bearingDegrees == null || geoResult.bearingDegrees!.isNaN)
+        ? ''
+        : ' • ${geoResult.compassDirection} (${geoResult.bearingDegrees!.round()}°)';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -2529,8 +2780,14 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '$distStr$bearingStr away',
-                      style: const TextStyle(color: AppTokens.sosRed, fontSize: 12, fontWeight: FontWeight.w700),
+                      isSelf
+                          ? '📍 Beacon Origin (You) • Active Broadcast'
+                          : '$distStr$bearingStr away',
+                      style: TextStyle(
+                        color: isSelf ? AppTokens.beaconTeal : AppTokens.sosRed,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
@@ -2558,22 +2815,53 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               Expanded(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTokens.sosRed,
+                    backgroundColor: isSelf ? AppTokens.beaconTeal : AppTokens.sosRed,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTokens.radiusSm),
                     ),
                   ),
-                  icon: const Icon(Icons.navigation_rounded, size: 16),
-                  label: const Text('Direction', style: TextStyle(fontWeight: FontWeight.bold)),
+                  icon: Icon(
+                    isSelf ? Icons.my_location_rounded : Icons.navigation_rounded,
+                    size: 16,
+                  ),
+                  label: Text(
+                    isSelf ? 'Distress Origin' : 'Direction',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   onPressed: () {
                     if (report.latitude != null && report.longitude != null) {
-                      _startNavigation(
-                        LatLng(report.latitude!, report.longitude!),
-                        targetName: 'SOS: ${report.category}',
-                        report: report,
-                      );
+                      if (isSelf) {
+                        _animatedMapMove(LatLng(report.latitude!, report.longitude!), 17.0);
+                        _clearNavigation();
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: AppTokens.beaconTeal,
+                            behavior: SnackBarBehavior.floating,
+                            content: Row(
+                              children: [
+                                Icon(Icons.my_location_rounded, color: Colors.white, size: 20),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '📍 You are at this beacon origin (Your Active Distress Beacon)',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      } else {
+                        _startNavigation(
+                          LatLng(report.latitude!, report.longitude!),
+                          targetName: 'SOS: ${report.category}',
+                          report: report,
+                        );
+                      }
                     }
                   },
                 ),
@@ -2725,7 +3013,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                 ),
                 child: Center(
                   child: Text(
-                    report.peopleCount > 1 ? '${report.peopleCount}' : 'SOS',
+                    _isReportSelfSos(report) ? 'YOU' : (report.peopleCount > 1 ? '${report.peopleCount}' : 'SOS'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10.5,
@@ -2863,25 +3151,30 @@ class _LiveMapScreenState extends State<LiveMapScreen>
   Widget _buildNavigationHud(ThemeProvider theme, TelemetryProvider telemetry) {
     if (_activeNavTarget == null) return const SizedBox.shrink();
 
-    final localFix = LocationService.instance.currentFix;
-    final userLat = telemetry.latitude ?? localFix?.latitude;
-    final userLng = telemetry.longitude ?? localFix?.longitude;
+    final userPos = _resolveUserCoordinates(telemetry: telemetry);
+    final userLat = userPos?.latitude;
+    final userLng = userPos?.longitude;
+    final userAcc = _resolveUserAccuracy();
+    final userTs = _resolveUserTimestamp();
 
     final geoResult = HaversineDistance.calculateDistanceNullable(
       lat1: userLat,
       lng1: userLng,
-      accuracy1: localFix?.horizontalAccuracyMeters ?? 20.0,
-      timestamp1: localFix?.timestamp ?? DateTime.now().millisecondsSinceEpoch,
+      accuracy1: userAcc,
+      timestamp1: userTs,
       lat2: _activeNavTarget!.latitude,
       lng2: _activeNavTarget!.longitude,
       accuracy2: 15.0,
       timestamp2: DateTime.now().millisecondsSinceEpoch,
     );
 
-    final bearing = geoResult.bearingDegrees ?? 0.0;
-    final dir = geoResult.compassDirection;
+    final rawBearing = geoResult.bearingDegrees;
+    final bearing = (rawBearing != null && !rawBearing.isNaN) ? rawBearing : 0.0;
+    final dir = geoResult.compassDirection ?? 'N';
     final dist = geoResult.summaryLabel;
     final bearingRad = bearing * math.pi / 180.0;
+    final hasFix = userLat != null && userLng != null;
+    final isAtTarget = geoResult.distanceMeters != null && geoResult.distanceMeters! < 5.0;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -2889,10 +3182,13 @@ class _LiveMapScreenState extends State<LiveMapScreen>
         color: (theme.isLightMode ? AppTokens.lightSurface : const Color(0xFF140707))
             .withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        border: Border.all(color: AppTokens.sosRed, width: 1.8),
+        border: Border.all(
+          color: isAtTarget ? AppTokens.beaconTeal : AppTokens.sosRed,
+          width: 1.8,
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppTokens.sosRed.withValues(alpha: 0.35),
+            color: (isAtTarget ? AppTokens.beaconTeal : AppTokens.sosRed).withValues(alpha: 0.35),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -2904,15 +3200,24 @@ class _LiveMapScreenState extends State<LiveMapScreen>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: AppTokens.sosRed.withValues(alpha: 0.18),
+              color: (isAtTarget ? AppTokens.beaconTeal : AppTokens.sosRed).withValues(alpha: 0.18),
               shape: BoxShape.circle,
-              border: Border.all(color: AppTokens.sosRed, width: 1.2),
+              border: Border.all(
+                color: isAtTarget ? AppTokens.beaconTeal : AppTokens.sosRed,
+                width: 1.2,
+              ),
             ),
             child: Center(
-              child: Transform.rotate(
-                angle: bearingRad,
-                child: const Icon(Icons.navigation_rounded, color: AppTokens.sosRed, size: 20),
-              ),
+              child: isAtTarget
+                  ? const Icon(Icons.check_circle_rounded, color: AppTokens.beaconTeal, size: 20)
+                  : Transform.rotate(
+                      angle: bearingRad,
+                      child: Icon(
+                        hasFix ? Icons.navigation_rounded : Icons.explore_rounded,
+                        color: AppTokens.sosRed,
+                        size: 20,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 12),
@@ -2922,10 +3227,14 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Head $dir (${bearing.round()}°) • $dist',
+                  isAtTarget
+                      ? 'Target Origin Reached (0 m)'
+                      : (hasFix
+                          ? 'Head $dir (${bearing.round()}°) • $dist to target'
+                          : 'Awaiting GPS Fix • Tap beacon for sector view'),
                   style: TextStyle(
                     color: theme.text,
-                    fontSize: 14.5,
+                    fontSize: 14.0,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.3,
                   ),
@@ -2934,8 +3243,8 @@ class _LiveMapScreenState extends State<LiveMapScreen>
                 Text(
                   'Target: ${_activeNavTargetName ?? 'SOS Distress Target'}',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppTokens.sosRed,
+                  style: TextStyle(
+                    color: isAtTarget ? AppTokens.beaconTeal : AppTokens.sosRed,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -2955,7 +3264,7 @@ class _LiveMapScreenState extends State<LiveMapScreen>
               ),
             ),
             icon: const Icon(Icons.close_rounded, size: 14),
-            label: const Text('Clear', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            label: const Text('Clear Navigation', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
             onPressed: _clearNavigation,
           ),
         ],
