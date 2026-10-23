@@ -479,6 +479,7 @@ class MeshEngine extends ChangeNotifier {
         expiresAt: envelope.timestamp + 86400000,
       ),
     );
+    unawaited(uploadQueuedPacketsToGateway());
 
     // 3. Routing scoring: prefer peers with higher battery, known route, or internet gateway
     final bestPeer = await selectBestCandidatePeer();
