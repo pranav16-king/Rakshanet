@@ -299,6 +299,7 @@ def logout():
 # =============================================================================
 
 @app.get("/api/v1/dashboard/overview", response_model=DashboardOverview)
+@app.get("/dashboard/overview", response_model=DashboardOverview)
 def get_dashboard_overview():
     """
     Returns real-time command center KPIs:
@@ -715,12 +716,16 @@ async def trigger_incident_clustering(eps_meters: float = 120.0, min_samples: in
 # =============================================================================
 
 @app.get("/api/v1/users")
+@app.get("/api/v1/people")
+@app.get("/people")
 def get_users(role: Optional[str] = None, search: Optional[str] = None):
     """Retrieve list of registered users and field responders."""
     return gateway_storage.get_users(role=role, search=search)
 
 
 @app.post("/api/v1/users")
+@app.post("/api/v1/people")
+@app.post("/people")
 def create_field_user(user_req: UserCreateRequest):
     """Register a new field commander, responder, or volunteer."""
     existing = gateway_storage.get_user_by_email(user_req.email)
@@ -737,12 +742,15 @@ def create_field_user(user_req: UserCreateRequest):
 # =============================================================================
 
 @app.get("/api/v1/devices")
+@app.get("/devices")
 def get_devices():
     """Returns active mesh nodes, battery levels, relay status, and topology position."""
     return gateway_storage.get_devices()
 
 
 @app.get("/api/v1/devices/stats", response_model=DeviceStats)
+@app.get("/devices/stats", response_model=DeviceStats)
+@app.get("/devices/summary")
 def get_devices_stats():
     """Returns counts of total, online, relay, and offline devices."""
     return gateway_storage.get_device_stats()
@@ -1155,31 +1163,20 @@ async def search_missing_persons_by_photo(
         except ValueError:
             pass
 
-    if "multipart/form-data" in content_type:
-        form = await request.form()
-        upload = form.get("photo") or form.get("file") or form.get("image")
-        if upload and hasattr(upload, "read"):
-            image_bytes = await upload.read()
-        if "top_k" in form:
-            try:
-                top_k = int(form["top_k"])
-            except ValueError:
-                pass
-        if "score_threshold" in form:
-            try:
-                score_threshold = float(form["score_threshold"])
-            except ValueError:
-                pass
-    else:
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
+    # 1. Try parsing JSON body first
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    if isinstance(body, dict):
         photo_input = (
             body.get("photo_base64")
             or body.get("photo_url")
             or body.get("photo")
             or body.get("image")
+            or body.get("file")
         )
         if photo_input:
             try:
@@ -1189,16 +1186,44 @@ async def search_missing_persons_by_photo(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Failed to decode photo: {e}"
                 )
-        if "top_k" in body:
-            try:
-                top_k = int(body["top_k"])
-            except ValueError:
-                pass
-        if "score_threshold" in body:
-            try:
-                score_threshold = float(body["score_threshold"])
-            except ValueError:
-                pass
+            if "top_k" in body:
+                try:
+                    top_k = int(body["top_k"])
+                except ValueError:
+                    pass
+            if "score_threshold" in body:
+                try:
+                    score_threshold = float(body["score_threshold"])
+                except ValueError:
+                    pass
+
+    # 2. Try parsing multipart form data if not found in JSON
+    if not image_bytes:
+        try:
+            form = await request.form()
+            upload = form.get("photo") or form.get("file") or form.get("image")
+            if upload and hasattr(upload, "read"):
+                image_bytes = await upload.read()
+            elif upload and isinstance(upload, str):
+                image_bytes = decode_image_bytes(upload)
+            if "top_k" in form:
+                try:
+                    top_k = int(form["top_k"])
+                except ValueError:
+                    pass
+            if "score_threshold" in form:
+                try:
+                    score_threshold = float(form["score_threshold"])
+                except ValueError:
+                    pass
+        except Exception:
+            pass
+
+    # 3. Try raw body if still not found and content-type is image/*
+    if not image_bytes and ("image/" in content_type or "octet-stream" in content_type):
+        raw_b = await request.body()
+        if raw_b and len(raw_b) > 100:
+            image_bytes = raw_b
 
     if not image_bytes:
         raise HTTPException(
@@ -1218,10 +1243,17 @@ async def search_missing_persons_by_photo(
     for m in qdrant_matches:
         p_id = m.get("person_id")
         db_person = gateway_storage.get_missing_person(p_id) if p_id else None
+        score_val = float(m.get("score", 0.0))
+        norm_score = max(0.0, min(1.0, score_val))
+        score = round(norm_score, 4)
+        pct = round(norm_score * 100.0, 1)
+
         record = {
             "person_id": p_id,
-            "score": m["score"],
-            "confidence_score": round(m["score"] * 100, 1),
+            "score": score,
+            "similarity_score": score,
+            "similarity_percent": pct,
+            "confidence_score": pct,
             "point_id": m.get("point_id"),
             "person": db_person or m.get("metadata", {}),
             "name": m.get("name") or (db_person.get("name") if db_person else None),
@@ -1234,14 +1266,17 @@ async def search_missing_persons_by_photo(
         }
         enriched_matches.append(record)
 
-    match_found = len(enriched_matches) > 0
-    top_match = enriched_matches[0] if match_found else None
+    # Filter to valid matches that meet or exceed score_threshold
+    valid_matches = [m for m in enriched_matches if m["score"] >= score_threshold]
+    match_found = len(valid_matches) > 0
+    top_match = valid_matches[0] if match_found else None
     latency_ms = int((time.time() - start_ts) * 1000)
 
     return {
         "match_found": match_found,
-        "matches": enriched_matches,
+        "matches": valid_matches,
         "top_match": top_match,
+        "candidates": enriched_matches,
         "success": True,
         "total_candidates_scanned": len(enriched_matches),
         "engine": "Qdrant Vector Cloud Engine (missing_persons, 512-D COSINE)",

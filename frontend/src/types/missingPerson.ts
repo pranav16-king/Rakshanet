@@ -72,8 +72,11 @@ export interface CreateSightingPayload {
 
 export interface VisualMatch {
   person: MissingPerson;
-  similarity_score: number;
-  confidence_score: number;
+  similarity_score?: number;
+  score?: number;
+  confidence_score?: number;
+  similarity_percent?: number;
+  point_id?: string;
   vector_distance?: number;
   matched_features?: string[];
   notes?: string;

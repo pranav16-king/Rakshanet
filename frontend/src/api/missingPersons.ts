@@ -66,18 +66,27 @@ export async function addMissingPersonSighting(
 }
 
 export async function searchMissingPersonByPhoto(
-  file: File
+  fileOrBase64: File | string,
+  scoreThreshold: number = 0.65
 ): Promise<VisualSearchResult> {
-  const formData = new FormData();
-  formData.append('file', file);
+  let photoBase64: string;
+
+  if (typeof fileOrBase64 === 'string') {
+    photoBase64 = fileOrBase64;
+  } else {
+    photoBase64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (e) => reject(e);
+      reader.readAsDataURL(fileOrBase64);
+    });
+  }
 
   const response = await apiClient.post<VisualSearchResult>(
     '/api/v1/missing-persons/search-by-photo',
-    formData,
     {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      photo_base64: photoBase64,
+      score_threshold: scoreThreshold,
     }
   );
   return response.data;

@@ -159,9 +159,17 @@ class GatewayStorage:
                     phone TEXT,
                     status TEXT DEFAULT 'Active',
                     last_active INTEGER,
-                    created_at INTEGER NOT NULL
+                    created_at INTEGER NOT NULL,
+                    location TEXT
                 )
             """)
+            cursor.execute("PRAGMA table_info(users)")
+            user_cols = [c[1] for c in cursor.fetchall()]
+            if "location" not in user_cols:
+                try:
+                    cursor.execute("ALTER TABLE users ADD COLUMN location TEXT")
+                except Exception:
+                    pass
             # Rescue Teams / Units
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS rescue_teams (
@@ -457,18 +465,37 @@ class GatewayStorage:
     def get_users(self, role: Optional[str] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
-            query = "SELECT id, email, name, role, agency, phone, status, last_active, created_at FROM users WHERE 1=1"
+            query = "SELECT id, email, name, role, agency, phone, status, last_active, created_at, location FROM users WHERE 1=1"
             params = []
             if role:
                 query += " AND role = ?"
                 params.append(role)
             if search:
-                query += " AND (name LIKE ? OR email LIKE ? OR agency LIKE ?)"
+                query += " AND (name LIKE ? OR email LIKE ? OR agency LIKE ? OR location LIKE ?)"
                 wildcard = f"%{search}%"
-                params.extend([wildcard, wildcard, wildcard])
+                params.extend([wildcard, wildcard, wildcard, wildcard])
             query += " ORDER BY created_at DESC"
             cursor.execute(query, params)
-            return [dict(row) for row in cursor.fetchall()]
+            users = []
+            for row in cursor.fetchall():
+                d = dict(row)
+                if not d.get("location"):
+                    agency_str = (d.get("agency") or "").lower()
+                    role_str = (d.get("role") or "").lower()
+                    if "ndrf" in agency_str or "boat" in role_str:
+                        d["location"] = "Sector 4B Riverside Colony"
+                    elif "med" in agency_str or "doctor" in role_str:
+                        d["location"] = "Guindy Metro Relief Shelter"
+                    elif "sdrf" in agency_str or "rescue" in role_str:
+                        d["location"] = "South Market Commercial Plaza"
+                    elif "volunteer" in agency_str or "volunteer" in role_str:
+                        d["location"] = "Kovalam Coast Sector 1"
+                    elif "admin" in role_str or "government" in agency_str:
+                        d["location"] = "Disaster Command Center Base"
+                    else:
+                        d["location"] = "Sector 4B Riverside Colony"
+                users.append(d)
+            return users
 
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         norm_email = email.strip().lower()
@@ -482,20 +509,47 @@ class GatewayStorage:
             elif not row and norm_email == "admin@signalrescue.org":
                 cursor.execute("SELECT * FROM users WHERE LOWER(email) = 'admin@rakshanet.org'")
                 row = cursor.fetchone()
-            return dict(row) if row else None
+            if row:
+                d = dict(row)
+                if not d.get("location"):
+                    d["location"] = "Disaster Command Center Base"
+                return d
+            return None
 
     def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, email, name, role, agency, phone, status, last_active, created_at FROM users WHERE id = ?", (user_id,))
+            cursor.execute("SELECT id, email, name, role, agency, phone, status, last_active, created_at, location FROM users WHERE id = ?", (user_id,))
             row = cursor.fetchone()
-            return dict(row) if row else None
+            if row:
+                d = dict(row)
+                if not d.get("location"):
+                    d["location"] = "Sector 4B Riverside Colony"
+                return d
+            return None
 
     def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         user_id = user_data.get("id") or f"USR-{secrets.token_hex(4).upper()}"
         now = int(time.time() * 1000)
         raw_password = user_data.get("password") or "RakshaNet@2026"
         pw_hash = user_data.get("password_hash") or hash_password(raw_password)
+
+        loc = user_data.get("location")
+        if not loc:
+            agency_str = (user_data.get("agency") or "").lower()
+            role_str = (user_data.get("role") or "").lower()
+            if "ndrf" in agency_str:
+                loc = "Sector 4B Riverside Colony"
+            elif "med" in agency_str or "doctor" in role_str:
+                loc = "Guindy Metro Relief Shelter"
+            elif "sdrf" in agency_str:
+                loc = "South Market Commercial Plaza"
+            elif "volunteer" in role_str or "volunteer" in agency_str:
+                loc = "Kovalam Coast Sector 1"
+            elif "admin" in role_str or "government" in agency_str:
+                loc = "Disaster Command Center Base"
+            else:
+                loc = "Sector 4B Riverside Colony"
 
         new_user = {
             "id": user_id,
@@ -506,6 +560,7 @@ class GatewayStorage:
             "agency": user_data.get("agency", "Disaster Response Force"),
             "phone": user_data.get("phone", "+91-90000-00000"),
             "status": user_data.get("status", "Active"),
+            "location": loc,
             "last_active": now,
             "created_at": now
         }
@@ -513,8 +568,8 @@ class GatewayStorage:
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO users (id, email, password_hash, name, role, agency, phone, status, last_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (id, email, password_hash, name, role, agency, phone, status, last_active, created_at, location)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     email = excluded.email,
                     password_hash = excluded.password_hash,
@@ -523,12 +578,13 @@ class GatewayStorage:
                     agency = excluded.agency,
                     phone = excluded.phone,
                     status = excluded.status,
-                    last_active = excluded.last_active
+                    last_active = excluded.last_active,
+                    location = excluded.location
             """, (
                 new_user["id"], new_user["email"], new_user["password_hash"],
                 new_user["name"], new_user["role"], new_user["agency"],
                 new_user["phone"], new_user["status"], new_user["last_active"],
-                new_user["created_at"]
+                new_user["created_at"], new_user["location"]
             ))
             conn.commit()
 
@@ -1683,8 +1739,68 @@ class GatewayStorage:
             legacy_admin["email"] = "admin@signalrescue.org"
             self.create_user(legacy_admin)
 
-        # Additional field responders
+        # Additional field responders and personnel with localized disaster sectors
         additional_users = [
+            {
+                "id": "USR-FLD-01",
+                "email": "amit.kumar@field.rakshanet.org",
+                "name": "Amit Kumar",
+                "role": "Field User",
+                "agency": "Sector 4 Citizen Mesh",
+                "phone": "+91 98765 43210",
+                "status": "Active",
+                "location": "Sector 4B Riverside Colony"
+            },
+            {
+                "id": "USR-FLD-02",
+                "email": "priya.sharma@field.rakshanet.org",
+                "name": "Priya Sharma",
+                "role": "Field User",
+                "agency": "Data Mule Relay Unit",
+                "phone": "+91 98111 22334",
+                "status": "Active",
+                "location": "Sector 4B Riverside Colony"
+            },
+            {
+                "id": "USR-VOL-03",
+                "email": "rahul.mehta@volunteer.rakshanet.org",
+                "name": "Rahul Mehta",
+                "role": "Volunteer",
+                "agency": "Highland Scout Corps",
+                "phone": "+91 97234 56789",
+                "status": "Active",
+                "location": "NH-48 Mountain Pass km 74"
+            },
+            {
+                "id": "USR-FLD-04",
+                "email": "sneha.patel@field.rakshanet.org",
+                "name": "Sneha Patel",
+                "role": "Field User",
+                "agency": "Industrial Triage Group",
+                "phone": "+91 99001 12233",
+                "status": "Active",
+                "location": "Industrial Park Gate 3"
+            },
+            {
+                "id": "USR-RESP-05",
+                "email": "vikram.singh@rescue.rakshanet.org",
+                "name": "Vikram Singh",
+                "role": "Rescue Team",
+                "agency": "NDRF Quick Reaction Force",
+                "phone": "+91 94120 99887",
+                "status": "Active",
+                "location": "Sector 4B Riverside Colony"
+            },
+            {
+                "id": "USR-ORG-06",
+                "email": "ananya.gupta@relief.rakshanet.org",
+                "name": "Ananya Gupta",
+                "role": "Organizer",
+                "agency": "Emergency Shelter Authority",
+                "phone": "+91 98990 44556",
+                "status": "Active",
+                "location": "Guindy Metro Relief Shelter"
+            },
             {
                 "id": "USR-RESP-02",
                 "email": "vikram.ndrf@rakshanet.org",
@@ -1692,7 +1808,8 @@ class GatewayStorage:
                 "role": "Field Commander",
                 "agency": "NDRF 4th Battalion",
                 "phone": "+91-98111-22334",
-                "status": "Active"
+                "status": "Active",
+                "location": "Sector 4B Riverside Colony"
             },
             {
                 "id": "USR-RESP-03",
@@ -1701,7 +1818,8 @@ class GatewayStorage:
                 "role": "Medical Officer",
                 "agency": "Emergency Medical Corps",
                 "phone": "+91-98222-33445",
-                "status": "Active"
+                "status": "Active",
+                "location": "Guindy Metro Relief Shelter"
             },
             {
                 "id": "USR-RESP-04",
@@ -1710,7 +1828,8 @@ class GatewayStorage:
                 "role": "Rescue Specialist",
                 "agency": "State Disaster Response Force",
                 "phone": "+91-98333-44556",
-                "status": "Active"
+                "status": "Active",
+                "location": "South Market Commercial Plaza"
             },
             {
                 "id": "USR-VOL-05",
@@ -1719,7 +1838,8 @@ class GatewayStorage:
                 "role": "Community Volunteer",
                 "agency": "Civilian Mesh Volunteer",
                 "phone": "+91-98444-55667",
-                "status": "Active"
+                "status": "Active",
+                "location": "Kovalam Coast Sector 1"
             }
         ]
         for u in additional_users:

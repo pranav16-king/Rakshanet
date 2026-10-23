@@ -94,29 +94,80 @@ def decode_image_bytes(data: Union[bytes, str]) -> bytes:
         raise ValueError(f"Failed to decode base64 image data: {e}")
 
 
+YUNET_PATH = Path(__file__).parent / "face_detection_yunet.onnx"
+SFACE_PATH = Path(__file__).parent / "face_recognition_sface.onnx"
+
+_face_detector = None
+_face_recognizer = None
+
+
+def get_face_models():
+    """Lazily load YuNet (face detection) and SFace (biometric feature extraction) models."""
+    global _face_detector, _face_recognizer
+    if _face_detector is None and YUNET_PATH.exists():
+        try:
+            _face_detector = cv2.FaceDetectorYN.create(
+                model=str(YUNET_PATH),
+                config="",
+                input_size=(320, 320),
+                score_threshold=0.5,
+                nms_threshold=0.3,
+                top_k=5000,
+            )
+            logger.info("YuNet SOTA Face Detector initialized successfully.")
+        except Exception as e:
+            logger.warning(f"Failed to initialize FaceDetectorYN: {e}")
+
+    if _face_recognizer is None and SFACE_PATH.exists():
+        try:
+            _face_recognizer = cv2.FaceRecognizerSF.create(
+                model=str(SFACE_PATH),
+                config="",
+            )
+            logger.info("SFace SOTA Deep Biometric Face Recognizer initialized successfully.")
+        except Exception as e:
+            logger.warning(f"Failed to initialize FaceRecognizerSF: {e}")
+
+    return _face_detector, _face_recognizer
+
+
+def calibrate_face_confidence(cosine_score: float) -> float:
+    """
+    Map SFace cosine similarity score (typically 0.363 for same identity)
+    to a human-calibrated percentage (0% to 100%).
+    """
+    s = float(cosine_score)
+    if s <= 0.0:
+        return 0.0
+    if s >= 0.98:
+        return 100.0
+    if s < 0.25:
+        # Non-matching random identities: 0.0 to 0.25 -> 0% to 35%
+        return round((s / 0.25) * 35.0, 1)
+    elif s < 0.363:
+        # Borderline similarity: 0.25 to 0.363 -> 35% to 65%
+        ratio = (s - 0.25) / (0.363 - 0.25)
+        return round(35.0 + ratio * 30.0, 1)
+    else:
+        # High confidence same-person match: 0.363 to 0.65 -> 68% to 98%
+        ratio = min(1.0, (s - 0.363) / (0.65 - 0.363))
+        conf = 68.0 + ratio * 31.5
+        return min(99.5, round(conf, 1))
+
+
 def extract_image_features(image_bytes: bytes) -> List[float]:
     """
-    Extract a robust 512-dimensional visual feature embedding vector from image bytes.
+    Extract a high-accuracy 512-dimensional visual biometric feature embedding vector.
 
     Architecture:
-    1. Preprocessing: Resized to 224x224 RGB, HSV, and Grayscale representations.
-    2. Spatial Color Moments (96 floats):
-       - 4x4 spatial grid (16 blocks).
-       - Mean and standard deviation computed across H, S, and V channels (6 values per block).
-       - 16 blocks * 6 moments = 96 floats.
-    3. Grayscale Gradient Orientations (256 floats):
-       - Sobel horizontal and vertical gradients (ksize=3).
-       - Polar magnitude and orientation angles [0..360 deg).
-       - 4x4 spatial blocks (16 blocks).
-       - Magnitude-weighted 16-bin orientation histogram per block.
-       - 16 blocks * 16 bins = 256 floats.
-    4. Luminance & Texture Distribution (160 floats):
-       - 5 spatial zones (Top-Left, Top-Right, Bottom-Left, Bottom-Right, Center).
-       - Zone luminance intensity histogram (16 bins, range 0..256) -> 5 * 16 = 80 floats.
-       - Zone Laplacian texture magnitude histogram (16 bins, range 0..256) -> 5 * 16 = 80 floats.
-       - 80 + 80 = 160 floats.
-    5. Normalization:
-       - Concatenated to 512-D vector and normalized with Euclidean L2 norm.
+    1. Primary Path (Deep Face Biometrics):
+       - YuNet SOTA Face Detector locates facial bounding box & 5-point landmarks.
+       - SFace Deep Face Recognizer aligns & crops facial region to canonical 112x112.
+       - Extracts 128-D L2-normalized Deep Face Embedding vector.
+       - Replicated 4x to 512-D space (retaining 100% exact SFace cosine distance in Qdrant).
+    2. Fallback Path (Texture / Clothing / Scene Moments):
+       - If no face is detected (e.g. back of head or blurred image):
+         Extracts 512-D zero-mean centered spatial color moments (HSV), HOG gradients, and Laplacians.
 
     Args:
         image_bytes: Raw bytes of the image file.
@@ -125,16 +176,47 @@ def extract_image_features(image_bytes: bytes) -> List[float]:
         List of 512 normalized float values.
     """
     try:
-        pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        # Decode image using OpenCV BGR for native face detection
+        arr = np.frombuffer(image_bytes, np.uint8)
+        img_bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img_bgr is None:
+            pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            img_bgr = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
     except Exception as e:
-        raise ValueError(f"Unable to parse image bytes with PIL: {e}")
+        raise ValueError(f"Unable to parse image bytes: {e}")
 
-    # Resize to standard canonical resolution: 224x224
-    rgb_arr = np.array(pil_image)
-    rgb_resized = cv2.resize(rgb_arr, (224, 224), interpolation=cv2.INTER_AREA)
+    # Step 1: Attempt Deep Facial Biometric Extraction (YuNet + SFace)
+    detector, recognizer = get_face_models()
+    if detector is not None and recognizer is not None:
+        try:
+            h, w = img_bgr.shape[:2]
+            detector.setInputSize((w, h))
+            _, faces = detector.detect(img_bgr)
+            if faces is not None and len(faces) > 0:
+                # Sort detected faces by bounding box area (w * h) to prioritize primary subject
+                faces = sorted(faces, key=lambda f: float(f[2]) * float(f[3]), reverse=True)
+                primary_face = faces[0]
+                aligned_face = recognizer.alignCrop(img_bgr, primary_face)
+                face_feature = recognizer.feature(aligned_face)[0].astype(np.float32)
 
-    hsv_resized = cv2.cvtColor(rgb_resized, cv2.COLOR_RGB2HSV)
-    gray_resized = cv2.cvtColor(rgb_resized, cv2.COLOR_RGB2GRAY)
+                # Repeat 128-D SFace embedding 4x to produce exactly 512 dimensions.
+                # In mathematical cosine distance:
+                # dot(tile(a, 4)/2, tile(b, 4)/2) == dot(a, b).
+                # Preserves 100% exact SFace deep biometric cosine distance!
+                embedding = np.tile(face_feature, 4).astype(np.float32)
+                norm = np.linalg.norm(embedding)
+                if norm > 1e-8:
+                    embedding = embedding / norm
+
+                logger.info(f"Extracted 512-D SFace biometric embedding from detected face (conf={primary_face[-1]:.2f})")
+                return embedding.tolist()
+        except Exception as e:
+            logger.warning(f"YuNet/SFace biometric extraction failed, falling back to spatial moments: {e}")
+
+    # Step 2: Fallback to Spatial Moments, HOG Gradients, and Texture
+    rgb_resized = cv2.resize(img_bgr, (224, 224), interpolation=cv2.INTER_AREA)
+    hsv_resized = cv2.cvtColor(rgb_resized, cv2.COLOR_BGR2HSV)
+    gray_resized = cv2.cvtColor(rgb_resized, cv2.COLOR_BGR2GRAY)
 
     # 1. Spatial Color Moments in HSV (4x4 blocks = 16 blocks * 6 moments = 96 floats)
     color_moments: List[float] = []
@@ -162,7 +244,6 @@ def extract_image_features(image_bytes: bytes) -> List[float]:
             hog_features.extend([float(v) for v in hist])
 
     # 3. Luminance & texture distribution (160 floats)
-    # 5 Spatial Zones: 4 quadrants + center zone
     zones = [
         (0, 112, 0, 112),        # Top-Left
         (0, 112, 112, 224),      # Top-Right
@@ -173,25 +254,18 @@ def extract_image_features(image_bytes: bytes) -> List[float]:
     laplacian = np.abs(cv2.Laplacian(gray_resized, cv2.CV_32F))
 
     texture_features: List[float] = []
-    # 5 zones * 16 luminance bins = 80 floats
     for y1, y2, x1, x2 in zones:
         z_gray = gray_resized[y1:y2, x1:x2]
         lum_hist, _ = np.histogram(z_gray, bins=16, range=(0.0, 256.0))
         texture_features.extend([float(v) for v in lum_hist])
 
-    # 5 zones * 16 texture bins = 80 floats
     for y1, y2, x1, x2 in zones:
         z_lap = laplacian[y1:y2, x1:x2]
         lap_hist, _ = np.histogram(z_lap, bins=16, range=(0.0, 256.0))
         texture_features.extend([float(v) for v in lap_hist])
 
-    # Concatenate all components (96 + 256 + 160 = 512)
     embedding = np.array(color_moments + hog_features + texture_features, dtype=np.float32)
-
-    if embedding.shape[0] != VECTOR_SIZE:
-        raise ValueError(f"Feature vector dimension mismatch: expected {VECTOR_SIZE}, got {embedding.shape[0]}")
-
-    # Euclidean L2 normalization
+    embedding = embedding - np.mean(embedding)
     norm = np.linalg.norm(embedding)
     if norm > 1e-8:
         embedding = embedding / norm
@@ -362,10 +436,13 @@ class QdrantService:
         try:
             query_vector = extract_image_features(image_bytes)
 
+            # Query Qdrant with the SFace same-identity threshold (0.35)
+            qdrant_threshold = min(0.35, float(score_threshold))
+
             body = {
                 "vector": query_vector,
                 "limit": top_k,
-                "score_threshold": score_threshold,
+                "score_threshold": qdrant_threshold,
                 "with_payload": True,
             }
 
@@ -377,20 +454,28 @@ class QdrantService:
             for pt in data:
                 payload = dict(pt.get("payload") or {})
                 person_id = payload.get("person_id") or str(pt.get("id"))
-                score = round(float(pt.get("score", 0.0)), 4)
+                raw_score = float(pt.get("score", 0.0))
+                pct = calibrate_face_confidence(raw_score)
+                norm_score = round(pct / 100.0, 4)
 
-                results.append({
-                    "person_id": person_id,
-                    "score": score,
-                    "point_id": str(pt.get("id")),
-                    "name": payload.get("name"),
-                    "age": payload.get("age"),
-                    "gender": payload.get("gender"),
-                    "last_seen_location": payload.get("last_seen_location"),
-                    "photo_url": payload.get("photo_url"),
-                    "status": payload.get("status"),
-                    "metadata": payload,
-                })
+                # Only include matches that meet genuine biometric confidence threshold
+                if pct >= 55.0:
+                    results.append({
+                        "person_id": person_id,
+                        "score": norm_score,
+                        "raw_cosine": round(raw_score, 4),
+                        "similarity_score": norm_score,
+                        "similarity_percent": pct,
+                        "confidence_score": pct,
+                        "point_id": str(pt.get("id")),
+                        "name": payload.get("name"),
+                        "age": payload.get("age"),
+                        "gender": payload.get("gender"),
+                        "last_seen_location": payload.get("last_seen_location"),
+                        "photo_url": payload.get("photo_url"),
+                        "status": payload.get("status"),
+                        "metadata": payload,
+                    })
 
             logger.info(f"Photo search completed: found {len(results)} matches (threshold={score_threshold})")
             return results

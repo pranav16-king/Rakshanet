@@ -68,7 +68,7 @@ import type {
 // PHOTO URL RESOLUTION & AVATAR COMPONENT
 // =============================================================================
 
-export function resolvePhotoUrl(url?: string | null): string | undefined {
+function resolvePhotoUrl(url?: string | null): string | undefined {
   if (!url || typeof url !== 'string') return undefined;
   const trimmed = url.trim();
   if (!trimmed) return undefined;
@@ -406,20 +406,20 @@ export const MissingPersonsPage: React.FC = () => {
       )}
 
       {/* Page Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[#FFD21F]/15 dark:bg-[#FFD21F]/20 text-[#D97706] dark:text-[#FFD21F] rounded-xl border border-[#FFD21F]/30 shadow-sm">
+            <div className="p-2.5 bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-500/30 shadow-xs">
               <UserSearch className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl font-bold tracking-tight text-[#16202D] dark:text-[#EEF2F8]">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
                   Missing Persons Registry
                 </h1>
                 {/* Live Real-Time Gateway Uplink Beacon */}
                 <div
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                     wsStatus === 'connected'
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                       : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
@@ -440,136 +440,135 @@ export const MissingPersonsPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <p className="text-sm text-[#4E6178] dark:text-[#8E9EB5] mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Disaster reunification directory, incident correlation, physical identification & Qdrant AI biometric search
               </p>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
+        {/* Action Buttons - Clean single-row alignment with distinct visual hierarchy */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
             onClick={() => fetchPersons(true)}
-            className="text-xs flex items-center gap-1.5 border-[#CBD5E1] dark:border-[#334155] text-[#475569] dark:text-[#CBD5E1]"
+            disabled={isRefreshing}
+            className="h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#162036] hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
             title="Force refresh registry records"
           >
             <RefreshCw
-              className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#0891B2]' : ''}`}
+              className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-600 dark:text-cyan-400' : ''}`}
             />
             <span>{isRefreshing ? 'Syncing...' : 'Sync Gateway'}</span>
-          </Button>
+          </button>
 
-          <Button
+          <button
             onClick={() => {
               setPrefilledMatchPerson(null);
               setIsVisualSearchModalOpen(true);
             }}
-            className="bg-[#0891B2] hover:bg-[#0e7490] text-white font-semibold flex items-center gap-2 shadow-sm text-sm"
+            className="h-10 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold flex items-center gap-2 shadow-xs text-xs sm:text-sm transition cursor-pointer"
           >
             <Camera className="w-4 h-4" />
-            <span>Match Found Person (Qdrant AI)</span>
-          </Button>
+            <span>Match Photo (Qdrant AI)</span>
+          </button>
 
-          <Button
+          <button
             onClick={() => setIsReportModalOpen(true)}
-            className="bg-[#FFD21F] text-[#0B1220] hover:bg-[#FACC15] font-semibold flex items-center gap-2 shadow-sm text-sm"
+            className="h-10 px-4 rounded-xl bg-[#FFC400] hover:bg-[#FFD21F] dark:bg-[#FFD21F] dark:hover:bg-[#FFC400] text-slate-900 font-bold flex items-center gap-2 shadow-xs text-xs sm:text-sm transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Report Missing Person</span>
-          </Button>
+            <span>+ Report Missing Person</span>
+          </button>
         </div>
       </div>
 
       {/* KPI Metrics Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
-        <Card className="p-4 bg-white dark:bg-[#111A2E] border-[#E2E8F0] dark:border-[#1E293B] shadow-sm">
+        <Card className="p-4 bg-white dark:bg-[#162036] border-slate-200 dark:border-slate-700/70 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#64748B] dark:text-[#94A3B8] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Total Bulletins
             </span>
-            <Users className="w-4 h-4 text-[#3B82F6]" />
+            <Users className="w-4 h-4 text-blue-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+          <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
             {totalCount}
           </div>
-          <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8] block mt-1">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-1">
             Registered disaster bulletins
           </span>
         </Card>
 
-        <Card className="p-4 bg-white dark:bg-[#111A2E] border-[#E2E8F0] dark:border-[#1E293B] shadow-sm">
+        <Card className="p-4 bg-white dark:bg-[#162036] border-slate-200 dark:border-slate-700/70 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#F59E0B] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-amber-500 uppercase tracking-wider">
               Active Missing
             </span>
-            <AlertCircle className="w-4 h-4 text-[#F59E0B]" />
+            <AlertCircle className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-[#F59E0B]">
+          <div className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">
             {missingCount}
           </div>
-          <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8] block mt-1">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-1">
             Search parties actively looking
           </span>
         </Card>
 
-        <Card className="p-4 bg-white dark:bg-[#111A2E] border-[#E2E8F0] dark:border-[#1E293B] shadow-sm">
+        <Card className="p-4 bg-white dark:bg-[#162036] border-slate-200 dark:border-slate-700/70 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#EF4444] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-rose-500 uppercase tracking-wider">
               Critical Alerts
             </span>
-            <HeartPulse className="w-4 h-4 text-[#EF4444]" />
+            <HeartPulse className="w-4 h-4 text-rose-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-[#EF4444]">
+          <div className="mt-2 text-2xl font-bold text-rose-600 dark:text-rose-400">
             {criticalCount}
           </div>
-          <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8] block mt-1">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-1">
             Children, elderly & medical needs
           </span>
         </Card>
 
-        <Card className="p-4 bg-white dark:bg-[#111A2E] border-[#E2E8F0] dark:border-[#1E293B] shadow-sm">
+        <Card className="p-4 bg-white dark:bg-[#162036] border-slate-200 dark:border-slate-700/70 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#10B981] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">
               Reunited / Found
             </span>
-            <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-[#10B981]">
+          <div className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
             {foundCount}
           </div>
-          <span className="text-[11px] text-[#10B981] block mt-1 font-medium">
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block mt-1 font-medium">
             {totalCount > 0 ? `${Math.round((foundCount / totalCount) * 100)}% resolution rate` : '0%'}
           </span>
         </Card>
 
-        <Card className="p-4 bg-white dark:bg-[#111A2E] border-[#E2E8F0] dark:border-[#1E293B] shadow-sm col-span-2 lg:col-span-1">
+        <Card className="p-4 bg-white dark:bg-[#162036] border-slate-200 dark:border-slate-700/70 shadow-xs col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#06B6D4] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-cyan-500 uppercase tracking-wider">
               Sightings Logged
             </span>
-            <Eye className="w-4 h-4 text-[#06B6D4]" />
+            <Eye className="w-4 h-4 text-cyan-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-[#06B6D4]">
+          <div className="mt-2 text-2xl font-bold text-cyan-600 dark:text-cyan-400">
             {totalSightings}
           </div>
-          <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8] block mt-1">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-1">
             GPS citizen & drone fixes
           </span>
         </Card>
       </div>
 
       {/* Main Tabs Header */}
-      <div className="flex items-center justify-between border-b border-[#E2E8F0] dark:border-[#1E293B]">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('DIRECTORY')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
               activeTab === 'DIRECTORY'
-                ? 'border-[#FFD21F] text-[#D97706] dark:text-[#FFD21F]'
-                : 'border-transparent text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-[#F8FAFC]'
+                ? 'border-[#FFC400] text-amber-600 dark:text-amber-400'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Users className="w-4 h-4" />
@@ -578,10 +577,10 @@ export const MissingPersonsPage: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('VISUAL_SEARCH')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
               activeTab === 'VISUAL_SEARCH'
-                ? 'border-[#0891B2] text-[#0891B2] dark:text-[#06B6D4]'
-                : 'border-transparent text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-[#F8FAFC]'
+                ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Sparkles className="w-4 h-4" />
@@ -589,7 +588,7 @@ export const MissingPersonsPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="text-xs text-[#64748B] dark:text-[#94A3B8] hidden sm:block">
+        <div className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
           Uplink synced: {formatTimeAgo(lastSyncTime)}
         </div>
       </div>
@@ -600,31 +599,31 @@ export const MissingPersonsPage: React.FC = () => {
       {activeTab === 'DIRECTORY' && (
         <div className="space-y-5">
           {/* Advanced Search & Incident Filter Controls */}
-          <Card className="p-4 bg-white dark:bg-[#111A2E] border-[#E2E8F0] dark:border-[#1E293B] shadow-sm">
+          <div className="p-3.5 bg-white dark:bg-[#162036] rounded-2xl border border-slate-200 dark:border-slate-700/70 shadow-xs">
             <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
               {/* Search Box */}
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-[#94A3B8]" />
+              <div className="relative flex-1 min-w-[260px]">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search by name, clothing, marks, medical needs, location..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 text-sm rounded-lg bg-[#F8FAFC] dark:bg-[#0B1220] border border-[#CBD5E1] dark:border-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#FFD21F]"
+                  className="w-full h-10 pl-10 pr-4 text-xs rounded-xl bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFC400]"
                 />
               </div>
 
-              {/* Incident Dropdown Filter */}
-              <div className="flex items-center gap-2">
+              {/* Incident & Priority Filters */}
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                 <select
                   value={selectedIncident}
                   onChange={(e) => setSelectedIncident(e.target.value)}
-                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-[#F8FAFC] dark:bg-[#0B1220] border border-[#CBD5E1] dark:border-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#FFD21F]"
+                  className="h-10 px-3 text-xs font-medium rounded-xl bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#FFC400] max-w-[220px] truncate cursor-pointer"
                 >
                   <option value="ALL">All Disaster Incidents</option>
                   {availableIncidents.map((inc) => {
                     const rawTitle = inc.title || inc.id || 'Incident';
-                    const displayTitle = rawTitle.length > 32 ? `${rawTitle.slice(0, 32)}...` : rawTitle;
+                    const displayTitle = rawTitle.length > 28 ? `${rawTitle.slice(0, 28)}...` : rawTitle;
                     return (
                       <option key={inc.id} value={inc.id}>
                         {inc.id}: {displayTitle}
@@ -633,28 +632,27 @@ export const MissingPersonsPage: React.FC = () => {
                   })}
                 </select>
 
-                {/* Priority Filter */}
                 <select
                   value={selectedPriority}
                   onChange={(e) => setSelectedPriority(e.target.value)}
-                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-[#F8FAFC] dark:bg-[#0B1220] border border-[#CBD5E1] dark:border-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#FFD21F]"
+                  className="h-10 px-3 text-xs font-medium rounded-xl bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#FFC400] cursor-pointer"
                 >
                   <option value="ALL">All Priorities</option>
-                  <option value="CRITICAL">🚨 Critical (Urgent / Medical)</option>
+                  <option value="CRITICAL">🚨 Critical Only</option>
                   <option value="HIGH">High Priority</option>
                 </select>
               </div>
 
-              {/* Status Filter Pills */}
-              <div className="flex items-center gap-1.5 shrink-0">
+              {/* Status Filter Segmented Control */}
+              <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-700 shrink-0">
                 {(['ALL', 'MISSING', 'FOUND'] as MissingPersonStatusFilter[]).map((st) => (
                   <button
                     key={st}
                     onClick={() => setSelectedStatus(st)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       selectedStatus === st
-                        ? 'bg-[#FFD21F] text-[#0B1220] shadow-sm'
-                        : 'bg-[#F1F5F9] dark:bg-[#1E293B] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#E2E8F0] dark:hover:bg-[#334155]'
+                        ? 'bg-[#FFC400] dark:bg-[#FFD21F] text-slate-900 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     {st === 'ALL'
@@ -666,7 +664,7 @@ export const MissingPersonsPage: React.FC = () => {
                 ))}
               </div>
             </div>
-          </Card>
+          </div>
 
           {/* Cards Grid */}
           {isLoading ? (
@@ -679,31 +677,30 @@ export const MissingPersonsPage: React.FC = () => {
               ))}
             </div>
           ) : filteredPersons.length === 0 ? (
-            <Card className="p-12 text-center bg-white dark:bg-[#111A2E] border-[#E2E8F0] dark:border-[#1E293B]">
-              <div className="mx-auto w-12 h-12 rounded-full bg-[#FFD21F]/15 flex items-center justify-center text-[#D97706] mb-4">
+            <Card className="p-12 text-center bg-white dark:bg-[#162036] border-slate-200 dark:border-slate-700/80 shadow-xs">
+              <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
                 <UserSearch className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-semibold text-[#0F172A] dark:text-[#F8FAFC]">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
                 No Matching Missing Persons
               </h3>
-              <p className="text-sm text-[#64748B] dark:text-[#94A3B8] max-w-sm mx-auto mt-1 mb-4">
+              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1 mb-4">
                 No reports found matching the selected filters. Reports submitted from field
                 mobiles over mesh or cloud will appear here automatically.
               </p>
               <div className="flex items-center justify-center gap-3">
-                <Button
+                <button
                   onClick={() => setIsReportModalOpen(true)}
-                  className="bg-[#FFD21F] text-[#0B1220] hover:bg-[#FACC15] font-semibold"
+                  className="h-10 px-4 rounded-xl bg-[#FFC400] hover:bg-[#FFD21F] text-slate-900 font-bold text-xs shadow-xs transition cursor-pointer"
                 >
                   Create New Report
-                </Button>
-                <Button
-                  variant="outline"
+                </button>
+                <button
                   onClick={() => setIsVisualSearchModalOpen(true)}
-                  className="text-[#0891B2] border-[#0891B2]/40"
+                  className="h-10 px-4 rounded-xl border border-cyan-500/40 bg-cyan-50/50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-300 font-semibold text-xs transition cursor-pointer hover:bg-cyan-100"
                 >
                   Scan Photo with AI
-                </Button>
+                </button>
               </div>
             </Card>
           ) : (
@@ -718,23 +715,53 @@ export const MissingPersonsPage: React.FC = () => {
                 const resolvedUrl = resolvePhotoUrl(person.photo_url);
 
                 return (
-                  <Card
+                  <div
                     key={person.id}
-                    className={`overflow-hidden transition-all duration-200 hover:shadow-lg flex flex-col bg-white dark:bg-[#111A2E] border ${
+                    className={`rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-xl flex flex-col bg-white dark:bg-[#162036] border ${
                       isFound
-                        ? 'border-emerald-500/40 dark:border-emerald-500/40'
+                        ? 'border-emerald-500/40 dark:border-emerald-500/50 shadow-xs'
                         : isCritical
-                        ? 'border-rose-500/40 dark:border-rose-500/40 ring-1 ring-rose-500/20'
-                        : 'border-[#E2E8F0] dark:border-[#1E293B]'
+                        ? 'border-rose-500/40 dark:border-rose-500/50 ring-1 ring-rose-500/20 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700/80 shadow-xs'
                     }`}
                   >
                     {/* 1. TOP INCIDENT & STATUS BAR */}
-                    <div className="px-4 py-2.5 bg-slate-50 dark:bg-[#0B1220]/80 border-b border-slate-100 dark:border-[#1E293B] flex items-center justify-between gap-2">
+                    <div className="px-4 py-2.5 bg-slate-50 dark:bg-[#0E1627] border-b border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2">
+                      {/* Status & Priority Badge */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span
+                          className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 border ${
+                            isFound
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                              : isCritical
+                              ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                          }`}
+                        >
+                          {isFound ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                              <span>REUNITED</span>
+                            </>
+                          ) : isCritical ? (
+                            <>
+                              <AlertCircle className="w-3 h-3 text-rose-500" />
+                              <span>CRITICAL MISSING</span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="w-3 h-3 text-amber-500" />
+                              <span>MISSING</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+
                       {/* Linked Incident Badge */}
                       {person.incident_id ? (
                         <Link
-                          to={`/app/incidents`}
-                          className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 truncate max-w-[200px]"
+                          to="/app/incidents"
+                          className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 truncate max-w-[190px]"
                           title={`Linked to Incident ${person.incident_id}: ${person.incident_title || 'Disaster Zone'}`}
                         >
                           {getDisasterIcon(person.incident_title || '')}
@@ -746,54 +773,45 @@ export const MissingPersonsPage: React.FC = () => {
                           <span>Sector Disaster Zone</span>
                         </span>
                       )}
-
-                      {/* Status & Priority Badges */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {isCritical && !isFound && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-                            CRITICAL
-                          </span>
-                        )}
-                        <span
-                          className={`text-[11px] px-2.5 py-0.5 rounded-full uppercase tracking-wider font-bold border ${
-                            isFound
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                          }`}
-                        >
-                          {isFound ? 'FOUND' : 'MISSING'}
-                        </span>
-                      </div>
                     </div>
 
-                    {/* 2. PHOTO & HERO IDENTIFICATION SHOWCASE */}
-                    <div className="relative w-full h-48 bg-slate-900 overflow-hidden group">
+                    {/* 2. PHOTO & HERO IDENTIFICATION SHOWCASE (Proper aspect ratio so face is never cut off!) */}
+                    <div className="relative w-full h-64 sm:h-72 bg-slate-950 overflow-hidden group">
                       {resolvedUrl ? (
                         <>
                           <img
                             src={resolvedUrl}
                             alt={person.name}
-                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-full object-cover object-top group-hover:scale-102 transition-transform duration-300"
                             loading="lazy"
                           />
-                          {/* Dark bottom gradient overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+                          {/* Subtle dark bottom gradient overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
-                          {/* Top-Right Inspect Button */}
+                          {/* Top-Right Lightbox Zoom Button */}
                           <button
                             type="button"
                             onClick={() => setLightboxPerson(person)}
-                            className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-black/60 text-white hover:bg-black/80 transition-colors shadow-sm"
-                            title="Inspect Photo & Biometrics"
+                            className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-black/60 text-white hover:bg-black/80 transition-colors shadow-xs cursor-pointer backdrop-blur"
+                            title="Inspect Photo & Biometrics in Lightbox"
                           >
                             <Maximize2 className="w-3.5 h-3.5" />
                           </button>
 
                           {/* Bottom-Left Vector Status */}
-                          <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/70 backdrop-blur-sm border border-white/20 text-[10px] font-mono text-cyan-300">
+                          <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm border border-white/20 text-[10px] font-mono text-cyan-300">
                             <Sparkles className="w-3 h-3 text-cyan-400" />
-                            <span>Qdrant 512-D Indexed</span>
+                            <span>Qdrant 512-D</span>
                           </div>
+
+                          {/* Bottom-Right Fast Dossier Link */}
+                          <button
+                            type="button"
+                            onClick={() => setDetailModalPerson(person)}
+                            className="absolute bottom-2.5 right-3 px-2 py-0.5 rounded-md bg-black/70 hover:bg-black/90 backdrop-blur-sm border border-white/20 text-[10px] font-semibold text-white hover:text-amber-300 transition-colors cursor-pointer"
+                          >
+                            View Dossier →
+                          </button>
                         </>
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-800 to-slate-900 text-slate-400">
@@ -804,7 +822,7 @@ export const MissingPersonsPage: React.FC = () => {
                               setPrefilledMatchPerson(person);
                               setIsVisualSearchModalOpen(true);
                             }}
-                            className="mt-2 text-[11px] px-3 py-1 rounded bg-[#0891B2]/30 hover:bg-[#0891B2]/50 text-cyan-300 border border-cyan-500/30 font-medium transition-colors"
+                            className="mt-2 text-[11px] px-3 py-1 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 border border-cyan-500/40 font-medium transition-colors cursor-pointer"
                           >
                             + Attach Photo to Index
                           </button>
@@ -814,56 +832,31 @@ export const MissingPersonsPage: React.FC = () => {
 
                     {/* 3. CORE IDENTITY & PHYSICAL ATTRIBUTES (FOR EXACT DETECTION) */}
                     <div className="p-4 flex-1 flex flex-col justify-between space-y-3.5">
-                      <div>
-                        {/* Name, Age, Gender & Blood Group */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">
-                              {person.name}
-                            </h3>
-                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-1">
-                              <span className="font-semibold text-slate-700 dark:text-slate-300">
-                                {person.age} yrs
+                      <div className="space-y-3">
+                        {/* Name & Micro-Vitals Badges */}
+                        <div>
+                          <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">
+                            {person.name}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs mt-1.5">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#0E1627] text-slate-700 dark:text-slate-300 font-semibold border border-slate-200 dark:border-slate-800">
+                              {person.age} yrs • {person.gender}
+                            </span>
+                            {person.blood_group && (
+                              <span className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold border border-rose-200 dark:border-rose-900/50">
+                                {person.blood_group}
                               </span>
-                              <span>•</span>
-                              <span>{person.gender}</span>
-                              {person.blood_group && (
-                                <>
-                                  <span>•</span>
-                                  <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                                    {person.blood_group}
-                                  </span>
-                                </>
-                              )}
-                              {person.height_cm ? (
-                                <>
-                                  <span>•</span>
-                                  <span>{person.height_cm} cm</span>
-                                </>
-                              ) : null}
-                            </div>
+                            )}
+                            {person.height_cm ? (
+                              <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#0E1627] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
+                                {person.height_cm} cm
+                              </span>
+                            ) : null}
                           </div>
-
-                          {/* Fast Status Toggle Link */}
-                          <button
-                            onClick={() =>
-                              handleToggleStatus(
-                                person,
-                                isFound ? 'MISSING' : 'FOUND'
-                              )
-                            }
-                            className={`text-xs font-semibold underline shrink-0 transition-colors ${
-                              isFound
-                                ? 'text-amber-600 dark:text-amber-400 hover:text-amber-700'
-                                : 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-700'
-                            }`}
-                          >
-                            {isFound ? 'Set Missing' : 'Set Found'}
-                          </button>
                         </div>
 
-                        {/* PHYSICAL PROFILE GRID (CRUCIAL RELEVANT DATA FOR IDENTIFICATION) */}
-                        <div className="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-[#0B1220] border border-slate-200/80 dark:border-[#1E293B] space-y-2 text-xs">
+                        {/* PHYSICAL CLUES BOX (CRUCIAL RELEVANT DATA FOR IDENTIFICATION) */}
+                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
                           {/* Clothing Last Seen */}
                           {person.clothing_last_seen && (
                             <div className="flex items-start gap-2">
@@ -898,118 +891,114 @@ export const MissingPersonsPage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Last Seen Location */}
-                        <div className="mt-3 flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
-                          <MapPin className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="font-semibold text-slate-900 dark:text-white">
-                              {person.last_seen_location}
-                            </span>
-                            {person.lat && person.lng && (
-                              <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[11px] text-cyan-600 dark:text-cyan-400">
-                                <span>[{person.lat.toFixed(4)}, {person.lng.toFixed(4)}]</span>
-                                <a
-                                  href={`https://www.google.com/maps/search/?api=1&query=${person.lat},${person.lng}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-slate-400 hover:text-cyan-500 inline-flex items-center ml-1"
-                                  title="View on Google Maps"
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
-                              </div>
-                            )}
+                        {/* Last Seen Location & Time */}
+                        <div className="flex items-start justify-between gap-2 text-xs">
+                          <div className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
+                            <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold text-slate-900 dark:text-white block">
+                                {person.last_seen_location}
+                              </span>
+                              {person.lat && person.lng && (
+                                <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[11px] text-cyan-600 dark:text-cyan-400">
+                                  <span>[{person.lat.toFixed(4)}, {person.lng.toFixed(4)}]</span>
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${person.lat},${person.lng}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-slate-400 hover:text-cyan-500 inline-flex items-center"
+                                    title="View on Google Maps"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
                           </div>
+                          <span className="text-[11px] text-slate-400 shrink-0">
+                            {formatTimeAgo(person.reported_at)}
+                          </span>
                         </div>
 
-                        {/* Assigned Search Team */}
-                        {person.assigned_team && (
-                          <div className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-                            <Navigation className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                            <span>Assigned: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{person.assigned_team}</strong></span>
-                          </div>
-                        )}
-
                         {/* Citizen Sightings Badge */}
-                        <div className="mt-3">
+                        <div>
                           {person.sightings && person.sightings.length > 0 ? (
-                            <div className="p-2 rounded-lg bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-900/40 flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-1.5 text-cyan-700 dark:text-cyan-300 font-semibold">
+                            <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-900/40 flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-1.5 text-cyan-800 dark:text-cyan-300 font-semibold">
                                 <Eye className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                                 <span>{person.sightings.length} Field Sighting{person.sightings.length > 1 ? 's' : ''} logged</span>
                               </div>
                               <button
                                 onClick={() => setDetailModalPerson(person)}
-                                className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline"
+                                className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer"
                               >
                                 View Clues →
                               </button>
                             </div>
                           ) : (
-                            <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-[#0B1220] border border-slate-200 dark:border-[#1E293B] text-[11px] text-slate-400 text-center">
+                            <div className="p-2 rounded-xl bg-slate-50 dark:bg-[#0E1627] border border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 text-center">
                               No citizen sightings recorded yet
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* 4. ACTIONS FOOTER */}
-                      <div className="pt-3 border-t border-slate-100 dark:border-[#1E293B] flex items-center gap-2">
-                        {/* 1-Click Biometric Match Button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setPrefilledMatchPerson(person);
-                            setIsVisualSearchModalOpen(true);
-                          }}
-                          className="text-xs flex items-center gap-1 border-cyan-500/40 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10"
-                          title="Match facial features with field found persons in Qdrant AI"
-                        >
-                          <Camera className="w-3.5 h-3.5" />
-                          <span>Match AI</span>
-                        </Button>
+                      {/* 4. ACTIONS FOOTER - Arranged with 2-tier visual hierarchy */}
+                      <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                        {/* Action Row 1: AI Match & Add Sighting */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            onClick={() => {
+                              setPrefilledMatchPerson(person);
+                              setIsVisualSearchModalOpen(true);
+                            }}
+                            className="h-8 px-2 rounded-lg border border-cyan-500/40 bg-cyan-50/50 dark:bg-cyan-950/30 hover:bg-cyan-100/60 dark:hover:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                            title="Compare with field survivor photos in Qdrant Vector Cloud"
+                          >
+                            <Camera className="w-3 h-3 shrink-0" />
+                            <span>Match AI</span>
+                          </button>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSightingModalPerson(person)}
-                          className="text-xs text-amber-600 dark:text-amber-400 border-amber-500/40 hover:bg-amber-500/10"
-                          title="Record new sighting coordinates"
-                        >
-                          + Sighting
-                        </Button>
+                          <button
+                            onClick={() => setSightingModalPerson(person)}
+                            className="h-8 px-2 rounded-lg border border-amber-500/40 bg-amber-50/50 dark:bg-amber-950/30 hover:bg-amber-100/60 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                            title="Log citizen sighting coordinates"
+                          >
+                            <Plus className="w-3 h-3 shrink-0" />
+                            <span>Sighting</span>
+                          </button>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDetailModalPerson(person)}
-                          className="text-xs flex-1 text-slate-700 dark:text-slate-300"
-                        >
-                          Dossier
-                        </Button>
+                          <button
+                            onClick={() => setDetailModalPerson(person)}
+                            className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0E1627] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                            title="Open detailed physical and medical dossier"
+                          >
+                            <User className="w-3 h-3 shrink-0" />
+                            <span>Dossier</span>
+                          </button>
+                        </div>
 
+                        {/* Action Row 2: Status Toggle Button */}
                         {!isFound ? (
-                          <Button
-                            size="sm"
+                          <button
                             onClick={() => handleToggleStatus(person, 'FOUND')}
-                            className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                            className="w-full h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                           >
-                            Mark Found
-                          </Button>
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Mark as Reunited & Found</span>
+                          </button>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
+                          <button
                             onClick={() => handleToggleStatus(person, 'MISSING')}
-                            className="text-xs text-amber-600 dark:text-amber-400 border-amber-500/40 hover:bg-amber-500/10"
+                            className="w-full h-9 px-4 rounded-xl border border-amber-500/50 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 font-semibold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                           >
-                            Reopen
-                          </Button>
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>Reopen Case as Active Missing</span>
+                          </button>
                         )}
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 );
               })}
             </div>
@@ -1230,14 +1219,13 @@ const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
           <Button variant="outline" size="sm" onClick={onClose} className="text-slate-300 border-slate-700">
             Close
           </Button>
-          <Button
-            size="sm"
+          <button
             onClick={onMatchPhoto}
-            className="bg-[#0891B2] hover:bg-[#0e7490] text-white font-semibold flex items-center gap-2"
+            className="h-9 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center gap-2 cursor-pointer shadow-xs transition"
           >
             <Camera className="w-4 h-4" />
             <span>Search Qdrant Database with Photo</span>
-          </Button>
+          </button>
         </div>
       </div>
     </div>
@@ -1253,6 +1241,23 @@ interface VisualRecognitionProps {
   onConfirmIdentification: (person: MissingPerson) => void;
   onClose?: () => void;
 }
+
+const getMatchPercent = (m: any): number => {
+  if (!m) return 0;
+  if (typeof m.similarity_percent === 'number' && !isNaN(m.similarity_percent)) {
+    return Math.round(m.similarity_percent);
+  }
+  if (typeof m.confidence_score === 'number' && !isNaN(m.confidence_score)) {
+    return Math.round(m.confidence_score <= 1.0 ? m.confidence_score * 100 : m.confidence_score);
+  }
+  if (typeof m.similarity_score === 'number' && !isNaN(m.similarity_score)) {
+    return Math.round(m.similarity_score <= 1.0 ? m.similarity_score * 100 : m.similarity_score);
+  }
+  if (typeof m.score === 'number' && !isNaN(m.score)) {
+    return Math.round(m.score <= 1.0 ? m.score * 100 : m.score);
+  }
+  return 0;
+};
 
 export const VisualRecognitionPanel: React.FC<VisualRecognitionProps> = ({
   prefilledPerson,
@@ -1302,8 +1307,9 @@ export const VisualRecognitionPanel: React.FC<VisualRecognitionProps> = ({
         fileToScan = new File([blob], 'query.jpg', { type: blob.type || 'image/jpeg' });
       }
 
-      if (fileToScan) {
-        const result = await searchMissingPersonByPhoto(fileToScan);
+      const queryTarget = previewUrl || fileToScan;
+      if (queryTarget) {
+        const result = await searchMissingPersonByPhoto(queryTarget);
         setSearchResult(result);
       }
     } catch (err: unknown) {
@@ -1404,14 +1410,15 @@ export const VisualRecognitionPanel: React.FC<VisualRecognitionProps> = ({
           )}
 
           <div className="mt-4 flex items-center gap-3">
-            <Button
+            <button
+              type="button"
               onClick={handleScan}
               disabled={(!selectedFile && !prefilledPerson?.photo_url) || isScanning}
-              className="bg-[#0891B2] hover:bg-[#0e7490] text-white font-semibold flex items-center gap-2 text-sm flex-1"
+              className="h-10 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:pointer-events-none text-white font-bold flex items-center justify-center gap-2 text-sm flex-1 shadow-xs transition cursor-pointer"
             >
               <Scan className={`w-4 h-4 ${isScanning ? 'animate-spin' : ''}`} />
               <span>{isScanning ? 'Extracting 512-D Vectors...' : 'Run Qdrant Vector Match'}</span>
-            </Button>
+            </button>
 
             {previewUrl && (
               <Button
@@ -1460,7 +1467,7 @@ export const VisualRecognitionPanel: React.FC<VisualRecognitionProps> = ({
                 <>
                   <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-bold">
                     <span>MATCH IDENTIFIED ({searchResult.matches.length} Candidates Found)</span>
-                    <span>Top Similarity: {Math.round(searchResult.matches[0].similarity_score * 100)}%</span>
+                    <span>Top Similarity: {getMatchPercent(searchResult.matches[0])}%</span>
                   </div>
 
                   <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
@@ -1487,12 +1494,13 @@ export const VisualRecognitionPanel: React.FC<VisualRecognitionProps> = ({
 
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
                           <span className="text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400">
-                            {Math.round(match.similarity_score * 100)}% Match
+                            {getMatchPercent(match)}% Match
                           </span>
                           <Button
+                            variant="success"
                             size="sm"
                             onClick={() => onConfirmIdentification(match.person)}
-                            className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-1 px-2.5"
+                            className="text-xs font-semibold py-1 px-2.5"
                           >
                             Confirm Found
                           </Button>
@@ -2284,9 +2292,10 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({
           <div className="flex items-center gap-2">
             {!isFound ? (
               <Button
+                variant="success"
                 size="sm"
                 onClick={() => onToggleStatus('FOUND')}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                className="font-semibold"
               >
                 Mark as Reunited / Found
               </Button>

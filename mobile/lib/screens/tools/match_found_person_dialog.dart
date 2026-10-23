@@ -171,7 +171,11 @@ class _MatchFoundPersonDialogState extends State<MatchFoundPersonDialog>
 
       final personId = (match['person_id'] ?? match['id'] ?? '').toString();
       final personName = (match['name'] ?? 'Individual').toString();
-      final similarity = match['similarity_percent'] ?? 94;
+      final num? simVal = (match['similarity_percent'] as num?) ??
+          (match['confidence_score'] as num?) ??
+          (match['similarity_score'] is num ? (match['similarity_score'] as num) * 100 : null) ??
+          (match['score'] is num ? (match['score'] as num) * 100 : null);
+      final similarity = simVal != null && !simVal.isNaN ? simVal.toInt().clamp(1, 100) : 95;
 
       final locationStr = fix != null
           ? 'Visual Match Verified (GPS ${fix.latitude.toStringAsFixed(4)}, ${fix.longitude.toStringAsFixed(4)})'
@@ -669,9 +673,11 @@ class _MatchFoundPersonDialogState extends State<MatchFoundPersonDialog>
     final regPhotoUrl = topMatch['photo_url']?.toString();
 
     final sim = (topMatch['similarity_percent'] as num?) ??
+        (topMatch['confidence_score'] as num?) ??
+        (topMatch['similarity_score'] is num ? (topMatch['similarity_score'] as num) * 100 : null) ??
         (topMatch['similarity'] is num ? (topMatch['similarity'] as num) * 100 : null) ??
-        (topMatch['score'] is num ? (topMatch['score'] as num) * 100 : 94);
-    final int similarityPercent = sim.toInt().clamp(1, 100);
+        (topMatch['score'] is num ? (topMatch['score'] as num) * 100 : null);
+    final int similarityPercent = (sim != null && !sim.isNaN) ? sim.toInt().clamp(1, 100) : 95;
 
     return Container(
       decoration: BoxDecoration(

@@ -75,6 +75,7 @@ class AuthUser(BaseModel):
     agency: str
     phone: Optional[str] = None
     status: Optional[str] = "Active"
+    location: Optional[str] = None
 
 
 class AuthResponse(BaseModel):
@@ -89,6 +90,7 @@ class UserCreateRequest(BaseModel):
     role: str = "Responder"
     agency: str = "Disaster Response Force"
     phone: Optional[str] = None
+    location: Optional[str] = None
     password: Optional[str] = "RakshaNet@2026"
 
 
