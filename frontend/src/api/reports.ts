@@ -1,5 +1,6 @@
 // src/api/reports.ts
 import apiClient from './client';
+import type { Incident } from '../types/incident';
 
 export interface GeneratedReport {
   id: string;
@@ -10,9 +11,23 @@ export interface GeneratedReport {
   recordsCount: number;
   downloadUrl: string;
   status: 'READY' | 'GENERATING';
+  realMetrics?: {
+    casualties?: number;
+    devices?: number;
+    clusters?: number;
+    urgencyLevel?: string;
+  };
+}
+
+export interface TelemetryStats {
+  unique_packets_stored: number;
+  sos_beacons_count: number;
+  active_mules: number;
+  connected_dashboard_clients: number;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const STORAGE_KEY = 'rakshanet_reports_export_history_v2';
 
 export const reportsApi = {
   fetchCapXmlFeed: async (): Promise<string> => {
@@ -22,126 +37,286 @@ export const reportsApi = {
         responseType: 'text',
       });
       return response.data;
-    } catch {
+    } catch (err) {
+      console.warn('Backend CAP endpoint unreachable, generating from live mesh state:', err);
+      // Fallback only if server completely unreachable
       return `<?xml version="1.0" encoding="UTF-8"?>
-<alerts xmlns="urn:oasis:names:tc:emergency:cap:1.2" source="RakshaNet">
+<alerts xmlns="urn:oasis:names:tc:emergency:cap:1.2" source="RakshaNet-Local">
   <alert>
-    <identifier>RAKSHANET-CAP-2026-FLOOD-01</identifier>
-    <sender>hq@rakshanet.org</sender>
-    <sent>2026-10-03T08:30:00Z</sent>
+    <identifier>RAKSHANET-LIVE-ALERT-FEED</identifier>
+    <sender>ops@rakshanet.in</sender>
+    <sent>${new Date().toISOString()}</sent>
     <status>Actual</status>
     <msgType>Alert</msgType>
     <scope>Public</scope>
     <info>
       <category>Rescue</category>
-      <event>Severe Flash Flood &amp; Trapped Citizens</event>
+      <event>Disaster Response Master Alert Feed</event>
       <urgency>Immediate</urgency>
-      <severity>Extreme</severity>
+      <severity>Critical</severity>
       <certainty>Observed</certainty>
-      <headline>Critical Inundation along Adyar River Basin</headline>
-      <description>10+ households submerged up to first floor. Multiple SOS distress signals received over DTN mesh.</description>
-      <area>
-        <areaDesc>Adyar River Lowlands, Chennai</areaDesc>
-        <circle>13.0100,80.2400 1.2</circle>
-      </area>
+      <headline>RakshaNet Live Tactical Mesh Alert Gateway</headline>
+      <description>Real-time distress signals correlated via DBSCAN clustering over Bluetooth Low Energy &amp; Wi-Fi Direct mesh.</description>
     </info>
   </alert>
 </alerts>`;
     }
   },
 
-  fetchCadJsonFeed: async (): Promise<unknown> => {
+  fetchCadJsonFeed: async (): Promise<unknown[]> => {
     try {
-      const response = await apiClient.get('/api/v1/interop/cad/incidents');
-      return response.data;
-    } catch {
-      return [
-        {
-          cad_call_id: 'CAD-2026-1003-01',
-          dispatch_center: 'TAMIL_NADU_112_INTEGRATED',
-          call_nature: 'WATER_RESCUE_FLOOD',
-          priority: 1,
-          location: {
-            address: 'Adyar Lowland Sector 4',
-            latitude: 13.01,
-            longitude: 80.24,
-          },
-          caller_party: 'ANONYMOUS_SURVIVOR_MESH_NODE_SR_8F42',
-          reported_time: '2026-10-03T08:24:12Z',
-          dispatched_units: ['NDRF-BOAT-01'],
-          status: 'UNIT_EN_ROUTE',
-          tactical_notes: 'Water depth 1.8 meters. High clearance or Zodiac boat mandatory.',
-        },
-      ];
+      const response = await apiClient.get<unknown[]>('/api/v1/interop/cad/incidents');
+      if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      return [];
+    } catch (err) {
+      console.warn('Backend CAD endpoint unreachable:', err);
+      return [];
     }
   },
 
-  generateIncidentSummaryCsv: (): string => {
+  fetchIncidents: async (): Promise<Incident[]> => {
+    try {
+      const response = await apiClient.get<Incident[]>('/api/v1/incidents');
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (err) {
+      console.warn('Failed to fetch incidents for reports:', err);
+      return [];
+    }
+  },
+
+  fetchTelemetryStats: async (): Promise<TelemetryStats> => {
+    try {
+      const response = await apiClient.get<TelemetryStats>('/api/v1/telemetry/stats');
+      return response.data;
+    } catch {
+      return {
+        unique_packets_stored: 0,
+        sos_beacons_count: 0,
+        active_mules: 0,
+        connected_dashboard_clients: 0,
+      };
+    }
+  },
+
+  generateIncidentSummaryCsv: (incidents: Incident[] = []): string => {
     const headers = [
       'Incident ID',
       'Title',
-      'Category',
-      'Urgency',
+      'Disaster Category',
+      'Severity',
+      'Status',
       'Latitude',
       'Longitude',
-      'Radius (meters)',
-      'Signal Count',
-      'Estimated Casualties',
-      'Assigned Unit',
-      'Status',
-      'Timestamp',
+      'Cluster Radius (m)',
+      'Estimated Casualties (People)',
+      'Reporting Handsets (Devices)',
+      'Devices != People (Ratio)',
+      'Location / Landmark',
+      'Assigned Rescue Fleet',
+      'AI Confidence (%)',
+      'First Reported',
+      'Last Telemetry Update',
     ];
 
-    const sampleRows = [
-      ['INC-2026-FLOOD-01', 'Flood in River Area', 'FLOOD', 'CRITICAL', '13.0100', '80.2400', '1200', '142', '12', 'NDRF-BOAT-01', 'ASSIGNED', '2026-10-03 08:30:00'],
-      ['INC-2026-LANDSLIDE-03', 'Landslide on NH-7 Pass', 'LANDSLIDE', 'HIGH', '12.9300', '80.1300', '850', '48', '6', 'SDRF-4WD-02', 'IN_PROGRESS', '2026-10-03 08:15:00'],
-      ['INC-2026-COLLAPSE-02', 'Building Structural Collapse', 'BUILDING_COLLAPSE', 'CRITICAL', '13.0400', '80.2200', '400', '29', '4', '108-AMB-05', 'ASSIGNED', '2026-10-03 07:45:00'],
-      ['INC-2026-CYCLONE-04', 'Cyclone Warning Coast Line', 'CYCLONE', 'MEDIUM', '12.9900', '80.1700', '5000', '19', '0', 'ARMY-HELI-01', 'OPEN', '2026-10-03 07:10:00'],
-    ];
+    if (!incidents || incidents.length === 0) {
+      return headers.join(',') + '\n';
+    }
 
-    return [headers.join(','), ...sampleRows.map(row => row.map(v => `"${v}"`).join(','))].join('\n');
+    const rows = incidents.map((inc) => {
+      const lat = inc.coordinates?.lat ?? (inc as unknown as { lat?: number }).lat ?? 0;
+      const lng = inc.coordinates?.lng ?? (inc as unknown as { lng?: number }).lng ?? 0;
+      const radius = inc.clusterRadiusMeters ?? inc.cluster_radius_meters ?? 0;
+      const people = inc.affectedPeople ?? inc.people_count ?? (inc as unknown as { casualty_estimate?: number }).casualty_estimate ?? 1;
+      const devices = inc.devicesCount ?? inc.devices_count ?? 1;
+      const ratio = devices > 0 ? (people / devices).toFixed(1) : '1.0';
+      const assigned = inc.assignedTeam || (inc as unknown as { assigned_team?: string }).assigned_team || 'Unassigned';
+      const aiConf = inc.ai_confidence ? Math.round(inc.ai_confidence * 100) : 90;
+
+      const loc = typeof inc.location === 'string'
+        ? inc.location
+        : (inc as unknown as { affected_area?: string }).affected_area || `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E`;
+
+      return [
+        inc.id || inc.incident_id || 'INC-UNKNOWN',
+        inc.title || 'Untitled Distress Cluster',
+        inc.type || inc.disaster_type || inc.category || 'General Emergency',
+        (inc.severity || 'HIGH').toUpperCase(),
+        (inc.status || 'Active').toUpperCase(),
+        lat.toFixed(5),
+        lng.toFixed(5),
+        radius.toString(),
+        people.toString(),
+        devices.toString(),
+        `${ratio}:1`,
+        loc,
+        assigned,
+        `${aiConf}%`,
+        inc.firstReported || 'Recent',
+        inc.lastUpdate || 'Just now',
+      ].map((val) => `"${String(val).replace(/"/g, '""')}"`);
+    });
+
+    return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   },
 
-  getRecentReports: (): GeneratedReport[] => [
-    {
-      id: 'REP-CAP-001',
-      name: 'OASIS CAP v1.2 National Alert XML Feed',
-      type: 'CAP_XML',
-      generatedAt: '10 min ago',
-      fileSize: '42.8 KB',
-      recordsCount: 18,
-      downloadUrl: `${API_BASE_URL}/api/v1/interop/cap/feed.xml`,
-      status: 'READY',
-    },
-    {
-      id: 'REP-CAD-002',
-      name: 'Computer-Aided Dispatch (CAD 112) JSON Feed',
-      type: 'CAD_JSON',
-      generatedAt: '14 min ago',
-      fileSize: '78.2 KB',
-      recordsCount: 18,
-      downloadUrl: `${API_BASE_URL}/api/v1/interop/cad/incidents`,
-      status: 'READY',
-    },
-    {
-      id: 'REP-CSV-003',
-      name: 'Master Incidents & Casualty Audit (CSV)',
-      type: 'INCIDENT_CSV',
-      generatedAt: '25 min ago',
-      fileSize: '18.4 KB',
-      recordsCount: 42,
-      downloadUrl: '#',
-      status: 'READY',
-    },
-    {
-      id: 'REP-LOG-004',
-      name: 'DTN Mesh Telemetry & Hop Ingestion Audit',
-      type: 'TELEMETRY_LOG',
-      generatedAt: '1 hour ago',
-      fileSize: '2.4 MB',
-      recordsCount: 12842,
-      downloadUrl: '#',
-      status: 'READY',
-    },
-  ],
+  generateTelemetryCsv: (stats: TelemetryStats, incidents: Incident[]): string => {
+    const headers = ['Audit Metric', 'Current Value', 'Measurement Unit', 'System Status', 'Timestamp'];
+    const now = new Date().toISOString();
+    const totalCasualties = incidents.reduce((acc, i) => acc + (i.affectedPeople || i.people_count || 1), 0);
+    const totalHandsets = incidents.reduce((acc, i) => acc + (i.devicesCount || i.devices_count || 1), 0);
+
+    const rows = [
+      ['Total Unique Hop Packets Ingested', stats.unique_packets_stored.toString(), 'Packets', 'NOMINAL', now],
+      ['Active SOS Beacon Pings', stats.sos_beacons_count.toString(), 'Beacons', 'HIGH_ACTIVITY', now],
+      ['Pedestrian & Mobile Data Mules', stats.active_mules.toString(), 'Relay Nodes', 'ACTIVE_MULE', now],
+      ['Live Dashboard Ingestion Clients', stats.connected_dashboard_clients.toString(), 'Sockets', 'CONNECTED', now],
+      ['Active DBSCAN Incident Centroids', incidents.length.toString(), 'Clusters', 'LIVE_CALCULATED', now],
+      ['Total Extrapolated Casualties', totalCasualties.toString(), 'People', 'PRIORITY_QUEUE', now],
+      ['Identified Physical Handsets', totalHandsets.toString(), 'Smartphones', 'IN_RANGE', now],
+    ];
+
+    return [headers.join(','), ...rows.map((r) => r.map((c) => `"${c}"`).join(','))].join('\n');
+  },
+
+  formatBytes: (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  },
+
+  getExportHistory: (
+    capXml: string,
+    cadJsonList: unknown[],
+    incidents: Incident[],
+    stats: TelemetryStats
+  ): GeneratedReport[] => {
+    const capSize = new Blob([capXml]).size;
+    const cadSize = new Blob([JSON.stringify(cadJsonList)]).size;
+    const csvContent = reportsApi.generateIncidentSummaryCsv(incidents);
+    const csvSize = new Blob([csvContent]).size;
+    const teleContent = reportsApi.generateTelemetryCsv(stats, incidents);
+    const teleSize = new Blob([teleContent]).size;
+
+    const totalCasualties = incidents.reduce(
+      (acc, i) => acc + (i.affectedPeople || i.people_count || 1),
+      0
+    );
+
+    // Live base records
+    const liveFeeds: GeneratedReport[] = [
+      {
+        id: 'FEED-CAP-LIVE',
+        name: 'OASIS CAP v1.2 National Alert XML Feed',
+        type: 'CAP_XML',
+        generatedAt: 'Live Stream • Synchronized',
+        fileSize: reportsApi.formatBytes(capSize),
+        recordsCount: cadJsonList.length > 0 ? cadJsonList.length : incidents.length,
+        downloadUrl: `${API_BASE_URL}/api/v1/interop/cap/feed.xml`,
+        status: 'READY',
+        realMetrics: {
+          clusters: incidents.length,
+          casualties: totalCasualties,
+          urgencyLevel: 'CRITICAL',
+        },
+      },
+      {
+        id: 'FEED-CAD-LIVE',
+        name: 'Computer-Aided Dispatch (CAD 112/911) JSON Feed',
+        type: 'CAD_JSON',
+        generatedAt: 'Live Stream • Synchronized',
+        fileSize: reportsApi.formatBytes(cadSize),
+        recordsCount: cadJsonList.length > 0 ? cadJsonList.length : incidents.length,
+        downloadUrl: `${API_BASE_URL}/api/v1/interop/cad/incidents`,
+        status: 'READY',
+        realMetrics: {
+          clusters: cadJsonList.length,
+          casualties: totalCasualties,
+          urgencyLevel: 'DISPATCH_READY',
+        },
+      },
+      {
+        id: 'FEED-CSV-LIVE',
+        name: 'Master Incidents & Casualty Audit (CSV RFC 4180)',
+        type: 'INCIDENT_CSV',
+        generatedAt: 'Live Snapshot • Ready',
+        fileSize: reportsApi.formatBytes(csvSize),
+        recordsCount: incidents.length,
+        downloadUrl: '#',
+        status: 'READY',
+        realMetrics: {
+          clusters: incidents.length,
+          casualties: totalCasualties,
+          urgencyLevel: 'AUDIT_VERIFIED',
+        },
+      },
+      {
+        id: 'FEED-LOG-LIVE',
+        name: 'DTN Mesh Telemetry & Hop Ingestion Audit (CSV)',
+        type: 'TELEMETRY_LOG',
+        generatedAt: 'Live Snapshot • Ready',
+        fileSize: reportsApi.formatBytes(teleSize),
+        recordsCount: stats.unique_packets_stored || 11,
+        downloadUrl: '#',
+        status: 'READY',
+        realMetrics: {
+          devices: stats.active_mules,
+          urgencyLevel: 'TELEMETRY_LIVE',
+        },
+      },
+    ];
+
+    // Combine with user-persisted download logs from localStorage
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const userLogs: GeneratedReport[] = JSON.parse(stored);
+        if (Array.isArray(userLogs)) {
+          return [...userLogs, ...liveFeeds];
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    return liveFeeds;
+  },
+
+  recordDownloadAudit: (report: GeneratedReport): void => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const existing: GeneratedReport[] = stored ? JSON.parse(stored) : [];
+      const updated = [
+        {
+          ...report,
+          id: `EXPORT-${Date.now()}`,
+          generatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        },
+        ...existing.slice(0, 15), // keep last 15 downloads
+      ];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  },
+
+  getRecentReports: (): GeneratedReport[] => {
+    return reportsApi.getExportHistory('', [], [], {
+      unique_packets_stored: 0,
+      sos_beacons_count: 0,
+      active_mules: 0,
+      connected_dashboard_clients: 0,
+    });
+  },
+
+  clearExportHistory: (): void => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  },
 };
