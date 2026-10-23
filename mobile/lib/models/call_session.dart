@@ -147,17 +147,17 @@ class CallHistoryEntry {
   final int durationSeconds;
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'call_id': callId,
-        'peer_device_id': peerDeviceId,
-        'peer_name': peerName,
-        'direction': direction.name,
-        'status': status.name,
-        'transport': 'nearby_connections',
-        'created_at': createdAt.millisecondsSinceEpoch,
-        'ended_at': endedAt.millisecondsSinceEpoch,
-        'duration_seconds': durationSeconds,
-      };
+    'id': id,
+    'call_id': callId,
+    'peer_device_id': peerDeviceId,
+    'peer_name': peerName,
+    'direction': direction.name,
+    'status': status.name,
+    'transport': 'nearby_connections',
+    'created_at': createdAt.millisecondsSinceEpoch,
+    'ended_at': endedAt.millisecondsSinceEpoch,
+    'duration_seconds': durationSeconds,
+  };
 
   factory CallHistoryEntry.fromMap(Map<String, dynamic> map) =>
       CallHistoryEntry(
@@ -167,7 +167,9 @@ class CallHistoryEntry {
         peerName: map['peer_name'].toString(),
         direction: CallDirection.values.byName(map['direction'].toString()),
         status: CallFinalStatus.values.byName(map['status'].toString()),
-        createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
+        createdAt: DateTime.fromMillisecondsSinceEpoch(
+          map['created_at'] as int,
+        ),
         endedAt: DateTime.fromMillisecondsSinceEpoch(map['ended_at'] as int),
         durationSeconds: map['duration_seconds'] as int,
       );

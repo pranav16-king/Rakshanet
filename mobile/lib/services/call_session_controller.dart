@@ -13,7 +13,10 @@ import 'database_service.dart';
 import 'offline_audio_bridge.dart';
 
 class NearbyCallAvailability {
-  const NearbyCallAvailability({required this.isAvailable, required this.message});
+  const NearbyCallAvailability({
+    required this.isAvailable,
+    required this.message,
+  });
 
   final bool isAvailable;
   final String message;
@@ -29,14 +32,18 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     CallHistoryRepository? history,
     DateTime Function()? now,
     Uuid? uuid,
-  })  : _radio = radio ?? BluetoothRadioService(),
-        _audio = audioBridge ?? OfflineAudioBridge(),
-        _history = history ?? const CallHistoryRepository(),
-        _now = now ?? DateTime.now,
-        _uuid = uuid ?? const Uuid() {
+  }) : _radio = radio ?? BluetoothRadioService(),
+       _audio = audioBridge ?? OfflineAudioBridge(),
+       _history = history ?? const CallHistoryRepository(),
+       _now = now ?? DateTime.now,
+       _uuid = uuid ?? const Uuid() {
     WidgetsBinding.instance.addObserver(this);
-    _controlSubscription = _radio.incomingCallControlStream.listen(_handleControl);
-    _audioSubscription = _radio.incomingAudioFrameStream.listen(_handleAudioFrame);
+    _controlSubscription = _radio.incomingCallControlStream.listen(
+      _handleControl,
+    );
+    _audioSubscription = _radio.incomingAudioFrameStream.listen(
+      _handleAudioFrame,
+    );
     _captureSubscription = _audio.capturedFrames.listen(_sendCapturedFrame);
   }
 
@@ -108,20 +115,30 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     );
     notifyListeners();
 
-    final sent = await _sendControl('invite', extra: {
-      'sender_device_id': DatabaseService.myDeviceId,
-      'sender_name': DatabaseService.myDisplayName,
-      'target_device_id': profile.userId,
-      'created_at': createdAt.millisecondsSinceEpoch,
-      'expires_at': _session!.expiresAt.millisecondsSinceEpoch,
-      'transport': 'nearby_connections',
-    });
+    final sent = await _sendControl(
+      'invite',
+      extra: {
+        'sender_device_id': DatabaseService.myDeviceId,
+        'sender_name': DatabaseService.myDisplayName,
+        'target_device_id': profile.userId,
+        'created_at': createdAt.millisecondsSinceEpoch,
+        'expires_at': _session!.expiresAt.millisecondsSinceEpoch,
+        'transport': 'nearby_connections',
+      },
+    );
     if (!sent) {
-      await _finish(CallFinalStatus.failed, 'The direct nearby link is unavailable.');
+      await _finish(
+        CallFinalStatus.failed,
+        'The direct nearby link is unavailable.',
+      );
       return 'The direct nearby link is unavailable.';
     }
     _transition(NearbyCallState.ringing, message: 'Ringing nearby device…');
-    _armTimeout(invitationTimeout, CallFinalStatus.timeout, 'No response from this nearby device.');
+    _armTimeout(
+      invitationTimeout,
+      CallFinalStatus.timeout,
+      'No response from this nearby device.',
+    );
     return null;
   }
 
@@ -137,35 +154,54 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     }
     final microphone = await Permission.microphone.request();
     if (!microphone.isGranted) {
-      await _sendControl('reject', extra: {'reason': 'microphone_permission_denied'});
-      await _finish(CallFinalStatus.rejected, 'Microphone permission was not granted.');
+      await _sendControl(
+        'reject',
+        extra: {'reason': 'microphone_permission_denied'},
+      );
+      await _finish(
+        CallFinalStatus.rejected,
+        'Microphone permission was not granted.',
+      );
       return 'Microphone permission is required to accept a voice call.';
     }
     _transition(NearbyCallState.connecting, message: 'Starting local audio…');
     if (!await _startAudio()) {
       await _sendControl('failure');
-      await _finish(CallFinalStatus.failed, 'The phone audio device could not start.');
+      await _finish(
+        CallFinalStatus.failed,
+        'The phone audio device could not start.',
+      );
       return 'The phone audio device could not start.';
     }
     await _sendControl('accept');
-    _armTimeout(connectionTimeout, CallFinalStatus.failed, 'Audio connection could not be established.');
+    _armTimeout(
+      connectionTimeout,
+      CallFinalStatus.failed,
+      'Audio connection could not be established.',
+    );
     return null;
   }
 
   Future<void> rejectIncoming() async {
-    if (_session?.state != NearbyCallState.incoming) return;
+    if (_session?.state != NearbyCallState.incoming) {
+      return;
+    }
     await _sendControl('reject');
     await _finish(CallFinalStatus.rejected, 'You declined the call.');
   }
 
   Future<void> cancelOutgoing() async {
     final state = _session?.state;
-    if (state != NearbyCallState.outgoing && state != NearbyCallState.ringing) return;
+    if (state != NearbyCallState.outgoing && state != NearbyCallState.ringing) {
+      return;
+    }
     await _sendControl('cancel');
     await _finish(CallFinalStatus.cancelled, 'You cancelled the call.');
   }
 
-  Future<void> endCall({CallFinalStatus status = CallFinalStatus.completed}) async {
+  Future<void> endCall({
+    CallFinalStatus status = CallFinalStatus.completed,
+  }) async {
     final active = _session;
     if (active == null || active.isTerminal) return;
     if (CallStateMachine.canTransition(active.state, NearbyCallState.ending)) {
@@ -177,10 +213,14 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> toggleMute() async {
     final active = _session;
-    if (active == null || active.isTerminal || !active.hasConnectedMedia) return;
+    if (active == null || active.isTerminal || !active.hasConnectedMedia) {
+      return;
+    }
     if (active.isMuted) {
       _captureActive = await _audio.startCapture();
-      if (!_captureActive) return;
+      if (!_captureActive) {
+        return;
+      }
       _session = active.copyWith(isMuted: false, message: 'Microphone on');
     } else {
       await _audio.stopCapture();
@@ -255,31 +295,62 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
         }
       case 'reject':
         if (!active.isTerminal) {
-          unawaited(_finish(CallFinalStatus.rejected, '${active.peerName} declined the call.'));
+          unawaited(
+            _finish(
+              CallFinalStatus.rejected,
+              '${active.peerName} declined the call.',
+            ),
+          );
         }
       case 'busy':
         if (!active.isTerminal) {
-          unawaited(_finish(CallFinalStatus.busy, '${active.peerName} is already in another call.'));
+          unawaited(
+            _finish(
+              CallFinalStatus.busy,
+              '${active.peerName} is already in another call.',
+            ),
+          );
         }
       case 'cancel':
         if (!active.isTerminal) {
-          unawaited(_finish(CallFinalStatus.cancelled, '${active.peerName} cancelled the call.'));
+          unawaited(
+            _finish(
+              CallFinalStatus.cancelled,
+              '${active.peerName} cancelled the call.',
+            ),
+          );
         }
       case 'end':
         if (!active.isTerminal) {
-          unawaited(_finish(CallFinalStatus.completed, '${active.peerName} ended the call.'));
+          unawaited(
+            _finish(
+              CallFinalStatus.completed,
+              '${active.peerName} ended the call.',
+            ),
+          );
         }
       case 'timeout':
         if (!active.isTerminal) {
-          unawaited(_finish(CallFinalStatus.timeout, 'The call invitation expired.'));
+          unawaited(
+            _finish(CallFinalStatus.timeout, 'The call invitation expired.'),
+          );
         }
       case 'failure':
         if (!active.isTerminal) {
-          unawaited(_finish(CallFinalStatus.failed, 'The nearby device could not start audio.'));
+          unawaited(
+            _finish(
+              CallFinalStatus.failed,
+              'The nearby device could not start audio.',
+            ),
+          );
         }
       case 'audio_received':
         if (active.state == NearbyCallState.connecting) {
-          _transition(NearbyCallState.active, message: 'Connected over nearby ${_transportLabel(active.endpointId)}');
+          _transition(
+            NearbyCallState.active,
+            message:
+                'Connected over nearby ${_transportLabel(active.endpointId)}',
+          );
         }
     }
   }
@@ -301,12 +372,19 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
     final expiresAt = DateTime.fromMillisecondsSinceEpoch(expiry);
-    if (_now().isAfter(expiresAt) || expiresAt.difference(_now()) > invitationTimeout) {
-      await _radio.sendCallControl(frame.endpointId, {'action': 'timeout', 'call_id': callId});
+    if (_now().isAfter(expiresAt) ||
+        expiresAt.difference(_now()) > invitationTimeout) {
+      await _radio.sendCallControl(frame.endpointId, {
+        'action': 'timeout',
+        'call_id': callId,
+      });
       return;
     }
     if (isBusy) {
-      await _radio.sendCallControl(frame.endpointId, {'action': 'busy', 'call_id': callId});
+      await _radio.sendCallControl(frame.endpointId, {
+        'action': 'busy',
+        'call_id': callId,
+      });
       return;
     }
     _session = NearbyCallSession(
@@ -321,17 +399,28 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
       message: 'Incoming nearby voice call',
     );
     notifyListeners();
-    _armTimeout(expiresAt.difference(_now()), CallFinalStatus.missed, 'You missed this nearby call.');
+    _armTimeout(
+      expiresAt.difference(_now()),
+      CallFinalStatus.missed,
+      'You missed this nearby call.',
+    );
   }
 
   Future<void> _onOutgoingAccepted() async {
     _transition(NearbyCallState.connecting, message: 'Connecting local audio…');
     if (!await _startAudio()) {
       await _sendControl('failure');
-      await _finish(CallFinalStatus.failed, 'The phone audio device could not start.');
+      await _finish(
+        CallFinalStatus.failed,
+        'The phone audio device could not start.',
+      );
       return;
     }
-    _armTimeout(connectionTimeout, CallFinalStatus.failed, 'Audio connection could not be established.');
+    _armTimeout(
+      connectionTimeout,
+      CallFinalStatus.failed,
+      'Audio connection could not be established.',
+    );
   }
 
   void _handleAudioFrame(NearbyAudioFrame frame) {
@@ -340,12 +429,16 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
         active.isTerminal ||
         active.callId != frame.callId ||
         active.endpointId != frame.endpointId ||
-        active.state != NearbyCallState.connecting && active.state != NearbyCallState.active) {
+        active.state != NearbyCallState.connecting &&
+            active.state != NearbyCallState.active) {
       return;
     }
     unawaited(_audio.playFrame(frame.pcm));
     if (active.state == NearbyCallState.connecting) {
-      _transition(NearbyCallState.active, message: 'Connected over nearby ${_transportLabel(active.endpointId)}');
+      _transition(
+        NearbyCallState.active,
+        message: 'Connected over nearby ${_transportLabel(active.endpointId)}',
+      );
       unawaited(_sendControl('audio_received'));
     }
   }
@@ -355,22 +448,29 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     if (active == null ||
         !_captureActive ||
         active.isMuted ||
-        (active.state != NearbyCallState.connecting && active.state != NearbyCallState.active) ||
+        (active.state != NearbyCallState.connecting &&
+            active.state != NearbyCallState.active) ||
         _sendingFrame) {
       return;
     }
     _sendingFrame = true;
-    _radio.sendCallAudio(active.endpointId, active.callId, frame).whenComplete(() {
-      _sendingFrame = false;
-    });
+    _radio.sendCallAudio(active.endpointId, active.callId, frame).whenComplete(
+      () {
+        _sendingFrame = false;
+      },
+    );
   }
 
   void _transition(NearbyCallState next, {String? message}) {
     final active = _session;
-    if (active == null || !CallStateMachine.canTransition(active.state, next)) return;
+    if (active == null || !CallStateMachine.canTransition(active.state, next)) {
+      return;
+    }
     _session = active.copyWith(
       state: next,
-      connectedAt: next == NearbyCallState.active && active.connectedAt == null ? _now() : null,
+      connectedAt: next == NearbyCallState.active && active.connectedAt == null
+          ? _now()
+          : null,
       message: message,
     );
     notifyListeners();
@@ -381,7 +481,8 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     _timeoutTimer = Timer(delay.isNegative ? Duration.zero : delay, () async {
       final active = _session;
       if (active == null || active.isTerminal) return;
-      if (status == CallFinalStatus.timeout || status == CallFinalStatus.missed) {
+      if (status == CallFinalStatus.timeout ||
+          status == CallFinalStatus.missed) {
         await _sendControl('timeout');
       } else {
         await _sendControl('failure');
@@ -410,7 +511,8 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   String _transportLabel(String endpointId) {
-    return _radio.deviceForEndpoint(endpointId)?.connectionType.name == 'wifiDirect'
+    return _radio.deviceForEndpoint(endpointId)?.connectionType.name ==
+            'wifiDirect'
         ? 'Wi-Fi Direct'
         : 'Bluetooth/Wi-Fi Nearby';
   }
@@ -420,7 +522,9 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if ((state == AppLifecycleState.paused || state == AppLifecycleState.detached) && isBusy) {
+    if ((state == AppLifecycleState.paused ||
+            state == AppLifecycleState.detached) &&
+        isBusy) {
       unawaited(endCall(status: CallFinalStatus.appBackgrounded));
     }
   }

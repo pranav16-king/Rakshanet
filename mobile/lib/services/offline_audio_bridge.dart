@@ -6,10 +6,12 @@ import 'package:flutter/services.dart';
 /// Native code owns AudioRecord, AudioTrack, audio focus and the jitter buffer;
 /// Dart only moves bounded PCM frames onto the already-established local link.
 class OfflineAudioBridge {
-  static const MethodChannel _methods =
-      MethodChannel('org.rakshanet/offline_audio');
-  static const EventChannel _captureEvents =
-      EventChannel('org.rakshanet/offline_audio_capture');
+  static const MethodChannel _methods = MethodChannel(
+    'org.rakshanet/offline_audio',
+  );
+  static const EventChannel _captureEvents = EventChannel(
+    'org.rakshanet/offline_audio_capture',
+  );
 
   final StreamController<Uint8List> _frames =
       StreamController<Uint8List>.broadcast();

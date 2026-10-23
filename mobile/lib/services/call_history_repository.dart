@@ -36,5 +36,6 @@ class CallHistoryRepository {
     return rows.map(CallHistoryEntry.fromMap).toList();
   }
 
-  Future<void> clearLocalHistory() => AppDatabase.instance.delete('call_history');
+  Future<void> clearLocalHistory() =>
+      AppDatabase.instance.delete('call_history');
 }

@@ -122,8 +122,9 @@ class BluetoothRadioService extends ChangeNotifier {
   Stream<NearbyAudioFrame> get incomingAudioFrameStream =>
       _audioFrameController.stream;
 
-  static final Uint8List _audioPrefix =
-      Uint8List.fromList(ascii.encode('RKAUD1|'));
+  static final Uint8List _audioPrefix = Uint8List.fromList(
+    ascii.encode('RKAUD1|'),
+  );
 
   final StreamController<List<MeshDevice>> _peerUpdateController =
       StreamController<List<MeshDevice>>.broadcast();
@@ -149,36 +150,50 @@ class BluetoothRadioService extends ChangeNotifier {
       final statuses = await permissions.request();
 
       // Location is mandatory on Android for BLE beacon reception
-      final locationStatus = statuses[Permission.location] ?? await Permission.location.status;
+      final locationStatus =
+          statuses[Permission.location] ?? await Permission.location.status;
       final locationOk = locationStatus.isGranted || locationStatus.isLimited;
 
       // On Android 12+, BluetoothScan and BluetoothConnect are used.
       // On Android <= 11, BLUETOOTH and ACCESS_FINE_LOCATION are used.
-      final btScanStatus = statuses[Permission.bluetoothScan] ?? await Permission.bluetoothScan.status;
-      final btConnStatus = statuses[Permission.bluetoothConnect] ?? await Permission.bluetoothConnect.status;
-      final btAdvStatus = statuses[Permission.bluetoothAdvertise] ?? await Permission.bluetoothAdvertise.status;
+      final btScanStatus =
+          statuses[Permission.bluetoothScan] ??
+          await Permission.bluetoothScan.status;
+      final btConnStatus =
+          statuses[Permission.bluetoothConnect] ??
+          await Permission.bluetoothConnect.status;
+      final btAdvStatus =
+          statuses[Permission.bluetoothAdvertise] ??
+          await Permission.bluetoothAdvertise.status;
 
-      final btOk = (btScanStatus.isGranted || btScanStatus.isRestricted) &&
+      final btOk =
+          (btScanStatus.isGranted || btScanStatus.isRestricted) &&
           (btConnStatus.isGranted || btConnStatus.isRestricted) &&
           (btAdvStatus.isGranted || btAdvStatus.isRestricted);
 
       // Check if location services (GPS toggle) are enabled on hardware
       try {
-        final serviceEnabled = await Permission.location.serviceStatus.isEnabled;
+        final serviceEnabled =
+            await Permission.location.serviceStatus.isEnabled;
         if (!serviceEnabled) {
-          _logStatus('Device GPS/Location service is currently disabled. Please turn on Location.');
+          _logStatus(
+            'Device GPS/Location service is currently disabled. Please turn on Location.',
+          );
         }
       } catch (e) {
         debugPrint('[BluetoothRadioService] location serviceStatus check: $e');
       }
 
       _permissionsGranted = locationOk;
-      _logStatus('Permissions check: location=$locationOk, bt=$btOk, granted=$_permissionsGranted');
+      _logStatus(
+        'Permissions check: location=$locationOk, bt=$btOk, granted=$_permissionsGranted',
+      );
       notifyListeners();
       return _permissionsGranted;
     } catch (e) {
       debugPrint('[BluetoothRadioService] Permission check error: $e');
-      _permissionsGranted = true; // Fallback to allowing Nearby Connections native prompt
+      _permissionsGranted =
+          true; // Fallback to allowing Nearby Connections native prompt
       return true;
     }
   }
@@ -304,14 +319,18 @@ class BluetoothRadioService extends ChangeNotifier {
     if (endpointName.isNotEmpty && localEndpointName.isNotEmpty) {
       if (localEndpointName.compareTo(endpointName) < 0) {
         _discoveredEndpointNames[endpointId] = endpointName;
-        _logStatus('Found $endpointId ($endpointName), waiting for peer to initiate handshake...');
-        
+        _logStatus(
+          'Found $endpointId ($endpointName), waiting for peer to initiate handshake...',
+        );
+
         // Fallback: If remote peer doesn't initiate within 4 seconds, initiate ourselves
         Timer(const Duration(seconds: 4), () {
           if (!_connectedPeers.containsKey(endpointId) &&
               !_acceptedConnections.contains(endpointId) &&
               !_pendingConnections.contains(endpointId)) {
-            _logStatus('Fallback timer expired for $endpointId. Initiating auto-handshake...');
+            _logStatus(
+              'Fallback timer expired for $endpointId. Initiating auto-handshake...',
+            );
             _initiateConnection(endpointId, endpointName, localEndpointName);
           }
         });
@@ -439,7 +458,10 @@ class BluetoothRadioService extends ChangeNotifier {
             'deviceId': DatabaseService.myDeviceId,
             'displayName': DatabaseService.myDisplayName,
           });
-          sendBytesToEndpoint(endpointId, Uint8List.fromList(utf8.encode(helloFrame)));
+          sendBytesToEndpoint(
+            endpointId,
+            Uint8List.fromList(utf8.encode(helloFrame)),
+          );
         } catch (_) {}
       });
     } else {
@@ -499,7 +521,10 @@ class BluetoothRadioService extends ChangeNotifier {
             final updatedPeer = MeshDevice(
               id: endpointId,
               deviceId: newDeviceId,
-              displayName: newDisplayName ?? existing?.displayName ?? 'Nearby RakshaNet user',
+              displayName:
+                  newDisplayName ??
+                  existing?.displayName ??
+                  'Nearby RakshaNet user',
               connectionType: ConnectionType.ble,
               signalStrength: -65,
               proximityBand: ProximityBand.near,
@@ -523,9 +548,9 @@ class BluetoothRadioService extends ChangeNotifier {
         );
       }
 
+      if (_consumeAudioFrame(endpointId, rawBytes)) return;
       if (_consumeMediaManifest(endpointId, rawBytes)) return;
       if (_consumeCallControl(endpointId, rawBytes)) return;
-      if (_consumeAudioFrame(endpointId, rawBytes)) return;
 
       // Stream message/control frames to MeshEngine for durable processing.
       _payloadController.add(rawBytes);
@@ -669,7 +694,9 @@ class BluetoothRadioService extends ChangeNotifier {
       _logStatus('Sent chunk packet (${bytes.length} bytes) -> $endpointId');
       return true;
     } catch (e) {
-      debugPrint('[BluetoothRadioService] sendBytesPayload failed for $endpointId: $e');
+      debugPrint(
+        '[BluetoothRadioService] sendBytesPayload failed for $endpointId: $e',
+      );
       return false;
     }
   }
@@ -682,7 +709,8 @@ class BluetoothRadioService extends ChangeNotifier {
     return null;
   }
 
-  MeshDevice? deviceForEndpoint(String endpointId) => _connectedPeers[endpointId];
+  MeshDevice? deviceForEndpoint(String endpointId) =>
+      _connectedPeers[endpointId];
 
   bool isEndpointConnected(String endpointId) =>
       _connectedPeers.containsKey(endpointId);
@@ -708,20 +736,18 @@ class BluetoothRadioService extends ChangeNotifier {
   /// selects Bluetooth or Wi-Fi transport; this method does not use internet
   /// routing and intentionally drops oversized frames rather than blocking
   /// the radio queue.
-  Future<bool> sendCallAudio(
-    String endpointId,
-    String callId,
-    Uint8List pcm,
-  ) {
+  Future<bool> sendCallAudio(String endpointId, String callId, Uint8List pcm) {
     if (!isEndpointConnected(endpointId) ||
         !RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(callId) ||
         pcm.isEmpty ||
         pcm.length > 2048) {
       return Future.value(false);
     }
-    final header = Uint8List.fromList(
-      <int>[..._audioPrefix, ...ascii.encode(callId), 0x7c],
-    );
+    final header = Uint8List.fromList(<int>[
+      ..._audioPrefix,
+      ...ascii.encode(callId),
+      0x7c,
+    ]);
     final frame = Uint8List(header.length + pcm.length)
       ..setRange(0, header.length, header)
       ..setRange(header.length, header.length + pcm.length, pcm);

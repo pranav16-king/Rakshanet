@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,8 +29,10 @@ import 'screens/settings/settings_screen.dart';
 
 import 'services/group_service.dart';
 import 'services/user_auth_service.dart';
+import 'services/call_session_controller.dart';
 import 'screens/chat/create_group_screen.dart';
 import 'screens/chat/pending_invites_screen.dart';
+import 'widgets/offline_call_overlay.dart';
 
 import 'screens/tools/sos_screen.dart';
 import 'services/location/location_service.dart';
@@ -48,6 +51,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ChatService()),
         ChangeNotifierProvider(create: (_) => GroupService()),
         ChangeNotifierProvider(create: (_) => UserAuthService.instance),
+        ChangeNotifierProvider(create: (_) => CallSessionController()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         ChangeNotifierProvider(create: (_) => DeviceStatusProvider()),
         ChangeNotifierProvider(create: (_) => EmergencyReportProvider()),
@@ -72,7 +76,7 @@ class RakshaNetApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: themeProvider.themeData,
       builder: (context, child) => GlobalSosOverlay(
-        child: child ?? const SizedBox.shrink(),
+        child: OfflineCallOverlay(child: child ?? const SizedBox.shrink()),
       ),
       home: const SplashScreen(),
       routes: {

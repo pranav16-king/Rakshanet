@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/mesh_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/mesh_device.dart';
+import '../../models/remote_user_profile.dart';
+import '../profile/remote_profile_details_screen.dart';
 import '../../theme/app_tokens.dart';
 
 class NearbyTab extends StatelessWidget {
@@ -174,85 +177,112 @@ class NearbyTab extends StatelessWidget {
             ),
           )
         else
-          ...mesh.nearbyDevices.map((device) => _buildDeviceCard(device, theme)),
+          ...mesh.nearbyDevices.map(
+            (device) => _buildDeviceCard(context, device, theme),
+          ),
         const SizedBox(height: 24),
       ],
     );
   }
 
-  Widget _buildDeviceCard(MeshDevice device, ThemeProvider theme) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: theme.surface,
+  Widget _buildDeviceCard(
+    BuildContext context,
+    MeshDevice device,
+    ThemeProvider theme,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        border: Border.all(color: theme.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-            ),
-            child: const Icon(
-              Icons.devices_other,
-              color: AppTokens.beaconTeal,
-              size: 24,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => RemoteProfileDetailsScreen(
+              profile: RemoteUserProfile.fromMeshDevice(device),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        child: Semantics(
+          button: true,
+          label: 'Open ${device.displayName} profile',
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: theme.surface,
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+              border: Border.all(color: theme.border),
+            ),
+            child: Row(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      device.displayName,
-                      style: TextStyle(
-                        color: theme.text,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                  ),
+                  child: const Icon(
+                    Icons.devices_other,
+                    color: AppTokens.beaconTeal,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            device.displayName,
+                            style: TextStyle(
+                              color: theme.text,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTokens.beaconTeal.withValues(
+                                alpha: 0.15,
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                AppTokens.radiusXs,
+                              ),
+                            ),
+                            child: Text(
+                              '${device.hopCount} hop',
+                              style: const TextStyle(
+                                color: AppTokens.beaconTeal,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTokens.beaconTeal.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(AppTokens.radiusXs),
-                      ),
-                      child: Text(
-                        '${device.hopCount} hop',
-                        style: const TextStyle(
-                          color: AppTokens.beaconTeal,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Nearby device • ${device.proximityDisplay} • ${device.signalStrength} dBm',
+                        style: TextStyle(
+                          color: theme.textMuted,
+                          fontSize: 12,
+                          fontFamily: 'monospace',
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${device.deviceId} • ${device.proximityDisplay} • ${device.signalStrength} dBm',
-                  style: TextStyle(
-                    color: theme.textMuted,
-                    fontSize: 12,
-                    fontFamily: 'monospace',
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

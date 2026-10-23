@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../../config/app_config.dart';
 import 'ai_models.dart';
 
 /// Client Service for Backend Groq Cloud Proxy
@@ -16,6 +17,9 @@ class OnlineGroqService {
   static const String _androidEmulatorHost = 'http://10.0.2.2:8000';
 
   String get _backendBaseUrl {
+    if (AppConfig.backendBaseUrl.isNotEmpty) {
+      return AppConfig.backendBaseUrl;
+    }
     if (kIsWeb) return _defaultLocalhost;
     if (defaultTargetPlatform == TargetPlatform.android) {
       return _androidEmulatorHost;
@@ -36,6 +40,7 @@ class OnlineGroqService {
     final urlsToTry = [
       '$_backendBaseUrl/api/v1/ai/chat',
       '$_defaultLocalhost/api/v1/ai/chat',
+      '$_androidEmulatorHost/api/v1/ai/chat',
     ];
 
     for (final url in urlsToTry) {

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/chat_group.dart';
 import '../../models/chat_message.dart';
+import '../../models/remote_user_profile.dart';
 import '../../providers/mesh_provider.dart';
 import '../../providers/telemetry_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -17,6 +18,7 @@ import '../../services/location/location_service.dart';
 import '../../theme/app_tokens.dart';
 import '../../utils/haversine_distance.dart';
 import '../../widgets/chat_image_viewer.dart';
+import '../profile/remote_profile_details_screen.dart';
 import 'my_messages_screen.dart';
 
 /// Screen 5: Community Chat & Mesh Groups (Offline Mesh Chat)
@@ -42,7 +44,8 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _playingVoiceMessageId;
   Timer? _voicePlaybackTimer;
 
-  static const List<({String label, IconData icon, Color color})> _emergencyShortcuts = [
+  static const List<({String label, IconData icon, Color color})>
+  _emergencyShortcuts = [
     (
       label: 'Need medical help',
       icon: Icons.medical_services_rounded,
@@ -140,8 +143,11 @@ class _ChatScreenState extends State<ChatScreen> {
     final lng = telemetry.longitude ?? localFix?.longitude;
 
     if (lat != null && lng != null) {
-      final acc = localFix?.horizontalAccuracyMeters ?? (telemetry.hasGpsFix ? 10.0 : 25.0);
-      final accuracyText = '${localFix?.source ?? (telemetry.hasGpsFix ? "GPS" : "Network")} (±${acc.round()}m)';
+      final acc =
+          localFix?.horizontalAccuracyMeters ??
+          (telemetry.hasGpsFix ? 10.0 : 25.0);
+      final accuracyText =
+          '${localFix?.source ?? (telemetry.hasGpsFix ? "GPS" : "Network")} (±${acc.round()}m)';
       final locationTitle =
           '${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E';
       final locationPreview = LocationPreview(
@@ -349,10 +355,7 @@ class _ChatScreenState extends State<ChatScreen> {
       targetConvId = groupService.selectedGroup!.conversationId;
     }
 
-    await chatService.sendMessage(
-      content: text,
-      conversationId: targetConvId,
-    );
+    await chatService.sendMessage(content: text, conversationId: targetConvId);
     _scrollToBottom();
   }
 
@@ -627,6 +630,12 @@ class _ChatScreenState extends State<ChatScreen> {
                               return ListTile(
                                 dense: true,
                                 contentPadding: EdgeInsets.zero,
+                                onTap: () {
+                                  Navigator.of(ctx).pop();
+                                  _openRemoteProfile(
+                                    RemoteUserProfile.fromGroupMember(m),
+                                  );
+                                },
                                 leading: CircleAvatar(
                                   radius: 16,
                                   backgroundColor: isAccepted
@@ -869,7 +878,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (messages.length != _previousMessageCount ||
           currentFilter != _previousFilter ||
           currentGroupId != _previousGroupId) {
-        final wasNewMessageAdded = messages.length > _previousMessageCount &&
+        final wasNewMessageAdded =
+            messages.length > _previousMessageCount &&
             currentFilter == _previousFilter &&
             currentGroupId == _previousGroupId;
         _previousMessageCount = messages.length;
@@ -1022,20 +1032,20 @@ class _ChatScreenState extends State<ChatScreen> {
       icon = Icons.search_off_rounded;
     } else if (filter == 'Group') {
       final grp = groupService.selectedGroup;
-      title = grp != null ? 'No messages in ${grp.name}' : 'No group messages yet';
+      title = grp != null
+          ? 'No messages in ${grp.name}'
+          : 'No group messages yet';
       subtitle = grp != null
           ? 'Send a message below to coordinate with ${grp.name} members.'
           : 'Create a group, accept a pending invite above, or select a group to chat.';
       icon = Icons.groups_outlined;
     } else if (filter == 'Rescue') {
       title = 'No rescue alerts yet';
-      subtitle =
-          'Emergency shortcuts, SOS broadcasts, and shared locations appear here.';
+      subtitle = 'Emergency shortcuts, SOS broadcasts, and shared locations appear here.';
       icon = Icons.health_and_safety_outlined;
     } else if (filter == 'Saved') {
       title = 'No saved messages yet';
-      subtitle =
-          'Tap the bookmark icon on any message to save important coordinates or instructions here.';
+      subtitle = 'Tap the bookmark icon on any message to save important coordinates or instructions here.';
       icon = Icons.bookmark_border_rounded;
     }
 
@@ -1052,11 +1062,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: theme.surfaceSunken,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 30,
-                color: theme.textMuted,
-              ),
+              child: Icon(icon, size: 30, color: theme.textMuted),
             ),
             const SizedBox(height: 14),
             Text(
@@ -1100,8 +1106,7 @@ class _ChatScreenState extends State<ChatScreen> {
         : AppTokens.darkSuccess;
 
     final isGroupFilter = chatService.activeFilter == 'Group';
-    final activeGroup =
-        isGroupFilter ? groupService.selectedGroup : null;
+    final activeGroup = isGroupFilter ? groupService.selectedGroup : null;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1128,8 +1133,10 @@ class _ChatScreenState extends State<ChatScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _getSenderColor(activeGroup.id, theme.isLightMode)
-                    .withValues(alpha: 0.2),
+                color: _getSenderColor(
+                  activeGroup.id,
+                  theme.isLightMode,
+                ).withValues(alpha: 0.2),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: _getSenderColor(activeGroup.id, theme.isLightMode),
@@ -1217,8 +1224,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           activeGroup != null
                               ? '${activeGroup.memberCount} members • Tap for details'
                               : (isGroupFilter
-                                  ? '${groupService.groups.length} groups joined • $peerCount online'
-                                  : 'Nearby devices • $peerCount online'),
+                                    ? '${groupService.groups.length} groups joined • $peerCount online'
+                                    : 'Nearby devices • $peerCount online'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1452,11 +1459,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Container(
-            width: 1,
-            height: 16,
-            color: theme.border,
-          ),
+          Container(width: 1, height: 16, color: theme.border),
           const SizedBox(width: 8),
           Expanded(
             child: InkWell(
@@ -1478,10 +1481,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   Text(
                     '${grp.memberCount} members',
-                    style: TextStyle(
-                      color: theme.textMuted,
-                      fontSize: 11.5,
-                    ),
+                    style: TextStyle(color: theme.textMuted, fontSize: 11.5),
                   ),
                   const SizedBox(width: 4),
                   const Icon(
@@ -1532,10 +1532,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   icon: const Icon(Icons.group_add_rounded, size: 20),
                   label: const Text(
                     'New Group',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   onPressed: () async {
                     final created = await Navigator.pushNamed(
@@ -1569,10 +1566,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   label: const Text(
                     'Join with Code',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   onPressed: () => _showJoinByCodeDialog(theme, groupService),
                 ),
@@ -1655,12 +1649,8 @@ class _ChatScreenState extends State<ChatScreen> {
           _buildEmptyGroupsCard(theme, groupService)
         else
           ...groups.map(
-            (grp) => _buildWhatsAppGroupTile(
-              theme,
-              chatService,
-              groupService,
-              grp,
-            ),
+            (grp) =>
+                _buildWhatsAppGroupTile(theme, chatService, groupService, grp),
           ),
       ],
     );
@@ -1968,10 +1958,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Empty Groups Card
-  Widget _buildEmptyGroupsCard(
-    ThemeProvider theme,
-    GroupService groupService,
-  ) {
+  Widget _buildEmptyGroupsCard(ThemeProvider theme, GroupService groupService) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: BoxDecoration(
@@ -2007,11 +1994,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Text(
             'Create an offline mesh group to coordinate privately with your rescue squad, field team, or family. Or join using a shared group code.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: theme.textMuted,
-              fontSize: 13,
-              height: 1.4,
-            ),
+            style: TextStyle(color: theme.textMuted, fontSize: 13, height: 1.4),
           ),
           const SizedBox(height: 18),
           Row(
@@ -2068,6 +2051,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Message row (mine vs theirs)
+  void _openRemoteProfile(RemoteUserProfile profile) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RemoteProfileDetailsScreen(profile: profile),
+      ),
+    );
+  }
+
   Widget _buildMessageRow(
     ThemeProvider theme,
     ChatService chatService,
@@ -2357,7 +2348,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final bubbleBg = isLight ? theme.surfaceSunken : theme.surface;
     final infoColor = isLight ? AppTokens.lightInfo : AppTokens.darkInfo;
 
-    final isGroup = msg.conversationId.startsWith('CONV_GRP-') ||
+    final isGroup =
+        msg.conversationId.startsWith('CONV_GRP-') ||
         chatService.activeFilter == 'Group';
     final senderColor = isGroup
         ? _getSenderColor(msg.senderId, isLight)
@@ -2368,28 +2360,36 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isGroup
-                  ? senderColor.withValues(alpha: 0.2)
-                  : theme.surface,
-              border: Border.all(
-                color: isGroup
-                    ? senderColor.withValues(alpha: 0.5)
-                    : theme.borderStrong,
-                width: 1,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: TextStyle(
-                color: senderColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
+          InkWell(
+            onTap: () => _openRemoteProfile(RemoteUserProfile.fromMessage(msg)),
+            customBorder: const CircleBorder(),
+            child: Semantics(
+              button: true,
+              label: 'Open ${msg.senderName} profile',
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isGroup
+                      ? senderColor.withValues(alpha: 0.2)
+                      : theme.surface,
+                  border: Border.all(
+                    color: isGroup
+                        ? senderColor.withValues(alpha: 0.5)
+                        : theme.borderStrong,
+                    width: 1,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initial,
+                  style: TextStyle(
+                    color: senderColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
               ),
             ),
           ),
@@ -2414,12 +2414,21 @@ class _ChatScreenState extends State<ChatScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Flexible(
-                        child: Text(
-                          msg.senderName,
-                          style: TextStyle(
-                            color: isGroup ? senderColor : theme.text,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                        child: InkWell(
+                          onTap: () => _openRemoteProfile(
+                            RemoteUserProfile.fromMessage(msg),
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Text(
+                              msg.senderName,
+                              style: TextStyle(
+                                color: isGroup ? senderColor : theme.text,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -2495,8 +2504,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final distanceLabel = geoResult.isCoordinatesAvailable
         ? 'Distance: ${geoResult.summaryLabel}'
         : (location.distance.isNotEmpty
-            ? location.distance
-            : (geoResult.fallbackPrompt ?? 'Coordinates unavailable'));
+              ? location.distance
+              : (geoResult.fallbackPrompt ?? 'Coordinates unavailable'));
 
     return InkWell(
       onTap: () {
@@ -2545,9 +2554,14 @@ class _ChatScreenState extends State<ChatScreen> {
                       if (geoResult.isCoordinatesAvailable) ...[
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
-                            color: geoResult.freshnessStatus == GeospatialFreshness.live
+                            color:
+                                geoResult.freshnessStatus ==
+                                    GeospatialFreshness.live
                                 ? AppTokens.beaconTeal.withValues(alpha: 0.2)
                                 : AppTokens.warningAmber.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(3),
@@ -2555,7 +2569,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           child: Text(
                             geoResult.freshnessStatus,
                             style: TextStyle(
-                              color: geoResult.freshnessStatus == GeospatialFreshness.live
+                              color:
+                                  geoResult.freshnessStatus ==
+                                      GeospatialFreshness.live
                                   ? AppTokens.beaconTeal
                                   : AppTokens.warningAmber,
                               fontSize: 9.5,
@@ -2656,11 +2672,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Text(
       msg.content,
-      style: TextStyle(
-        color: theme.text,
-        fontSize: 15,
-        height: 1.35,
-      ),
+      style: TextStyle(color: theme.text, fontSize: 15, height: 1.35),
     );
   }
 
@@ -2710,12 +2722,18 @@ class _ChatScreenState extends State<ChatScreen> {
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          Icon(Icons.broken_image_outlined, color: theme.textMuted),
+                          Icon(
+                            Icons.broken_image_outlined,
+                            color: theme.textMuted,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Image unavailable on this phone',
-                              style: TextStyle(color: theme.textMuted, fontSize: 13),
+                              style: TextStyle(
+                                color: theme.textMuted,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ],
@@ -2731,7 +2749,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 left: 0,
                 right: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -2803,10 +2824,11 @@ class _ChatScreenState extends State<ChatScreen> {
                             child: InkWell(
                               onTap: () async {
                                 HapticFeedback.mediumImpact();
-                                final saved = await ChatImageSaver.saveImageToDownloads(
-                                  file,
-                                  attachment.fileName,
-                                );
+                                final saved =
+                                    await ChatImageSaver.saveImageToDownloads(
+                                      file,
+                                      attachment.fileName,
+                                    );
                                 if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -2869,7 +2891,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                 child: InkWell(
                                   onTap: () async {
                                     HapticFeedback.selectionClick();
-                                    await ChatReactionStore.toggleLike(msg.messageId);
+                                    await ChatReactionStore.toggleLike(
+                                      msg.messageId,
+                                    );
                                   },
                                   borderRadius: BorderRadius.circular(12),
                                   child: AnimatedContainer(
@@ -2880,13 +2904,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: isLiked
-                                          ? const Color(0xFFEF4444).withValues(alpha: 0.28)
-                                          : Colors.black.withValues(alpha: 0.55),
+                                          ? const Color(0xFFEF4444)
+                                                .withValues(alpha: 0.28)
+                                          : Colors.black.withValues(
+                                              alpha: 0.55,
+                                            ),
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                         color: isLiked
                                             ? const Color(0xFFEF4444)
-                                            : Colors.white.withValues(alpha: 0.25),
+                                            : Colors.white.withValues(
+                                                alpha: 0.25,
+                                              ),
                                         width: isLiked ? 1.0 : 0.5,
                                       ),
                                     ),
@@ -2954,7 +2983,10 @@ class _ChatScreenState extends State<ChatScreen> {
               },
               borderRadius: BorderRadius.circular(AppTokens.radiusPill),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: theme.surface,
                   borderRadius: BorderRadius.circular(AppTokens.radiusPill),
@@ -3203,8 +3235,9 @@ class _ChatScreenState extends State<ChatScreen> {
         ? AppTokens.lightBgAlt
         : (isLowPower ? AppTokens.oledBgAlt : AppTokens.darkBgAlt);
 
-    final activeGroup =
-        chatService.activeFilter == 'Group' ? groupService.selectedGroup : null;
+    final activeGroup = chatService.activeFilter == 'Group'
+        ? groupService.selectedGroup
+        : null;
     final hintText = activeGroup != null
         ? 'Message ${activeGroup.name}...'
         : 'Type a message...';
@@ -3246,9 +3279,13 @@ class _ChatScreenState extends State<ChatScreen> {
                         size: 20,
                       ),
                     ),
-                    constraints: const BoxConstraints(minWidth: 34, minHeight: 36),
+                    constraints: const BoxConstraints(
+                      minWidth: 34,
+                      minHeight: 36,
+                    ),
                     padding: EdgeInsets.zero,
-                    tooltip: 'Add attachment (Camera, Gallery, Location, Voice)',
+                    tooltip:
+                        'Add attachment (Camera, Gallery, Location, Voice)',
                     onPressed: () => _showAttachmentMenu(context, theme),
                   ),
 
@@ -3287,7 +3324,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: theme.textMuted,
                       size: 20,
                     ),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 36,
+                    ),
                     padding: EdgeInsets.zero,
                     tooltip: 'Take photo',
                     onPressed: () => _pickImageFromSource(ImageSource.camera),
@@ -3336,7 +3376,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       alignment: Alignment.center,
                       child: Icon(
                         hasText ? Icons.send_rounded : Icons.mic_rounded,
-                        color: hasText ? AppTokens.nightNavy : AppTokens.signalYellow,
+                        color: hasText
+                            ? AppTokens.nightNavy
+                            : AppTokens.signalYellow,
                         size: 20,
                       ),
                     ),

@@ -1060,9 +1060,8 @@ class AppDatabase {
     }
 
     bool evalCondition(String condition, Object? arg) {
-      final match = RegExp(
-        r'^(\w+)\s*(=|!=|<>|<=|>=|<|>)\s*\?$',
-      ).firstMatch(condition.trim());
+      final match = RegExp(r'^(\w+)\s*(=|!=|<>|<=|>=|<|>)\s*\?$')
+          .firstMatch(condition.trim());
       if (match == null) return false;
       final col = match.group(1)!;
       final op = match.group(2)!;
@@ -1303,7 +1302,10 @@ class AppDatabase {
   }
 
   /// Fetch missing person bulletins with optional status and search filters
-  Future<List<MissingPerson>> getMissingPersons({String? status, String? search}) async {
+  Future<List<MissingPerson>> getMissingPersons({
+    String? status,
+    String? search,
+  }) async {
     String? where;
     List<dynamic>? whereArgs;
 
@@ -1316,7 +1318,9 @@ class AppDatabase {
     }
 
     if (search != null && search.trim().isNotEmpty) {
-      conditions.add('(name LIKE ? OR last_seen_location LIKE ? OR description LIKE ?)');
+      conditions.add(
+        '(name LIKE ? OR last_seen_location LIKE ? OR description LIKE ?)',
+      );
       final term = '%${search.trim()}%';
       args.addAll([term, term, term]);
     }
@@ -1367,11 +1371,15 @@ class AppDatabase {
   }
 
   /// Add a citizen sighting to a missing person record
-  Future<void> addMissingPersonSighting(String personId, MissingPersonSighting sighting) async {
+  Future<void> addMissingPersonSighting(
+    String personId,
+    MissingPersonSighting sighting,
+  ) async {
     final person = await getMissingPersonById(personId);
     if (person == null) return;
 
-    final updatedSightings = List<MissingPersonSighting>.from(person.sightings)..add(sighting);
+    final updatedSightings = List<MissingPersonSighting>.from(person.sightings)
+      ..add(sighting);
     final updated = person.copyWith(sightings: updatedSightings);
     await saveMissingPerson(updated);
   }
@@ -1427,10 +1435,7 @@ class AppDatabase {
   Future<void> updateChunkStatus(String chunkId, String status) async {
     await update(
       'attachment_chunks',
-      {
-        'status': status,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-      },
+      {'status': status, 'updated_at': DateTime.now().millisecondsSinceEpoch},
       where: 'id = ?',
       whereArgs: [chunkId],
     );
@@ -1535,10 +1540,7 @@ class AppDatabase {
 
   /// Fetch all known peers sorted by last seen
   Future<List<PeerCapability>> getPeerCapabilities() async {
-    final rows = await query(
-      'peer_capabilities',
-      orderBy: 'last_seen DESC',
-    );
+    final rows = await query('peer_capabilities', orderBy: 'last_seen DESC');
     return rows.map((r) => PeerCapability.fromMap(r)).toList();
   }
 
@@ -1600,23 +1602,19 @@ class AppDatabase {
     if (message is ChatMessage) {
       await saveMessage(message);
     } else if (message is MeshMessage) {
-      await insert(
-        'messages',
-        {
-          'message_id': message.messageId,
-          'conversation_id': message.conversationId,
-          'sender_id': message.senderDeviceId,
-          'sender_name': message.senderName,
-          'content': message.content,
-          'timestamp': message.createdAt,
-          'created_at': message.createdAt,
-          'status': message.status,
-          'hop_count': message.hopCount,
-          'ttl': message.ttl,
-          'message_type': 'TEXT',
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await insert('messages', {
+        'message_id': message.messageId,
+        'conversation_id': message.conversationId,
+        'sender_id': message.senderDeviceId,
+        'sender_name': message.senderName,
+        'content': message.content,
+        'timestamp': message.createdAt,
+        'created_at': message.createdAt,
+        'status': message.status,
+        'hop_count': message.hopCount,
+        'ttl': message.ttl,
+        'message_type': 'TEXT',
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     } else if (message is Map<String, dynamic>) {
       await insert(
         'messages',
@@ -1633,20 +1631,16 @@ class AppDatabase {
     required int hopNumber,
     String status = 'FORWARDED',
   }) async {
-    await insert(
-      'message_relays',
-      {
-        'id': 'relay_${DateTime.now().microsecondsSinceEpoch}_$hopNumber',
-        'message_id': messageId,
-        'from_device_id': fromDeviceId,
-        'to_device_id': toDeviceId,
-        'hop_number': hopNumber,
-        'received_at': DateTime.now().millisecondsSinceEpoch,
-        'forwarded_at': DateTime.now().millisecondsSinceEpoch,
-        'status': status,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await insert('message_relays', {
+      'id': 'relay_${DateTime.now().microsecondsSinceEpoch}_$hopNumber',
+      'message_id': messageId,
+      'from_device_id': fromDeviceId,
+      'to_device_id': toDeviceId,
+      'hop_number': hopNumber,
+      'received_at': DateTime.now().millisecondsSinceEpoch,
+      'forwarded_at': DateTime.now().millisecondsSinceEpoch,
+      'status': status,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<Map<String, dynamic>>> getRelays() async {
@@ -1696,9 +1690,7 @@ class AppDatabase {
     int? downloadedAt,
     String? filePath,
   }) async {
-    final values = <String, dynamic>{
-      'status': status,
-    };
+    final values = <String, dynamic>{'status': status};
     if (downloadedTiles != null) values['downloaded_tiles'] = downloadedTiles;
     if (sizeBytes != null) values['size_bytes'] = sizeBytes;
     if (downloadedAt != null) values['downloaded_at'] = downloadedAt;
@@ -1744,4 +1736,3 @@ class AppDatabase {
     );
   }
 }
-
