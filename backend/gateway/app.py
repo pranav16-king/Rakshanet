@@ -1484,6 +1484,21 @@ async def create_missing_person_report(req: MissingPersonCreate):
     if photo_input:
         try:
             image_bytes = decode_image_bytes(photo_input)
+
+            # Persist photo file locally so it can be served via GET /api/v1/missing-persons/{id}/photo
+            photos_dir = Path(backend_root) / "data" / "photos"
+            photos_dir.mkdir(parents=True, exist_ok=True)
+            photo_file = photos_dir / f"{created['id']}.jpg"
+            with open(photo_file, "wb") as f:
+                f.write(image_bytes)
+
+            photo_url = req.photo_url
+            if not photo_url or not str(photo_url).startswith("http"):
+                photo_url = f"/api/v1/missing-persons/{created['id']}/photo"
+
+            gateway_storage.update_missing_person_photo(created["id"], photo_url)
+            created["photo_url"] = photo_url
+
             indexed = qdrant_service.upsert_person_photo(
                 person_id=created["id"],
                 image_bytes=image_bytes,
@@ -1492,7 +1507,7 @@ async def create_missing_person_report(req: MissingPersonCreate):
                     "age": created.get("age"),
                     "gender": created.get("gender"),
                     "last_seen_location": created.get("last_seen_location"),
-                    "photo_url": created.get("photo_url"),
+                    "photo_url": photo_url,
                     "status": created.get("status"),
                     "reported_by": created.get("reported_by"),
                 }
@@ -1661,12 +1676,18 @@ def get_missing_person_photo(person_id: str):
         from fastapi.responses import FileResponse
         return FileResponse(str(photo_file), media_type="image/jpeg")
 
+    for ext in [".png", ".jpeg", ".webp"]:
+        alt_file = Path(backend_root) / "data" / "photos" / f"{person_id}{ext}"
+        if alt_file.exists():
+            from fastapi.responses import FileResponse
+            media = "image/png" if ext == ".png" else "image/jpeg"
+            return FileResponse(str(alt_file), media_type=media)
+
     person = gateway_storage.get_missing_person(person_id)
     if person and person.get("photo_url"):
         from fastapi.responses import RedirectResponse
         if person["photo_url"].startswith("http"):
             return RedirectResponse(url=person["photo_url"])
-        return {"photo_url": person["photo_url"]}
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -1794,8 +1815,13 @@ async def search_missing_persons_by_photo(
         score = round(norm_score, 4)
         pct = round(norm_score * 100.0, 1)
 
+        p_photo = m.get("photo_url") or (db_person.get("photo_url") if db_person else None)
+        if not p_photo and p_id:
+            p_photo = f"/api/v1/missing-persons/{p_id}/photo"
+
         record = {
             "person_id": p_id,
+            "id": p_id,
             "score": score,
             "similarity_score": score,
             "similarity_percent": pct,
@@ -1806,7 +1832,11 @@ async def search_missing_persons_by_photo(
             "age": m.get("age") or (db_person.get("age") if db_person else None),
             "gender": m.get("gender") or (db_person.get("gender") if db_person else None),
             "last_seen_location": m.get("last_seen_location") or (db_person.get("last_seen_location") if db_person else None),
-            "photo_url": m.get("photo_url") or (db_person.get("photo_url") if db_person else None),
+            "contact_phone": (db_person.get("contact_phone") if db_person else None) or m.get("contact_phone") or m.get("metadata", {}).get("contact_phone"),
+            "description": (db_person.get("description") if db_person else None) or m.get("description") or m.get("metadata", {}).get("description"),
+            "medical_alerts": (db_person.get("medical_alerts") or db_person.get("medical_needs") if db_person else None) or m.get("metadata", {}).get("medical_alerts"),
+            "medical_notes": (db_person.get("medical_notes") or db_person.get("medical_needs") if db_person else None) or m.get("metadata", {}).get("medical_notes"),
+            "photo_url": p_photo,
             "status": m.get("status") or (db_person.get("status") if db_person else None),
             "metadata": m.get("metadata", {}),
         }
@@ -1986,9 +2016,13 @@ async def sync_telemetry_batch(batch: SyncBatchRequest):
             # Broadcast immediate incident update when an emergency SOS packet is ingested
             p_type_upper = str(packet.type).upper()
             if p_type_upper in ("SOS", "EMERGENCY_SOS", "DISTRESS"):
+                inc_record = gateway_storage.get_incident(packet.msg_id)
+                norm_inc = _normalize_incident_dict(inc_record) if inc_record else None
                 await ws_manager.broadcast({
                     "event": "INCIDENTS_UPDATED",
                     "sos_packet": packet_dict,
+                    "incident": norm_inc,
+                    "packet": packet_dict,
                     "timestamp": int(time.time() * 1000)
                 })
 

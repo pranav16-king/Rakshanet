@@ -131,6 +131,19 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   const computedCenter = useMemo((): [number, number] | null => {
     if (center && isValidCoordinate(center[0], center[1])) return center;
 
+    // Prioritize active SOS beacon coordinates if present
+    const activeSos = incidents.find(
+      (inc) =>
+        (inc.type === 'sos' ||
+          inc.severity === 'CRITICAL' ||
+          inc.badgeLabel.toLowerCase().includes('sos') ||
+          inc.title.toLowerCase().includes('sos')) &&
+        isValidCoordinate(inc.lat, inc.lng)
+    );
+    if (activeSos && isValidCoordinate(activeSos.lat, activeSos.lng)) {
+      return [activeSos.lat, activeSos.lng];
+    }
+
     const points: [number, number][] = [];
     incidents.forEach((inc) => {
       if (isValidCoordinate(inc.lat, inc.lng)) {

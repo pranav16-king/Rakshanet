@@ -491,12 +491,23 @@ class NetworkStateService extends ChangeNotifier {
         final location = <String, dynamic>{
           if (meta['latitude'] != null) 'lat': meta['latitude'],
           if (meta['longitude'] != null) 'lng': meta['longitude'],
+          if (meta['lat'] != null) 'lat': meta['lat'],
+          if (meta['lng'] != null) 'lng': meta['lng'],
           if (meta['accuracy_m'] != null) 'accuracy': meta['accuracy_m'],
+          if (meta['accuracy'] != null) 'accuracy': meta['accuracy'],
           if (meta['location_source'] != null)
             'fix_type': meta['location_source'],
         };
         if (location.containsKey('lat') && location.containsKey('lng')) {
           packet['location'] = location;
+          packet['lat'] = location['lat'];
+          packet['lng'] = location['lng'];
+          if (location['accuracy'] != null) packet['accuracy'] = location['accuracy'];
+        }
+        if (senderName != null && senderName.isNotEmpty) {
+          packet['sender_name'] = senderName;
+        } else if (packet['type'] == 'SOS') {
+          packet['sender_name'] = 'Distress Beacon';
         }
         payloadList.add(packet);
       }
@@ -507,6 +518,7 @@ class NetworkStateService extends ChangeNotifier {
         sosIds.add(id);
         if (uploadedMessageIds.contains(id)) continue;
         uploadedMessageIds.add(id);
+        final casualties = s['people_count'] ?? s['casualties'] ?? 1;
         final packet = <String, dynamic>{
           'ver': 1,
           'msg_id': id,
@@ -518,27 +530,35 @@ class NetworkStateService extends ChangeNotifier {
           'hops': 0,
           'type': 'SOS',
           'payload': jsonEncode({
-            'category': s['category'],
-            'people_count': s['people_count'],
+            'category': s['category'] ?? 'SOS',
+            'people_count': casualties,
+            'casualties': casualties,
             'notes': s['notes'],
           }),
           'meta': {
             'urgency': s['urgency'] ?? 'CRITICAL',
             'category': s['category'] ?? 'Emergency SOS',
-            'peopleCount': s['people_count'] ?? 1,
+            'peopleCount': casualties,
+            'people_count': casualties,
+            'casualties': casualties,
             'location_source': s['location_source'],
             'location_is_stale': s['location_is_stale'] == 1,
             'synced_via': 'auto_recovery',
           },
         };
         final senderName = s['sender_name']?.toString().trim() ?? '';
-        if (senderName.isNotEmpty) packet['sender_name'] = senderName;
-        if (s['latitude'] != null && s['longitude'] != null) {
+        packet['sender_name'] = senderName.isNotEmpty ? senderName : 'Distress Beacon';
+        final lat = s['latitude'] ?? s['lat'];
+        final lng = s['longitude'] ?? s['lng'];
+        final acc = s['location_accuracy'] ?? s['accuracy'];
+        if (lat != null && lng != null) {
+          packet['lat'] = lat;
+          packet['lng'] = lng;
+          if (acc != null) packet['accuracy'] = acc;
           packet['location'] = {
-            'lat': s['latitude'],
-            'lng': s['longitude'],
-            if (s['location_accuracy'] != null)
-              'accuracy': s['location_accuracy'],
+            'lat': lat,
+            'lng': lng,
+            'accuracy': ?acc,
             if (s['location_source'] != null) 'fix_type': s['location_source'],
           };
         }
@@ -551,6 +571,7 @@ class NetworkStateService extends ChangeNotifier {
         reportIds.add(id);
         if (uploadedMessageIds.contains(id)) continue;
         uploadedMessageIds.add(id);
+        final casualties = r['people_affected'] ?? r['casualties'] ?? 1;
         final packet = <String, dynamic>{
           'ver': 1,
           'msg_id': id,
@@ -571,14 +592,22 @@ class NetworkStateService extends ChangeNotifier {
           'meta': {
             'urgency': r['severity'] ?? 'CRITICAL',
             'category': r['type'] ?? 'Emergency SOS',
-            'peopleCount': r['people_affected'] ?? 1,
+            'peopleCount': casualties,
+            'people_count': casualties,
+            'casualties': casualties,
             'synced_via': 'auto_recovery',
           },
         };
-        if (r['latitude'] != null && r['longitude'] != null) {
+        final senderName = r['sender_name']?.toString().trim() ?? '';
+        packet['sender_name'] = senderName.isNotEmpty ? senderName : 'Emergency Report';
+        final lat = r['latitude'] ?? r['lat'];
+        final lng = r['longitude'] ?? r['lng'];
+        if (lat != null && lng != null) {
+          packet['lat'] = lat;
+          packet['lng'] = lng;
           packet['location'] = {
-            'lat': r['latitude'],
-            'lng': r['longitude'],
+            'lat': lat,
+            'lng': lng,
             'fix_type': 'STORED_GPS',
           };
         }

@@ -21,10 +21,15 @@ import {
   Activity,
   Layers,
   Users,
+  Info,
+  Copy,
+  Check,
+  User,
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Card } from '../common/Card';
 import { broadcastIncidentMessage } from '../../api/incidents';
+import { HumanReadablePayload } from './HumanReadablePayload';
 import type {
   IncidentCommunicationsResponse,
   IncidentSosAlert,
@@ -52,8 +57,33 @@ const reportedCoordinates = (lat: unknown, lng: unknown): string =>
     ? `[${lat.toFixed(4)}, ${lng.toFixed(4)}]`
     : 'Location not reported';
 
-const reportedTimestamp = (value: unknown): string =>
-  typeof value === 'string' && value.trim() ? value : 'Time not reported';
+const reportedTimestamp = (value: unknown, rawTimestamp?: unknown): string => {
+  if (typeof value === 'string' && value.trim() && value !== 'Time not reported') {
+    return value;
+  }
+  if (rawTimestamp) {
+    try {
+      const num = typeof rawTimestamp === 'number' ? rawTimestamp : parseFloat(String(rawTimestamp));
+      if (!isNaN(num) && num > 0) {
+        const sec = num > 1e11 ? num : num * 1000;
+        const d = new Date(sec);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          });
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return 'Just now';
+};
 
 export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenterProps> = ({
   incidentId,
@@ -68,6 +98,21 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
   const [broadcastText, setBroadcastText] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastSuccess, setBroadcastSuccess] = useState<string | null>(null);
+  const [revealedImeis, setRevealedImeis] = useState<Record<string, boolean>>({});
+  const [showAllImeis, setShowAllImeis] = useState<boolean>(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const toggleImei = (id: string) => {
+    setRevealedImeis((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const copyImei = (imei: string, id: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(imei);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2500);
+    }
+  };
 
   const summary = communications?.summary || {
     total: 0,
@@ -228,19 +273,34 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
       </div>
 
       {/* ===================================================================== */}
-      {/* 1. UNIFIED FEED WITH SEARCH */}
+      {/* 1. UNIFIED FEED WITH SEARCH & IMEI TOGGLE */}
       {/* ===================================================================== */}
       {activeSubTab === 'ALL' && (
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-[#94A3B8]" />
-            <input
-              type="text"
-              placeholder="Search all communications of this incident..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#111A2E] border border-[#CBD5E1] dark:border-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] focus:ring-2 focus:ring-[#FFD21F] outline-none"
-            />
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative flex-1 w-full">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-[#94A3B8]" />
+              <input
+                type="text"
+                placeholder="Search messages, senders, IMEIs, or reports..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#111A2E] border border-[#CBD5E1] dark:border-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] focus:ring-2 focus:ring-[#FFD21F] outline-none"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAllImeis((prev) => !prev)}
+              className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                showAllImeis
+                  ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-cyan-500/40 ring-1 ring-cyan-500/30'
+                  : 'bg-white dark:bg-[#111A2E] text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+              title="Toggle visibility of IMEI numbers for all communication cards"
+            >
+              <Info className="w-3.5 h-3.5 text-cyan-500" />
+              <span>{showAllImeis ? 'Hide All IMEIs' : 'Show All IMEIs (i)'}</span>
+            </button>
           </div>
 
           {filteredAll.length === 0 ? (
@@ -257,6 +317,9 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
                 const isSOS = item.category === 'SOS';
                 const isSITREP = item.category === 'SITREP';
                 const isTeam = item.category === 'RESCUE_COMMS';
+                const imei = item.imei || (item.sender_id && item.sender_id.length >= 14 ? item.sender_id : null);
+                const isImeiRevealed = showAllImeis || !!revealedImeis[item.id];
+                const displayName = item.sender_name || item.sender || (item.sender_id ? `Node ${item.sender_id.slice(-4)}` : 'Mesh Handset');
 
                 return (
                   <div
@@ -272,7 +335,7 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
                         <div
                           className={`p-2 rounded-lg shrink-0 mt-0.5 ${
                             isSOS
@@ -294,14 +357,62 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
                             <Mic className="w-4 h-4" />
                           )}
                         </div>
-                        <div>
+
+                        <div className="flex-1 min-w-0">
+                          {/* Card Header with Badges, Sender Name & IMEI (i) button */}
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">
                               {item.title}
                             </h4>
-                            <span className="font-mono text-[10.5px] px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-[#0891B2] dark:text-[#06B6D4]">
-                              {item.sender_id}
+
+                            {/* Sender Name with User Icon */}
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                              <User className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                              <span>{displayName}</span>
                             </span>
+
+                            {/* [i] Info Button to Reveal / Hide IMEI */}
+                            {imei && (
+                              <div className="inline-flex items-center">
+                                {isImeiRevealed ? (
+                                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-[11px] font-bold bg-cyan-50 dark:bg-cyan-950/70 border border-cyan-400 text-cyan-800 dark:text-cyan-200 shadow-xs animate-fadeIn">
+                                    <Info className="w-3.5 h-3.5 text-cyan-500" />
+                                    <span>IMEI: {imei}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => copyImei(imei, item.id)}
+                                      className="p-0.5 hover:text-cyan-950 dark:hover:text-white transition cursor-pointer"
+                                      title="Copy IMEI number"
+                                    >
+                                      {copiedId === item.id ? (
+                                        <Check className="w-3 h-3 text-emerald-500" />
+                                      ) : (
+                                        <Copy className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleImei(item.id)}
+                                      className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-0.5 cursor-pointer"
+                                      title="Hide IMEI"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleImei(item.id)}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-cyan-500/15 hover:text-cyan-600 hover:border-cyan-400 transition cursor-pointer"
+                                    title="Click (i) to view device IMEI number"
+                                  >
+                                    <Info className="w-3.5 h-3.5 text-cyan-500" />
+                                    <span>IMEI (i)</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
                             <span
                               className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                                 item.priority === 'CRITICAL'
@@ -312,16 +423,23 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
                               {item.priority}
                             </span>
                           </div>
-                          <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-1.5 leading-relaxed">
-                            "{item.content}"
-                          </p>
+
+                          {/* Human-Readable Message Content (Clean Cards, No Raw JSON) */}
+                          <HumanReadablePayload
+                            content={item.content}
+                            title={item.title}
+                            category={item.category}
+                            meta={item.meta}
+                          />
                         </div>
                       </div>
 
                       <div className="flex flex-col items-end gap-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] shrink-0 font-mono">
-                        <span>{reportedTimestamp(item.timestamp_display)}</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {reportedTimestamp(item.timestamp_display, item.timestamp)}
+                        </span>
                         <span className="text-[10px] bg-[#E2E8F0] dark:bg-[#1E293B] px-1.5 py-0.5 rounded">
-                          {item.hops} mesh hops
+                          {item.hops ?? 0} mesh hops
                         </span>
                       </div>
                     </div>
@@ -358,48 +476,96 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
             </div>
           ) : (
             <div className="space-y-3">
-              {(communications?.sos_alerts || []).map((sos: IncidentSosAlert) => (
-                <Card
-                  key={sos.id}
-                  className="p-5 bg-white dark:bg-[#111A2E] border-red-500/40 ring-1 ring-red-500/20 shadow-md"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-red-500 text-white animate-pulse">
-                          CRITICAL SOS
-                        </span>
-                        <h3 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                          {sos.sender_name}
-                        </h3>
-                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-cyan-600">
-                          {sos.sender_id}
-                        </span>
-                      </div>
+              {(communications?.sos_alerts || []).map((sos: IncidentSosAlert) => {
+                const sosImei = sos.imei || (sos.sender_id && sos.sender_id.length >= 14 ? sos.sender_id : null);
+                const isRevealed = showAllImeis || !!revealedImeis[sos.id];
+                return (
+                  <Card
+                    key={sos.id}
+                    className="p-5 bg-white dark:bg-[#111A2E] border-red-500/40 ring-1 ring-red-500/20 shadow-md"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-red-500 text-white animate-pulse">
+                            CRITICAL SOS
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700">
+                            <User className="w-3.5 h-3.5 text-red-500" />
+                            <span>{sos.sender_name || 'Survivor Handset'}</span>
+                          </span>
 
-                      <p className="text-sm font-semibold text-red-950 dark:text-red-200 bg-red-500/10 p-3 rounded-xl border border-red-500/20">
-                        "{sos.payload}"
-                      </p>
+                          {/* [i] Info Button for IMEI */}
+                          {sosImei && (
+                            <div className="inline-flex items-center">
+                              {isRevealed ? (
+                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-[11px] font-bold bg-cyan-50 dark:bg-cyan-950/70 border border-cyan-400 text-cyan-800 dark:text-cyan-200 shadow-xs animate-fadeIn">
+                                  <Info className="w-3.5 h-3.5 text-cyan-500" />
+                                  <span>IMEI: {sosImei}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyImei(sosImei, sos.id)}
+                                    className="p-0.5 hover:text-cyan-950 dark:hover:text-white transition cursor-pointer"
+                                    title="Copy IMEI number"
+                                  >
+                                    {copiedId === sos.id ? (
+                                      <Check className="w-3 h-3 text-emerald-500" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleImei(sos.id)}
+                                    className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-0.5 cursor-pointer"
+                                    title="Hide IMEI"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleImei(sos.id)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-cyan-500/15 hover:text-cyan-600 hover:border-cyan-400 transition cursor-pointer"
+                                  title="Click (i) to view device IMEI number"
+                                >
+                                  <Info className="w-3.5 h-3.5 text-cyan-500" />
+                                  <span>IMEI (i)</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
 
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-[#64748B] dark:text-[#94A3B8] pt-1">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5 text-red-500" />
-                          <strong>{reportedNumber(sos.casualties)} people reported</strong>
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1 font-mono">
-                          <Battery className="w-3.5 h-3.5 text-amber-500" />
-                          {reportedNumber(sos.battery_pct, '%')} battery
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1 font-mono">
-                          <MapPin className="w-3.5 h-3.5 text-cyan-500" />
-                          {reportedCoordinates(sos.lat, sos.lng)}
-                        </span>
-                        <span>•</span>
-                        <span>{reportedTimestamp(sos.timestamp_display)}</span>
+                        {/* Human-Readable SOS Payload */}
+                        <HumanReadablePayload
+                          content={sos.payload}
+                          title="SOS"
+                          category="SOS"
+                        />
+
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-[#64748B] dark:text-[#94A3B8] pt-1">
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5 text-red-500" />
+                            <strong>{reportedNumber(sos.casualties)} people reported</strong>
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1 font-mono">
+                            <Battery className="w-3.5 h-3.5 text-amber-500" />
+                            {reportedNumber(sos.battery_pct, '%')} battery
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1 font-mono">
+                            <MapPin className="w-3.5 h-3.5 text-cyan-500" />
+                            {reportedCoordinates(sos.lat, sos.lng)}
+                          </span>
+                          <span>•</span>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300">
+                            {reportedTimestamp(sos.timestamp_display, sos.timestamp)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
                     {/* Relay Route Snippet */}
                     <div className="sm:w-64 p-3 rounded-xl bg-gray-50 dark:bg-[#0B1220] border border-[#E2E8F0] dark:border-[#1E293B] shrink-0 text-xs">
@@ -423,7 +589,8 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
                     </div>
                   </div>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -541,16 +708,20 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
                           {sit.location}
                         </h4>
                       </div>
-                      <p className="text-xs text-[#334155] dark:text-[#CBD5E1] mt-2 leading-relaxed">
-                        "{sit.notes}"
-                      </p>
+                      <HumanReadablePayload
+                        content={sit.notes}
+                        title="SITREP"
+                        category={sit.category}
+                      />
                       <div className="mt-2.5 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200">
                         <strong>Reported operational action:</strong> {sit.actionable || 'Not reported'}
                       </div>
                     </div>
 
                     <div className="flex sm:flex-col items-end gap-1 text-[11px] text-[#64748B] dark:text-[#94A3B8] shrink-0 font-mono">
-                      <span>{reportedTimestamp(sit.timestamp_display)}</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {reportedTimestamp(sit.timestamp_display, sit.timestamp)}
+                      </span>
                       <span>Reported by: {sit.reporter}</span>
                       <span>{reportedCoordinates(sit.lat, sit.lng)}</span>
                     </div>
@@ -597,7 +768,7 @@ export const IncidentCommunicationsCenter: React.FC<IncidentCommunicationsCenter
                       </p>
                     </div>
                     <div className="flex flex-col items-end text-[11px] font-mono text-[#64748B]">
-                      <span>{reportedTimestamp(tc.timestamp_display)}</span>
+                      <span>{reportedTimestamp(tc.timestamp_display, tc.timestamp)}</span>
                       <span className="text-emerald-500 font-bold">{tc.status}</span>
                     </div>
                   </div>

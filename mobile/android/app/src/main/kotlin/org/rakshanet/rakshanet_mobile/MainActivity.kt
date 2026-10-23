@@ -31,6 +31,7 @@ import java.io.FileOutputStream
 import java.io.RandomAccessFile
 import java.security.MessageDigest
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
 
 class MainActivity : FlutterActivity(), LocationListener {
     private val channelName = "org.rakshanet/telemetry"
@@ -54,7 +55,7 @@ class MainActivity : FlutterActivity(), LocationListener {
     private val mainHandler = Handler(Looper.getMainLooper())
     // A short bounded jitter buffer prevents stale radio packets from turning
     // into multi-second speech delay. Oldest frames are discarded on overflow.
-    private val playbackFrames = ArrayBlockingQueue<ByteArray>(3)
+    private val playbackFrames = ArrayBlockingQueue<ByteArray>(10)
     private val recordingLock = Any()
     private var recordingCallId: String? = null
     private var localRecordingFile: File? = null
@@ -197,13 +198,17 @@ class MainActivity : FlutterActivity(), LocationListener {
             audioRecord = recorder
             captureRunning = true
             captureThread = Thread {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
                 val frame = ByteArray(pcmFrameBytes)
                 while (captureRunning) {
-                    val read = recorder.read(frame, 0, frame.size, AudioRecord.READ_BLOCKING)
-                    if (read > 0 && captureRunning) {
-                        writeLocalRecordingPcm(frame, read)
-                        val outbound = pcm16ToMuLaw(frame, read)
-                        mainHandler.post { captureEventSink?.success(outbound) }
+                    try {
+                        val read = recorder.read(frame, 0, frame.size, AudioRecord.READ_BLOCKING)
+                        if (read > 0 && captureRunning) {
+                            writeLocalRecordingPcm(frame, read)
+                            val outbound = pcm16ToMuLaw(frame, read)
+                            mainHandler.post { captureEventSink?.success(outbound) }
+                        }
+                    } catch (_: Exception) {
                     }
                 }
             }.apply {
@@ -268,10 +273,17 @@ class MainActivity : FlutterActivity(), LocationListener {
             playbackRunning = true
             track.play()
             playbackThread = Thread {
-                val silence = ByteArray(pcmFrameBytes)
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
                 while (playbackRunning) {
-                    val pcm = playbackFrames.poll() ?: silence
-                    track.write(pcm, 0, pcm.size, AudioTrack.WRITE_BLOCKING)
+                    try {
+                        val pcm = playbackFrames.poll(40, TimeUnit.MILLISECONDS)
+                        if (pcm != null && playbackRunning) {
+                            track.write(pcm, 0, pcm.size, AudioTrack.WRITE_BLOCKING)
+                        }
+                    } catch (_: InterruptedException) {
+                        break
+                    } catch (_: Exception) {
+                    }
                 }
             }.apply {
                 name = "RakshaNetNearbyAudioPlayback"
@@ -287,6 +299,12 @@ class MainActivity : FlutterActivity(), LocationListener {
     private fun enqueuePlaybackFrame(pcm: ByteArray) {
         if (!playbackRunning) return
         val copy = pcm.copyOf()
+        // Low-latency jitter management:
+        // Discard oldest frames if buffered speech exceeds 4 frames (~160ms)
+        // to strictly maintain real-time voice latency (< 200ms).
+        while (playbackFrames.size >= 4) {
+            playbackFrames.poll()
+        }
         if (!playbackFrames.offer(copy)) {
             playbackFrames.poll()
             playbackFrames.offer(copy)

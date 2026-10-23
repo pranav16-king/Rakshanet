@@ -1,17 +1,17 @@
 # Graph Report - RakshaNet  (2026-10-23)
 
 ## Corpus Check
-- 531 files · ~1,373,764 words
+- 532 files · ~1,378,742 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 60 file(s) not represented in the graph (top: (none) 9, .xcconfig 8, .xml 7)
 
 ## Summary
-- 7330 nodes · 11008 edges · 370 communities (304 shown, 66 thin omitted)
+- 7343 nodes · 11032 edges · 368 communities (301 shown, 67 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.93)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c8ccc626`
+- Built from commit: `40bc08d1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -24,10 +24,10 @@
 - graphify reference: extra exports and benchmark
 - Frontend Design
 - SignalRescue Design System & UI Guidelines
-- incident.ts
+- lucide-react
 - ▶️ Running the Project
 - live_map_screen.dart
-- match_found_person_dialog.dart
+- IncidentsPage.tsx
 - RakshaNet
 - RakshaNet: Problem Statement, Latest Incident and Impact Case
 - graphify reference: add a URL and watch a folder
@@ -46,21 +46,21 @@
 - app_database.dart
 - ✨ Features
 - package.json
-- sos_provider.dart
+- dart:async
 - _
 - settings_screen.dart
 - LiveMapPage.tsx
 - emergency_profile_components.dart
 - RescueOpsPage.tsx
 - test_backend_ai.py
-- package:flutter_test/flutter_test.dart
+- all_features_connections_test.dart
 - generate_pdfs.py
 - emergency_design_tokens.dart
 - emergency_dashboard_components.dart
 - client.ts
 - network_state_service.dart
 - GSD Planner
-- package:shared_preferences/shared_preferences.dart
+- whatsapp_group_chat_test.dart
 - test_phase1.js
 - ai_assistant_screen.dart
 - mesh_engine.dart
@@ -71,14 +71,14 @@
 - PROJECT AGENT INSTRUCTIONS
 - profile_provider.dart
 - RakshaNet (SignalRescue AI) — System Architecture Specification
-- package:flutter/material.dart
+- global_sos_overlay.dart
 - message_envelope.dart
 - database_service.dart
 - chat_screen.dart
 - chat_service.dart
 - emergency_report.dart
 - map/index.ts
-- shelter_resource.dart
+- List
 - chat_group.dart
 - user_auth_service.dart
 - get
@@ -88,29 +88,29 @@
 - safety_tools_screen.dart
 - chat_repository.dart
 - missing_person.dart
-- qdrant_service.py
+- QdrantHttpClient
 - MessagesPage.tsx
 - MissingPersonsPage.tsx
 - app.py
 - mesh_router.dart
 - call_session_controller.dart
-- react
+- PeoplePage.tsx
 - mesh_device.dart
 - offline_map_service.dart
-- conversation.dart
+- String?
 - mesh_provider.dart
-- lucide-react
+- DevicesPage.tsx
 - telemetry_provider.dart
 - RecentIncidentsCard.tsx
-- App.tsx
+- react
 - sos_alert_service.dart
 - RakshaNet (SignalRescue AI) — Master System Implementation & AI Technical Guide
 - missing_persons_screen.dart
 - ble_transport.dart
-- test_call_signaling.py
+- storage.py
 - telemetry_model.dart
 - shelters_screen.dart
-- device_repository.dart
+- beacon_sos_button.dart
 - wifi_direct_transport.dart
 - device_status_provider.dart
 - group_service.dart
@@ -121,7 +121,7 @@
 - transport_manager.dart
 - encrypted_envelope.dart
 - device_identity_service.dart
-- ThemeProvider
+- StatelessWidget
 - compilerOptions
 - generate_clean_drawio.py
 - LaunchImage.imageset/README.md
@@ -132,7 +132,7 @@
 - compilerOptions
 - crypto_service.dart
 - optimizer.py
-- remote_profile_details_screen.dart
+- ThemeProvider
 - sqlite_database.dart
 - SpatialClusterEngine
 - Verification Process
@@ -158,12 +158,12 @@
 - tsconfig.json
 - encrypted_mesh_packet.dart
 - image_chunk.dart
-- detect_project.py
+- offline_call_overlay.dart
 - image_transfer_service.dart
 - generate_slide_5.py
 - _
 - Any
-- main.dart
+- package:flutter/material.dart
 - Agent: General
 - peer_range_estimator.dart
 - mesh_telemetry_card.dart
@@ -182,12 +182,12 @@
 - AGENTS.md
 - profile/profile_setup_screen.dart
 - The 7 Attack Vectors
-- MissingPersonsProvider
+- train_offline_ai_model.py
 - Professional Mobile Application & Mobile UI Skill
-- storage.py
+- test_call_signaling.py
 - Model-Native Optimization Notes (Gemini tuned)
 - Memory Protocol
-- dart:async
+- missing_person_photo_thumbnail.dart
 - Agent: Plan
 - Subagent Patterns
 - dependencies
@@ -219,7 +219,7 @@
 - GSD Phase Researcher
 - Universal UI & UX Engineering Standards
 - ai_help_tab.dart
-- CommunicationGapsPage.tsx
+- dart:io
 - report_repository.dart
 - MapCanvas.tsx
 - coordinator.md
@@ -228,7 +228,7 @@
 - GSD Research Synthesizer
 - Process
 - bool get
-- dart:io
+- image_transfer_test.dart
 - static const String
 - GSD Debugger
 - Investigation Techniques
@@ -244,7 +244,7 @@
 - GSD Debug
 - GSD Plan Phase
 - GSD Verify Work
-- List
+- package:flutter/foundation.dart
 - mesh_message.dart
 - Debug File Protocol
 - Hypothesis Testing
@@ -309,45 +309,42 @@
 - Execution Patterns
 - MessagesTrendChart.tsx
 - Final Commit
-- ai_chat_completion
-- profile_repository.dart
+- BackendAiService
+- package:flutter_test/flutter_test.dart
 - nearby_device.dart
 - offline_audio_bridge.dart
-- DateTime
-- ChangeNotifier
-- 7. Screen Specs (10 screens)
-- chat_bubble.dart
-- delivery_state.dart
+- zero_prefilled_inputs_and_features_test.dart
+- emergency_report_screen.dart
+- emergency_mesh_and_profile_screen_test.dart
+- offline_first_sos_and_mesh_sync_test.dart
+- dart:math
+- peer_details_sheet.dart
 - Professional Web Application & Web UI Skill
 - app_config.dart
 - 4. Human-Computer Interaction (HCI) Principles
-- 2. Colour System
-- 4. Spacing, Sizing and Shape
+- package:shared_preferences/shared_preferences.dart
 - StreamHandler
-- 16. Design Skill (for AI agents and contributors)
-- geospatial_distance_and_location_service_test.dart
+- VoidCallback?
 - MapControlBar.tsx
-- 🎯 Problem Statement
-- package:latlong2/latlong.dart
-- remote_user_profile_test.dart
-- MessageDeliveryStatus
-- zero_prefilled_inputs_and_features_test.dart
-- ThemeContext.tsx
+- splash_onboarding_routing_test.dart
+- tokens.ts
 - anomalous-matter-hero.tsx
 - vite.config.ts
-- _ReportMissingPersonModal
+- 📑 Feature Taxonomy & Table of Contents
 - Web Accessibility (WCAG 2.1 & 2.2 AA) Audit Checklist
 - 8. Error Handling (when errors still happen)
-- _ReportSightingModal
 - GatewayFlow
 - OfflineCachedTileImageProvider
 - build_ipa.sh
+- map_tab.dart
+- 🚀 Installation & Reproduction
+- 🗺️ Roadmap
 
 ## God Nodes (most connected - your core abstractions)
 1. `ThemeProvider` - 120 edges
-2. `react` - 117 edges
-3. `_` - 88 edges
-4. `lucide-react` - 87 edges
+2. `react` - 118 edges
+3. `lucide-react` - 88 edges
+4. `_` - 88 edges
 5. `_` - 58 edges
 6. `GatewayStorage` - 55 edges
 7. `MainActivity` - 44 edges
@@ -362,31 +359,31 @@
   docs/SYSTEM_IMPLEMENTATION_AND_AI_GUIDE.md → backend/gateway/storage.py
 - `9. Core Components` --references--> `Button()`  [INFERRED]
   design.md → frontend/src/components/common/Button.tsx
-- `9. Core Components` --references--> `Card()`  [INFERRED]
-  design.md → frontend/src/components/common/Card.tsx
 - `9. Core Components` --references--> `EmptyState()`  [INFERRED]
   design.md → frontend/src/components/common/EmptyState.tsx
+- `3. Sizing, Spacing and Layout` --references--> `clamp()`  [INFERRED]
+  .agents/skills/professional-webapp-ui/SKILL.md → frontend/src/components/ui/gateway-flow.tsx
 
 ## Import Cycles
 - None detected.
 
-## Communities (370 total, 66 thin omitted)
+## Communities (368 total, 67 thin omitted)
 
 ### Community 0 - "SignalRescue AI (RakshaNet) — Complete Feature Set"
-Cohesion: 0.05
-Nodes (43): 10. 📦 Store-and-Forward Delay-Tolerant Networking, 11. 🔐 Message Deduplication & Hash Verification, 12. ⏳ Message Time-To-Live (TTL) & Hop Limits, 13. 📴 Lightweight On-Device AI Assistant (SLM), 14. 🧠 Automated AI Emergency Classification, 15. 📊 Spatial Incident Clustering (DBSCAN), 16. 📡 Communication-Gap & Black Hole Anomaly Detection, 17. 👤 Last-Known Presence Timeline (+35 more)
+Cohesion: 0.06
+Nodes (36): 10. 📦 Store-and-Forward Delay-Tolerant Networking, 11. 🔐 Message Deduplication & Hash Verification, 12. ⏳ Message Time-To-Live (TTL) & Hop Limits, 13. 📴 Lightweight On-Device AI Assistant (SLM), 14. 🧠 Automated AI Emergency Classification, 15. 📊 Spatial Incident Clustering (DBSCAN), 16. 📡 Communication-Gap & Black Hole Anomaly Detection, 17. 👤 Last-Known Presence Timeline (+28 more)
 
 ### Community 1 - "RakshaNet — Offline Disaster Communication and AI Rescue System"
 Cohesion: 0.07
 Nodes (27): 10. Government & Rescue Agency Dispatch Integration, 11. SignalRescue AI Command Centre, 12. AI Emergency Clustering, 13. Communication-Gap Detection, 14. Missing-Person Search Intelligence, 15. Rescue Resource Optimization, 16. Economic & Operational Benefits, 17. End-to-End System Workflow (+19 more)
 
 ### Community 2 - "SignalRescue AI — design.md"
-Cohesion: 0.12
-Nodes (16): 10. Content and Voice, 11. Accessibility, 12. Battery and Low-Connectivity Design, 13. Design Tokens (TypeScript), 14. Representation Guidelines (data to visuals), 15. Light vs Dark Quick Preview, 17. Suggested File Structure, 1. Design Direction (+8 more)
+Cohesion: 0.04
+Nodes (46): 10. Content and Voice, 11. Accessibility, 12. Battery and Low-Connectivity Design, 13. Design Tokens (TypeScript), 14. Representation Guidelines (data to visuals), 15. Light vs Dark Quick Preview, 16. Design Skill (for AI agents and contributors), 17. Suggested File Structure (+38 more)
 
 ### Community 3 - "What You Must Do When Invoked"
-Cohesion: 0.08
-Nodes (25): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Part A - Structural extraction for code files, Part B - Semantic extraction (parallel subagents) (+17 more)
+Cohesion: 0.07
+Nodes (26): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+18 more)
 
 ### Community 5 - "app_tokens.dart"
 Cohesion: 0.02
@@ -404,9 +401,9 @@ Nodes (6): Design principles, Frontend Design, Ground your designs in the subjec
 Cohesion: 0.29
 Nodes (6): Always, Component recipe (React Native example), Never, Screen checklist, SignalRescue Design System & UI Guidelines, When to apply
 
-### Community 9 - "incident.ts"
-Cohesion: 0.05
-Nodes (95): assignTeamToIncident(), broadcastIncidentMessage(), fetchAvailableRescueUnits(), fetchIncidentById(), fetchIncidentCommunications(), fetchIncidentMeshTopology(), fetchIncidents(), getIncidentDevices() (+87 more)
+### Community 9 - "lucide-react"
+Cohesion: 0.04
+Nodes (101): assignTeamToIncident(), broadcastIncidentMessage(), fetchAvailableRescueUnits(), fetchIncidentById(), fetchIncidentCommunications(), fetchIncidentMeshTopology(), fetchIncidents(), getIncidentDevices() (+93 more)
 
 ### Community 10 - "▶️ Running the Project"
 Cohesion: 0.33
@@ -416,13 +413,13 @@ Nodes (6): 1. Install Native Android APK (Lightweight 1.24 MB), 2. Run Phase 1 A
 Cohesion: 0.03
 Nodes (68): _activeDownloadProgress, _activeFilters, _activeNavTarget, _activeNavTargetName, _animatedMapMove, _buildActiveReportCard, _buildBottomTray, _buildCalmCard (+60 more)
 
-### Community 12 - "match_found_person_dialog.dart"
-Cohesion: 0.06
-Nodes (30): build, _buildComparisonPhoto, _buildHeader, _buildInfoLine, _buildMatchFoundCard, _buildOfflineNoMatchCard, _buildOnlineNoMatchCard, _buildPhotoCard (+22 more)
+### Community 12 - "IncidentsPage.tsx"
+Cohesion: 0.10
+Nodes (27): incidentsApi, EmergencyToastContainer(), ToastItem(), ToastItemProps, StatusColor, StatusDot(), StatusDotProps, AppShell() (+19 more)
 
 ### Community 13 - "RakshaNet"
-Cohesion: 0.06
-Nodes (32): 1. Clone the Repository, 1. On-Device SQLite Local Outbox (`design.md`), 2. Cloud PostGIS Incident Schema (`docs/features.md`), 2. Set Up a Virtual Environment (Recommended), 3. Install Document & Chart Dependencies, 🙏 Acknowledgements, Actual Technologies Implemented & Verified in Repository, 🤖 AI / ML Architecture (+24 more)
+Cohesion: 0.07
+Nodes (28): 1. On-Device SQLite Local Outbox (`design.md`), 2. Cloud PostGIS Incident Schema (`docs/features.md`), 🙏 Acknowledgements, Actual Technologies Implemented & Verified in Repository, 🤖 AI / ML Architecture, 🏆 Competitor Analysis & Market Moat, 🗄️ Database Models (Specified Architecture), 🔗 Documentation Links (+20 more)
 
 ### Community 14 - "RakshaNet: Problem Statement, Latest Incident and Impact Case"
 Cohesion: 0.11
@@ -450,7 +447,7 @@ Nodes (36): settingsApi, ApiIntegrationsTab(), GeneralSettingsTab(), GeneralSett
 
 ### Community 27 - "chat_message.dart"
 Cohesion: 0.04
-Nodes (47): attachment, buildStatusWidget, byteLength, category, content, conversationId, copyWith, createdAt (+39 more)
+Nodes (50): attachment, buildStatusWidget, byteLength, category, content, conversationId, copyWith, createdAt (+42 more)
 
 ### Community 28 - "GeneratedPluginRegistrant.swift"
 Cohesion: 0.06
@@ -468,37 +465,37 @@ Nodes (10): 1. Core Offline Communications & Mesh Protocol, 2. Delay-Tolerant Ne
 Cohesion: 0.17
 Nodes (11): author, description, keywords, license, main, name, scripts, dev (+3 more)
 
-### Community 34 - "sos_provider.dart"
-Cohesion: 0.05
-Nodes (26): EmergencyReport, _isBroadcasting, _latestReport, loadReports, pendingCount, _reports, sendEmergencyReport, activeAlert (+18 more)
+### Community 34 - "dart:async"
+Cohesion: 0.07
+Nodes (20): activeAlert, cancelLocalSos, dispose, instance, isMuted, isSirenPlaying, _isSosActive, muteSiren (+12 more)
 
 ### Community 35 - "_"
 Cohesion: 0.03
 Nodes (64): _, altitudeMeters, AndroidLocationNotificationConfig, bearingDegrees, channelDescription, channelId, channelName, copyWith (+56 more)
 
 ### Community 36 - "settings_screen.dart"
-Cohesion: 0.04
-Nodes (46): DeviceStatusProvider, _baseThemeMode, didChangePlatformBrightness, dispose, isDarkMode, isLight, isLightMode, _isLowPower (+38 more)
+Cohesion: 0.07
+Nodes (27): DeviceStatusProvider, _autoSync, build, _buildNavTile, _buildSectionHeader, _buildSwitchTile, _buildThemeOptionButton, createState (+19 more)
 
 ### Community 37 - "LiveMapPage.tsx"
 Cohesion: 0.20
-Nodes (22): fetchDeviceStats(), fetchLiveDevices(), fetchMapIncidents(), fetchRescueTeams(), numeric(), relativeTime(), LiveDeviceItem(), LiveDeviceItemProps (+14 more)
+Nodes (21): fetchDeviceStats(), fetchLiveDevices(), fetchMapIncidents(), fetchRescueTeams(), numeric(), relativeTime(), LiveDeviceItem(), LiveDeviceItemProps (+13 more)
 
 ### Community 38 - "emergency_profile_components.dart"
 Cohesion: 0.04
 Nodes (49): AppTextField, _AppTextFieldState, badgeText, build, categoryTitle, color, controller, createState (+41 more)
 
 ### Community 39 - "RescueOpsPage.tsx"
-Cohesion: 0.13
-Nodes (17): rescueOpsApi, DispatchPlanSummary(), DispatchPlanSummaryProps, FleetTable(), FleetTableProps, UnitStatusBadge(), UnitStatusBadgeProps, UnitTypeIcon() (+9 more)
+Cohesion: 0.12
+Nodes (18): rescueOpsApi, DispatchPlanSummary(), DispatchPlanSummaryProps, FleetTable(), FleetTableProps, UnitStatusBadge(), UnitStatusBadgeProps, UnitTypeIcon() (+10 more)
 
 ### Community 43 - "test_backend_ai.py"
-Cohesion: 0.12
-Nodes (5): BlackHoleAnomaly, CAPExporter, MasterIncident, test_black_hole_cap_alert_and_cad_json(), test_oasis_cap_xml_compliance()
+Cohesion: 0.08
+Nodes (8): BlackHoleAnomaly, CAPExporter, MasterIncident, EmergencySource, get_source_by_id(), list_all_sources(), test_black_hole_cap_alert_and_cad_json(), test_oasis_cap_xml_compliance()
 
-### Community 44 - "package:flutter_test/flutter_test.dart"
-Cohesion: 0.07
-Nodes (9): main, main, main, main, main, main, main, main (+1 more)
+### Community 44 - "all_features_connections_test.dart"
+Cohesion: 0.10
+Nodes (3): main, main, main
 
 ### Community 46 - "generate_pdfs.py"
 Cohesion: 0.14
@@ -514,7 +511,7 @@ Nodes (53): _batteryColor, _batteryIcon, batteryLevel, build, _buildActionTile, 
 
 ### Community 50 - "client.ts"
 Cohesion: 0.09
-Nodes (18): analyticsApi, EMPTY_ANALYTICS, LiveAnalyticsData, authApi, API_BASE_URL, apiClient, dispatchApi, telemetryApi (+10 more)
+Nodes (18): analyticsApi, EMPTY_ANALYTICS, LiveAnalyticsData, authApi, API_BASE_URL, apiClient, communicationGapsApi, dispatchApi (+10 more)
 
 ### Community 51 - "network_state_service.dart"
 Cohesion: 0.03
@@ -524,9 +521,9 @@ Nodes (64): _applyStateTransition, bluetoothOnly, calculateBackoffDelay, cellula
 Cohesion: 0.04
 Nodes (44): Building the Dependency Graph, Context Budget Rules, Context Section Rules, Core Responsibilities, Critical Rules, Dependency Graph, Dependency Graph Construction, Depth Calibration (+36 more)
 
-### Community 53 - "package:shared_preferences/shared_preferences.dart"
-Cohesion: 0.17
-Nodes (7): kSampleBase64Png, main, _buildTestApp, chat, main, mesh, telemetry
+### Community 53 - "whatsapp_group_chat_test.dart"
+Cohesion: 0.12
+Nodes (8): main, main, main, _buildTestApp, chat, main, mesh, telemetry
 
 ### Community 54 - "test_phase1.js"
 Cohesion: 0.08
@@ -538,7 +535,7 @@ Nodes (34): AiAssistantScreen, _AiAssistantScreenState, build, _buildAssistantCa
 
 ### Community 56 - "mesh_engine.dart"
 Cohesion: 0.03
-Nodes (61): add, attachmentPath, _bits, broadcastMissingPerson, broadcastMissingPersonSighting, broadcastSos, clear, _dbService (+53 more)
+Nodes (64): _activeSosEnvelopes, add, attachmentPath, _bits, broadcastMissingPerson, broadcastMissingPersonSighting, broadcastSos, clear (+56 more)
 
 ### Community 57 - "my_application.cc"
 Cohesion: 0.08
@@ -550,7 +547,7 @@ Nodes (28): age, bloodGroup, copyWith, createdAt, createdDateTime, defaultMock, 
 
 ### Community 59 - "signal_rescue_bottom_nav.dart"
 Cohesion: 0.04
-Nodes (47): ToolsScreen, activeText, background, build, createState, currentIndex, cyanAccent, dispose (+39 more)
+Nodes (46): activeText, background, build, createState, currentIndex, cyanAccent, dispose, _handleTapCancel (+38 more)
 
 ### Community 60 - "PROJECT AGENT INSTRUCTIONS"
 Cohesion: 0.07
@@ -561,28 +558,28 @@ Cohesion: 0.08
 Nodes (26): 10. Location / GPS, 11. External Services, 12. AI / ML Features, 13. Error Handling, 14. Loading / Empty States, 15. Existing Code First, 16. Do Not Guess, 17. Production Quality (+18 more)
 
 ### Community 62 - "profile_provider.dart"
-Cohesion: 0.05
-Nodes (33): UserProfile, fetchCloudProfileByImei, incrementMessagesRelayed, incrementMissingFound, incrementPeopleHelped, incrementSosForwarded, _isLoading, _isRegistered (+25 more)
+Cohesion: 0.04
+Nodes (42): clearProfile, _db, getOrCreateDeviceId, getProfile, isRegistered, ProfileRepository, saveProfile, _tableName (+34 more)
 
 ### Community 63 - "RakshaNet (SignalRescue AI) — System Architecture Specification"
 Cohesion: 0.08
 Nodes (25): 1. Executive Summary & Design Philosophy, 2. Multi-Tier End-to-End System Topology, 3.1 Database Entity-Relationship (ER) Model (`app_database.db`), 3. Flutter Mobile Application Architecture, 4. Complete 13-Screen Wireframe Specification, 5.1 Binary Envelope Structure, 5.2 Save-Before-Send Transactional Guarantee, 5.3 Deduplication & Loop Suppression (+17 more)
 
-### Community 64 - "package:flutter/material.dart"
+### Community 64 - "global_sos_overlay.dart"
 Cohesion: 0.03
-Nodes (69): build, createState, dispose, initState, onTriggered, _pulseController, _scaleAnimation, size (+61 more)
+Nodes (53): build, createState, dispose, initState, onTriggered, _pulseController, _scaleAnimation, size (+45 more)
 
 ### Community 65 - "message_envelope.dart"
 Cohesion: 0.07
 Nodes (28): checksum, conversationId, copyForRelay, copyWith, decode, defaultMaxHops, encode, fromBytes (+20 more)
 
 ### Community 66 - "database_service.dart"
-Cohesion: 0.12
-Nodes (13): DatabaseService, deleteMessage, getAllMessages, getMessageById, getMessagesForConversation, getPendingOutboxMessages, insertMessage, _instance (+5 more)
+Cohesion: 0.08
+Nodes (19): DatabaseService, deleteMessage, getAllMessages, getMessageById, getMessagesForConversation, getPendingOutboxMessages, insertMessage, _instance (+11 more)
 
 ### Community 67 - "chat_screen.dart"
 Cohesion: 0.03
-Nodes (58): _buildActiveGroupBreadcrumb, _buildAttachmentOption, _buildDirectChatBanner, _buildEmergencyShortcutsBar, _buildEmptyGroupsCard, _buildEmptyState, _buildFilterTabs, _buildImageAttachment (+50 more)
+Nodes (56): _buildActiveGroupBreadcrumb, _buildAttachmentOption, _buildDirectChatBanner, _buildEmergencyShortcutsBar, _buildEmptyGroupsCard, _buildEmptyState, _buildFilterTabs, _buildImageAttachment (+48 more)
 
 ### Community 68 - "chat_service.dart"
 Cohesion: 0.04
@@ -594,15 +591,15 @@ Nodes (22): category, create, createdAt, description, EmergencyType, fromMap, fr
 
 ### Community 70 - "map/index.ts"
 Cohesion: 0.10
-Nodes (50): CommunicationGapPolygon(), CommunicationGapPolygonProps, DeviceClusterMarker(), DeviceClusterMarkerProps, DeviceNodeMarker(), DeviceNodeMarkerProps, FloodZonePolygon(), FloodZonePolygonProps (+42 more)
+Nodes (49): CommunicationGapPolygon(), CommunicationGapPolygonProps, DeviceClusterMarker(), DeviceClusterMarkerProps, DeviceNodeMarker(), DeviceNodeMarkerProps, FloodZonePolygon(), FloodZonePolygonProps (+41 more)
 
-### Community 71 - "shelter_resource.dart"
-Cohesion: 0.10
-Nodes (19): address, availableSpots, capacity, copyWith, distance, fromJson, fromMap, id (+11 more)
+### Community 71 - "List"
+Cohesion: 0.06
+Nodes (29): amenities, capacity, distance, id, lastUpdated, name, occupancy, occupancyRate (+21 more)
 
 ### Community 72 - "chat_group.dart"
-Cohesion: 0.07
-Nodes (26): ChatGroup, conversationId, createdAt, creatorId, description, deviceId, fromMap, groupId (+18 more)
+Cohesion: 0.08
+Nodes (25): conversationId, createdAt, creatorId, description, deviceId, fromMap, groupId, GroupInvite (+17 more)
 
 ### Community 73 - "user_auth_service.dart"
 Cohesion: 0.08
@@ -610,7 +607,7 @@ Nodes (23): _baseUrl, checkOfflineLoginAvailable, _currentEmail, _currentUniqueI
 
 ### Community 74 - "get"
 Cohesion: 0.03
-Nodes (30): get_all_cad_incidents(), get_analytics_trends(), get_available_rescue_fleet(), get_cap_alert_feed(), get_cloud_available_data(), get_devices(), get_devices_stats(), get_incident_cad_json() (+22 more)
+Nodes (31): get_all_cad_incidents(), get_analytics_trends(), get_available_rescue_fleet(), get_cap_alert_feed(), get_cloud_available_data(), get_dashboard_overview(), get_devices(), get_devices_stats() (+23 more)
 
 ### Community 75 - "devDependencies"
 Cohesion: 0.17
@@ -622,11 +619,11 @@ Nodes (39): _activeRegionId, calculateSectorBounds, cancelDownload, clearAllTile
 
 ### Community 77 - "bluetooth_radio_service.dart"
 Cohesion: 0.02
-Nodes (82): _acceptedConnections, _audioFrameController, broadcastBytes, broadcastJson, broadcastMedia, broadcastPayload, byteLength, _callControlController (+74 more)
+Nodes (83): _acceptedConnections, _audioFrameController, broadcastBytes, broadcastJson, broadcastMedia, broadcastPayload, byteLength, _callControlController (+75 more)
 
 ### Community 78 - "safety_tools_screen.dart"
 Cohesion: 0.03
-Nodes (78): build, StatusStrip, EmergencyReportProvider, MeshProvider, TelemetryProvider, _buildHeader, _buildMyMessageBubble, _openRemoteProfile (+70 more)
+Nodes (73): build, StatusStrip, EmergencyReportProvider, MeshProvider, TelemetryProvider, _buildHeader, _buildMyMessageBubble, _openRemoteProfile (+65 more)
 
 ### Community 79 - "chat_repository.dart"
 Cohesion: 0.11
@@ -636,53 +633,53 @@ Nodes (16): ChatRepository, _conversationsTable, _db, deleteMessage, getConversa
 Cohesion: 0.05
 Nodes (38): age, assignedTeam, biometricIndexed, bloodGroup, clothingLastSeen, contactPhone, copyWith, description (+30 more)
 
-### Community 81 - "qdrant_service.py"
-Cohesion: 0.04
-Nodes (18): EmergencySource, get_source_by_id(), list_all_sources(), calibrate_face_confidence(), CollectionConfig, CollectionInfo, decode_image_bytes(), extract_image_features() (+10 more)
+### Community 81 - "QdrantHttpClient"
+Cohesion: 0.07
+Nodes (6): calibrate_face_confidence(), CollectionConfig, CollectionInfo, QdrantHttpClient, QdrantService, to_point_uuid()
 
 ### Community 82 - "MessagesPage.tsx"
-Cohesion: 0.16
-Nodes (19): messagesApi, DeliveryTicks(), DeliveryTicksProps, StatusBadgeProps, BroadcastMessageModal(), BroadcastMessageModalProps, FilterCriteria, MessageFilterModalProps (+11 more)
+Cohesion: 0.17
+Nodes (17): messagesApi, DeliveryTicks(), DeliveryTicksProps, BroadcastMessageModal(), BroadcastMessageModalProps, FilterCriteria, MessageFilterModalProps, MessageItem() (+9 more)
 
 ### Community 83 - "MissingPersonsPage.tsx"
-Cohesion: 0.14
-Nodes (29): addMissingPersonSighting(), createMissingPerson(), getMissingPersons(), searchMissingPersonByPhoto(), updateMissingPersonStatus(), getDisasterIcon(), getMatchPercent(), MissingPersonsPage() (+21 more)
+Cohesion: 0.13
+Nodes (31): addMissingPersonSighting(), createMissingPerson(), getMissingPersons(), searchMissingPersonByPhoto(), updateMissingPersonStatus(), Button(), ButtonProps, getDisasterIcon() (+23 more)
 
 ### Community 84 - "app.py"
 Cohesion: 0.04
-Nodes (54): acknowledge_message(), add_missing_person_sighting(), assign_incident_rescue_team(), broadcast_incident_mesh_message(), create_access_token(), create_field_user(), create_missing_person_report(), create_or_sync_group() (+46 more)
+Nodes (54): acknowledge_message(), add_missing_person_sighting(), ai_chat_completion(), assign_incident_rescue_team(), broadcast_incident_mesh_message(), create_access_token(), create_field_user(), create_missing_person_report() (+46 more)
 
 ### Community 85 - "mesh_router.dart"
-Cohesion: 0.05
-Nodes (31): ackTimestamp, DeliveryReceipt, fromMap, messageId, receiptId, recipientId, signature, toMap (+23 more)
+Cohesion: 0.07
+Nodes (23): BloomFilter, action, battery, bloomFilter, db, deliveryReceipt, deviceId, email (+15 more)
 
 ### Community 86 - "call_session_controller.dart"
 Cohesion: 0.04
 Nodes (48): acceptIncoming, approveRecordingRequest, _armTimeout, _audio, _audioSubscription, availabilityFor, cancelOutgoing, _captureActive (+40 more)
 
-### Community 87 - "react"
-Cohesion: 0.11
-Nodes (18): GeneratedReport, reportsApi, TelemetryStats, ImpactCardProps, CommandHeader(), CommandLayout(), CommandSidebar(), NAV_ITEMS (+10 more)
+### Community 87 - "PeoplePage.tsx"
+Cohesion: 0.15
+Nodes (19): peopleApi, StatusBadge(), StatusBadgeProps, AddUserModal(), AddUserModalProps, PeopleTable(), PeopleTableProps, PeopleTabsProps (+11 more)
 
 ### Community 88 - "mesh_device.dart"
 Cohesion: 0.11
-Nodes (17): batteryLevel, ConnectionType, copyWith, deviceId, displayName, fromMap, fromNearbyDevice, hopCount (+9 more)
+Nodes (16): batteryLevel, ConnectionType, copyWith, deviceId, displayName, fromMap, fromNearbyDevice, hopCount (+8 more)
 
 ### Community 89 - "offline_map_service.dart"
 Cohesion: 0.05
 Nodes (39): bearingDegrees, cardinalDirection, clearCache, darkTileUrl, distanceMeters, downloaded, downloadRegion, forceOfflineGrid (+31 more)
 
-### Community 90 - "conversation.dart"
-Cohesion: 0.13
-Nodes (14): Conversation, conversationId, copyWith, createdAt, fromJson, fromMap, id, lastMessage (+6 more)
+### Community 90 - "String?"
+Cohesion: 0.08
+Nodes (22): Conversation, conversationId, copyWith, createdAt, fromJson, fromMap, id, lastMessage (+14 more)
 
 ### Community 91 - "mesh_provider.dart"
 Cohesion: 0.09
 Nodes (19): addOrUpdateDevice, _connectedPeerCount, dispose, _initRadioListener, _isMeshActive, _isScanning, _loadStoredPeers, _nearbyDevices (+11 more)
 
-### Community 92 - "lucide-react"
-Cohesion: 0.07
-Nodes (46): coordinateLabel(), devicesApi, EMPTY_METRICS, formatTimeAgo(), isNumber(), peopleApi, BatteryBar(), BatteryBarProps (+38 more)
+### Community 92 - "DevicesPage.tsx"
+Cohesion: 0.10
+Nodes (29): 9. Core Components, coordinateLabel(), devicesApi, EMPTY_METRICS, formatTimeAgo(), isNumber(), BatteryBar(), BatteryBarProps (+21 more)
 
 ### Community 93 - "telemetry_provider.dart"
 Cohesion: 0.08
@@ -692,41 +689,41 @@ Nodes (20): batteryLevel, dispose, hasGpsFix, _initAndRefresh, isOnline, _latitu
 Cohesion: 0.13
 Nodes (26): EMPTY_DASHBOARD_DATA, fetchDashboardOverview(), EmptyState(), EmptyStateProps, KpiCard(), KpiCardProps, LoadingSkeleton(), LoadingSkeletonProps (+18 more)
 
-### Community 95 - "App.tsx"
+### Community 95 - "react"
 Cohesion: 0.05
-Nodes (50): react, App(), queryClient, EmergencyToastContainer(), ToastItem(), ToastItemProps, Logo(), LogoProps (+42 more)
+Nodes (49): react, GeneratedReport, reportsApi, TelemetryStats, App(), queryClient, Logo(), LogoProps (+41 more)
 
 ### Community 96 - "sos_alert_service.dart"
 Cohesion: 0.04
 Nodes (42): acknowledgeAndRespond, activeAlertNotifier, _alertHistory, alertStream, _alertStreamController, _audioPlayer, _audioPlayerInitialized, _autoMuteTimer (+34 more)
 
 ### Community 97 - "RakshaNet (SignalRescue AI) — Master System Implementation & AI Technical Guide"
-Cohesion: 0.06
-Nodes (32): 1.1 Why We Did This, 1.2 Benefit, 1.3 Technical Mechanics & Implementation, 1.4 How It Works in a Disaster Scenario, 1. Bluetooth Low Energy & Wi-Fi Direct Mesh Integration (Tiers 1 & 2), 2.1 Why We Did This, 2.2 Benefit, 2.4 How It Works in a Disaster Scenario (+24 more)
+Cohesion: 0.07
+Nodes (28): 1.1 Why We Did This, 1.2 Benefit, 1.3 Technical Mechanics & Implementation, 1.4 How It Works in a Disaster Scenario, 1. Bluetooth Low Energy & Wi-Fi Direct Mesh Integration (Tiers 1 & 2), 2.1 Why We Did This, 2.2 Benefit, 2.4 How It Works in a Disaster Scenario (+20 more)
 
 ### Community 98 - "missing_persons_screen.dart"
-Cohesion: 0.04
-Nodes (50): _ageCtrl, borderRadius, _buildAttributeChip, _buildEmptyState, _buildFallbackInitial, _buildFieldLabel, _buildFilterChip, _buildFrame (+42 more)
+Cohesion: 0.02
+Nodes (86): MissingPersonsProvider, build, _buildComparisonPhoto, _buildHeader, _buildInfoLine, _buildMatchFoundCard, _buildOfflineNoMatchCard, _buildOnlineNoMatchCard (+78 more)
 
 ### Community 99 - "ble_transport.dart"
 Cohesion: 0.03
 Nodes (66): ackEvents, _ackEventsController, ackId, ackRequested, BleFrame, BleFrameType, broadcast, broadcastCapabilities (+58 more)
 
-### Community 100 - "test_call_signaling.py"
-Cohesion: 0.09
-Nodes (5): _auth_headers(), isolated_call_users(), test_invite_accept_and_server_authorized_sdp_relay(), test_offline_or_unknown_recipient_is_not_reported_as_ringing(), setup_function()
+### Community 100 - "storage.py"
+Cohesion: 0.05
+Nodes (9): extract_image_features(), get_face_models(), setup_function(), create_synthetic_face_image(), test_decode_image_bytes(), test_fastapi_endpoints(), test_feature_extractor(), test_qdrant_connection() (+1 more)
 
 ### Community 101 - "telemetry_model.dart"
 Cohesion: 0.15
 Nodes (12): batteryLevel, copyWith, dutyCycle, fromBattery, hasGpsFix, intervalSec, isOnline, meshCount (+4 more)
 
 ### Community 102 - "shelters_screen.dart"
-Cohesion: 0.06
-Nodes (33): ChatProvider, build, _buildMessageRow, _categories, ChatTab, _ChatTabState, createState, dispose (+25 more)
+Cohesion: 0.04
+Nodes (40): _baseThemeMode, didChangePlatformBrightness, dispose, isDarkMode, isLight, isLightMode, _isLowPower, _loadThemeFromPrefs (+32 more)
 
-### Community 103 - "device_repository.dart"
-Cohesion: 0.08
-Nodes (20): clearAll, _db, DeviceRepository, getConnectedCount, getDeviceById, getNearbyDevices, removeStaleDevices, _tableName (+12 more)
+### Community 103 - "beacon_sos_button.dart"
+Cohesion: 0.11
+Nodes (18): BeaconSosButton, _BeaconSosButtonState, build, _cancelHolding, createState, dispose, _holdCompleted, _holdDurationMs (+10 more)
 
 ### Community 104 - "wifi_direct_transport.dart"
 Cohesion: 0.03
@@ -745,8 +742,8 @@ Cohesion: 0.07
 Nodes (20): deserialized, env1, isolatedMsg, isolatedRes, loopResult, MockBluetoothRadio, MockMeshEngineNode, outboxRes (+12 more)
 
 ### Community 108 - "incident_dispatch_service.dart"
-Cohesion: 0.07
-Nodes (23): CryptoService, _chatService, _copyWithStatus, _crypto, _database, deviceId, dispatchSos, identifierKind (+15 more)
+Cohesion: 0.06
+Nodes (25): CryptoService, _chatService, _copyWithStatus, _crypto, currentLocation, _database, deviceId, dispatchSos (+17 more)
 
 ### Community 109 - "manifest.json"
 Cohesion: 0.18
@@ -768,9 +765,9 @@ Nodes (45): authTag, authTagBase64, ciphertext, ciphertextBase64, copyForRelay, 
 Cohesion: 0.07
 Nodes (25): clearConsentOnSignOut, _computeLuhnCheckDigit, _consentedImeiId, _consentedImeiKey, _deriveHardwareImeiFromSystemProps, detectAndConfirmHardwareImeiId, _deviceId, DeviceIdentityService (+17 more)
 
-### Community 114 - "ThemeProvider"
-Cohesion: 0.03
-Nodes (97): build, height, icon, isDanger, label, onPressed, PrimaryButton, ThemeProvider (+89 more)
+### Community 114 - "StatelessWidget"
+Cohesion: 0.04
+Nodes (51): _PersonDetailsSheet, ConnectivityGrid, ConnectivityStatusCard, EmergencyAction, QuickActionBar, SignalRescueBottomNav, SystemReadinessCard, DropdownField (+43 more)
 
 ### Community 115 - "compilerOptions"
 Cohesion: 0.10
@@ -781,12 +778,12 @@ Cohesion: 0.32
 Nodes (9): add_diagram(), build_tab1_er_architecture(), build_tab2_dtn_protocol(), build_tab3_clean_wireframes(), build_tab4_command_center(), create_drawio(), edge(), main() (+1 more)
 
 ### Community 121 - "frontend/package.json"
-Cohesion: 0.11
-Nodes (18): name, private, type, version, autoprefixer, axios, clsx, oxlint (+10 more)
+Cohesion: 0.10
+Nodes (19): name, private, type, version, autoprefixer, axios, clsx, oxlint (+11 more)
 
 ### Community 122 - "State"
-Cohesion: 0.12
-Nodes (25): CircularSosButton, _CircularSosButtonState, ProfileSetupScreen, HomeTab, _HomeTabState, _PersonPhotoThumbnail, _PersonPhotoThumbnailState, SheltersScreen (+17 more)
+Cohesion: 0.11
+Nodes (29): CircularSosButton, _CircularSosButtonState, EmergencyMeshIntroScreen, _EmergencyMeshIntroScreenState, HomeTab, _HomeTabState, MatchFoundPersonDialog, _MatchFoundPersonDialogState (+21 more)
 
 ### Community 123 - "GSD Roadmapper"
 Cohesion: 0.05
@@ -797,16 +794,16 @@ Cohesion: 0.12
 Nodes (16): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, lib, module, moduleDetection, noEmit, noFallthroughCasesInSwitch (+8 more)
 
 ### Community 128 - "crypto_service.dart"
-Cohesion: 0.05
-Nodes (33): _aesGcm, computeFingerprint, computeSha256Hex, createEnvelopeForGroup, createEnvelopeForPeer, decryptEnvelopeFromGroup, decryptEnvelopeFromPeer, decryptFromGroup (+25 more)
+Cohesion: 0.04
+Nodes (36): _aesGcm, computeFingerprint, computeSha256Hex, createEnvelopeForGroup, createEnvelopeForPeer, CryptoDecryptionException, CryptoSignatureException, decryptEnvelopeFromGroup (+28 more)
 
 ### Community 136 - "optimizer.py"
-Cohesion: 0.11
-Nodes (10): DispatchOptimizer, DispatchPlan, RescueUnit, SearchIsochrone, SearchIsochroneEngine, UnitAssignment, get_missing_person_isochrone(), test_linear_dispatch_optimization_matching() (+2 more)
+Cohesion: 0.10
+Nodes (14): DispatchOptimizer, DispatchPlan, RescueUnit, SearchIsochrone, SearchIsochroneEngine, UnitAssignment, get_missing_person_isochrone(), test_linear_dispatch_optimization_matching() (+6 more)
 
-### Community 137 - "remote_profile_details_screen.dart"
-Cohesion: 0.04
-Nodes (63): build, initState, _sendImage, _sendVoiceRecording, _shareCurrentLocation, _addCustomMember, CreateGroupScreen, _CreateGroupScreenState (+55 more)
+### Community 137 - "ThemeProvider"
+Cohesion: 0.03
+Nodes (81): ChatGroup, SosProvider, ThemeProvider, build, ChatScreen, _ChatScreenState, initState, _sendImage (+73 more)
 
 ### Community 138 - "sqlite_database.dart"
 Cohesion: 0.10
@@ -845,8 +842,8 @@ Cohesion: 0.07
 Nodes (27): Baseline (before implementation), C#, Edge Case Matrix, Evidence Format (cite verbatim), Evidence Requirements, Go, Issuing VERDICT: FAIL, Issuing VERDICT: PASS (+19 more)
 
 ### Community 147 - "mesh_topology_visualizer.dart"
-Cohesion: 0.07
-Nodes (26): _animController, build, _buildAnimatedTransportConnector, _buildEmptyScanningState, _buildNodeBadge, _buildRealDiscoveredTopology, _buildSimulatedMultiHopTopology, createState (+18 more)
+Cohesion: 0.10
+Nodes (19): _animController, build, _buildAnimatedTransportConnector, _buildEmptyScanningState, _buildNodeBadge, _buildRealDiscoveredTopology, _buildSimulatedMultiHopTopology, createState (+11 more)
 
 ### Community 148 - "profile_screen.dart"
 Cohesion: 0.09
@@ -897,16 +894,16 @@ Cohesion: 0.07
 Nodes (24): createdAt, deviceId, DeviceKeypair, DevicePublicKeys, ed25519Key, ed25519KeyPair, ed25519PrivateKey, ed25519PublicKey (+16 more)
 
 ### Community 161 - "encrypted_mesh_packet.dart"
-Cohesion: 0.12
-Nodes (15): copyWith, createdAt, EncryptedMeshPacket, encryptedPayloadJson, expiresAt, fromMap, hopCount, messageId (+7 more)
+Cohesion: 0.05
+Nodes (33): expired, fromDynamic, fromString, MeshDeliveryState, statusString, toDbString, toMessageDeliveryStatus, copyWith (+25 more)
 
 ### Community 164 - "image_chunk.dart"
-Cohesion: 0.08
+Cohesion: 0.07
 Nodes (24): attachmentId, byteLength, checksum, chunkIndex, computeChecksum, copyWith, encryptedData, fromBinary (+16 more)
 
-### Community 165 - "detect_project.py"
-Cohesion: 0.17
-Nodes (7): count_source_files(), detect_language(), main(), suggest_budget(), main(), detect_language(), run_verification()
+### Community 165 - "offline_call_overlay.dart"
+Cohesion: 0.07
+Nodes (29): _ActionButton, active, background, border, _CallDuration, _CallDurationState, child, connectedAt (+21 more)
 
 ### Community 166 - "image_transfer_service.dart"
 Cohesion: 0.05
@@ -921,12 +918,12 @@ Cohesion: 0.04
 Nodes (49): _, bearingDegrees, calculateBearingDegrees, calculateDestinationPoint, calculateDistance, calculateDistanceNullable, calculateNavigationTarget, calculateRelativeBearing (+41 more)
 
 ### Community 169 - "Any"
-Cohesion: 0.11
-Nodes (7): _authenticate_call_websocket(), call_signaling_endpoint(), CallSignalingManager, get_current_user(), get_optional_user(), websocket_mesh_endpoint(), WebSocketManager
+Cohesion: 0.10
+Nodes (8): _authenticate_call_websocket(), call_signaling_endpoint(), CallSignalingManager, get_current_user(), get_current_user_profile(), get_optional_user(), websocket_mesh_endpoint(), WebSocketManager
 
-### Community 170 - "main.dart"
+### Community 170 - "package:flutter/material.dart"
 Cohesion: 0.05
-Nodes (18): build, main, RakshaNetApp, build, _buildSelectionTile, createState, dispose, EmergencyReportScreen (+10 more)
+Nodes (24): build, main, RakshaNetApp, ChatProvider, build, initialIndex, MainScreen, build (+16 more)
 
 ### Community 172 - "Agent: General"
 Cohesion: 0.10
@@ -957,8 +954,8 @@ Cohesion: 0.18
 Nodes (10): batteryLevel, deviceId, fromMap, isInternetGateway, isRelay, lastSeen, PeerCapability, peerId (+2 more)
 
 ### Community 180 - "main_shell.dart"
-Cohesion: 0.10
-Nodes (11): build, createState, _currentIndex, initialIndex, initState, MainShell, _MainShellState, _onTabTapped (+3 more)
+Cohesion: 0.13
+Nodes (9): build, createState, _currentIndex, initialIndex, initState, MainShell, _MainShellState, _onTabTapped (+1 more)
 
 ### Community 181 - "GSD Plan Checker"
 Cohesion: 0.07
@@ -994,23 +991,23 @@ Nodes (15): Agent Rules & Instructions, Quick Index, 1. Directory Structure, 2. 
 
 ### Community 189 - "profile/profile_setup_screen.dart"
 Cohesion: 0.03
-Nodes (74): ProfileProvider, UserProfileProvider, build, _buildValueCard, _navigateToProfileSetup, OnboardingScreen, _breathingGlowAnimation, build (+66 more)
+Nodes (77): ProfileProvider, UserProfileProvider, build, _buildValueCard, _navigateToProfileSetup, OnboardingScreen, _breathingGlowAnimation, build (+69 more)
 
 ### Community 190 - "The 7 Attack Vectors"
 Cohesion: 0.10
 Nodes (19): Adversarial Critique Protocol, Auth Middleware Order, Common Failure Patterns (Historical), Critique Output Format, Critique Thresholds, DB Migration Without Transaction, Import Style Breaks Tree Shaking, Test Assertion Mismatch (+11 more)
 
-### Community 193 - "MissingPersonsProvider"
-Cohesion: 0.20
-Nodes (10): MissingPersonsProvider, _confirmSightingAndTransmit, _publishBulletinToMesh, _scanAndSearch, MissingPersonScreen, build, MissingPersonsScreen, _MissingPersonsScreenState (+2 more)
+### Community 193 - "train_offline_ai_model.py"
+Cohesion: 0.15
+Nodes (4): clean_text(), simple_stem(), tokenize(), train_and_compile()
 
 ### Community 195 - "Professional Mobile Application & Mobile UI Skill"
 Cohesion: 0.10
 Nodes (20): 0. Hard Rules (never break), 10. Accessibility (WCAG 2.2 AA + platform guidelines), 11. Performance and Battery, 12. Privacy, Compliance and Store Readiness, 13. Implementation Workflow (follow in order), 14. Final Delivery Checklist, 1. Platform Approach, 2. Color System (Theme Tokens) (+12 more)
 
-### Community 203 - "storage.py"
-Cohesion: 0.06
-Nodes (7): imported_plugin_names(), main(), sha256(), clean_text(), simple_stem(), tokenize(), train_and_compile()
+### Community 203 - "test_call_signaling.py"
+Cohesion: 0.08
+Nodes (14): count_source_files(), detect_language(), main(), suggest_budget(), imported_plugin_names(), main(), sha256(), main() (+6 more)
 
 ### Community 206 - "Model-Native Optimization Notes (Gemini tuned)"
 Cohesion: 0.12
@@ -1020,9 +1017,9 @@ Nodes (16): 10. Integration with GRAVITAS Tiers, 11. Portability Notes (tuned on
 Cohesion: 0.12
 Nodes (16): Before saving, Cross-Session Continuity Pattern, Don't save, `feedback` — What the user has corrected, Layer 1 — Session Memory (in-session, ephemeral), Layer 2 — Project Memory (cross-session, persistent), Memory Index — GRAVITAS_MEMORY.md, Memory Lifecycle (+8 more)
 
-### Community 208 - "dart:async"
-Cohesion: 0.06
-Nodes (28): _isLoading, loadMessages, markAllAsRead, _messages, pendingOutboxCount, sendMessage, syncPendingOutbox, _unreadCount (+20 more)
+### Community 208 - "missing_person_photo_thumbnail.dart"
+Cohesion: 0.12
+Nodes (14): borderRadius, build, _buildFallback, _buildLargeImage, decodeBase64Photo, detectSourceType, isFound, _isPureBase64 (+6 more)
 
 ### Community 209 - "Agent: Plan"
 Cohesion: 0.12
@@ -1041,8 +1038,8 @@ Cohesion: 0.18
 Nodes (7): { exec }, fs, http, MIME_TYPES, MOBILE_DIR, path, server
 
 ### Community 215 - "dart:convert"
-Cohesion: 0.09
-Nodes (7): CryptoDecryptionException, CryptoSignatureException, InsufficientAnchorsException, main, main, main, main
+Cohesion: 0.12
+Nodes (3): main, main, main
 
 ### Community 216 - "ai_models.dart"
 Cohesion: 0.06
@@ -1121,8 +1118,8 @@ Cohesion: 0.25
 Nodes (7): 1. The Thumb Zone Architecture, 2. Touch Hit Targets & Spacing, 3. One-Handed Reachability Checklist, Design Rules:, Expanding Hit Areas with Hit Slop:, Minimum Hit Target Standards:, Mobile Touch Targets & Thumb-Zone Ergonomics
 
 ### Community 236 - "MapView.tsx"
-Cohesion: 0.15
-Nodes (14): RakshaMapView(), RakshaMapViewProps, createOfflineGridLayer(), OfflineGridLayer, OfflineGridLayerOptions, getTileLayerConfig(), MapTileTheme, RakshaTileLayer() (+6 more)
+Cohesion: 0.24
+Nodes (10): RakshaMapView(), RakshaMapViewProps, getTileLayerConfig(), MapTileTheme, RakshaTileLayer(), RakshaTileLayerProps, TILE_CONFIGS, TileLayerConfig (+2 more)
 
 ### Community 238 - "Git Workflow & Commit Guidelines"
 Cohesion: 0.29
@@ -1148,13 +1145,13 @@ Nodes (5): 1. Visual Hierarchy & Design System Consistency, 2. Accessibility (a1
 Cohesion: 0.08
 Nodes (24): AiHelpTab, _AiHelpTabState, build, _buildAssistantCard, _buildThinkingTile, _buildUserBubble, _copyMessageToClipboard, createState (+16 more)
 
-### Community 244 - "CommunicationGapsPage.tsx"
-Cohesion: 0.29
-Nodes (8): communicationGapsApi, BlackHoleAlertCard(), BlackHoleAlertCardProps, CommunicationGapsMap(), CommunicationGapsMapProps, DecayChartMini(), DecayChartMiniProps, BlackHoleAnomaly
+### Community 244 - "dart:io"
+Cohesion: 0.21
+Nodes (3): main, kSampleBase64Png, main
 
 ### Community 245 - "report_repository.dart"
-Cohesion: 0.10
-Nodes (19): _db, deleteReport, getMissingPersonById, getMissingPersons, getPendingReports, getReportById, getReports, getShelterById (+11 more)
+Cohesion: 0.05
+Nodes (39): clearAll, _db, DeviceRepository, getConnectedCount, getDeviceById, getNearbyDevices, removeStaleDevices, _tableName (+31 more)
 
 ### Community 246 - "MapCanvas.tsx"
 Cohesion: 0.30
@@ -1171,10 +1168,6 @@ Nodes (15): Core Responsibilities, Decision gate:**, GSD New Project, Phase 1: S
 ### Community 252 - "bool get"
 Cohesion: 0.04
 Nodes (31): AiOrchestratorState, _activeRequestCompleter, cancelCurrentRequest, checkConnectivity, _forceOfflineMode, instance, isGenerating, isNetworkOnline (+23 more)
-
-### Community 253 - "dart:io"
-Cohesion: 0.11
-Nodes (8): createDestination, maxImageBytes, MediaStorageService, _mimeTypeFor, _safeName, stageImage, main, tempDir
 
 ### Community 254 - "static const String"
 Cohesion: 0.22
@@ -1236,13 +1229,13 @@ Nodes (6): GSD Plan Phase, Output Documents, Process, Related Skills, Success Cr
 Cohesion: 0.29
 Nodes (6): GSD Verify Work, Process, Related Skills, Success Criteria, Verification Checklist, When to Use
 
-### Community 269 - "List"
-Cohesion: 0.15
-Nodes (10): amenities, capacity, distance, id, lastUpdated, name, occupancy, occupancyRate (+2 more)
+### Community 269 - "package:flutter/foundation.dart"
+Cohesion: 0.07
+Nodes (20): EmergencyReport, _isLoading, loadMessages, markAllAsRead, _messages, pendingOutboxCount, sendMessage, syncPendingOutbox (+12 more)
 
 ### Community 270 - "mesh_message.dart"
-Cohesion: 0.15
-Nodes (12): content, conversationId, copyWith, createdAt, fromMap, hopCount, messageId, senderDeviceId (+4 more)
+Cohesion: 0.10
+Nodes (18): build, _buildStatusIcon, ChatBubble, isMe, message, content, conversationId, copyWith (+10 more)
 
 ### Community 271 - "Debug File Protocol"
 Cohesion: 0.33
@@ -1496,13 +1489,13 @@ Nodes (8): MessagesTrendChartProps, AnalyticsSummary, IncidentTypeDistribution, 
 Cohesion: 0.67
 Nodes (3): 1. Stage Execution Artifacts, 2. Commit Metadata, Final Commit
 
-### Community 335 - "ai_chat_completion"
-Cohesion: 0.16
-Nodes (8): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal, Interpreter guard for subcommands, BackendAiService, ai_chat_completion()
+### Community 335 - "BackendAiService"
+Cohesion: 0.20
+Nodes (6): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal, BackendAiService
 
-### Community 336 - "profile_repository.dart"
-Cohesion: 0.17
-Nodes (9): clearProfile, _db, getOrCreateDeviceId, getProfile, isRegistered, ProfileRepository, saveProfile, _tableName (+1 more)
+### Community 336 - "package:flutter_test/flutter_test.dart"
+Cohesion: 0.13
+Nodes (7): _buildTestApp, main, mesh, telemetry, theme, main, main
 
 ### Community 337 - "nearby_device.dart"
 Cohesion: 0.11
@@ -1512,25 +1505,21 @@ Nodes (16): batteryLevel, calculateBand, connectionType, copyWith, deviceId, dis
 Cohesion: 0.08
 Nodes (20): CallRecordingFiles, capturedFrames, _captureEvents, _captureSubscription, dispose, _frames, fromPlatform, hasFiles (+12 more)
 
-### Community 340 - "DateTime"
-Cohesion: 0.13
-Nodes (11): _cleanName, displayName, fromGroupMember, fromMeshDevice, fromMessage, isDirectlyConnected, isNearby, lastSeen (+3 more)
+### Community 339 - "zero_prefilled_inputs_and_features_test.dart"
+Cohesion: 0.12
+Nodes (6): _buildTestApp, chat, deviceStatus, main, mesh, telemetry
 
-### Community 341 - "ChangeNotifier"
-Cohesion: 0.25
-Nodes (7): SosProvider, AiOrchestrator, BluetoothRadioService, MeshEngine, NetworkStateService, TransportManager, UserAuthService
+### Community 340 - "emergency_report_screen.dart"
+Cohesion: 0.15
+Nodes (11): build, _buildSelectionTile, createState, dispose, EmergencyReportScreen, _EmergencyReportScreenState, _emergencyTypes, _isSending (+3 more)
 
-### Community 342 - "7. Screen Specs (10 screens)"
-Cohesion: 0.18
-Nodes (11): 7.10 Settings, 7.1 Onboarding, 7.2 Permissions, 7.3 Home, 7.4 Offline chat, 7.5 SOS, 7.6 My location (offline map), 7.7 Nearby network (+3 more)
+### Community 341 - "emergency_mesh_and_profile_screen_test.dart"
+Cohesion: 0.14
+Nodes (6): _buildTestApp, chat, main, mesh, telemetry, main
 
-### Community 343 - "chat_bubble.dart"
-Cohesion: 0.25
-Nodes (6): build, _buildStatusIcon, ChatBubble, isMe, message, MeshMessage
-
-### Community 344 - "delivery_state.dart"
-Cohesion: 0.20
-Nodes (7): expired, fromDynamic, fromString, MeshDeliveryState, statusString, toDbString, toMessageDeliveryStatus
+### Community 344 - "peer_details_sheet.dart"
+Cohesion: 0.17
+Nodes (10): MeshDevice, build, _buildDetailRow, isSimulated, onConnect, onDisconnect, onPing, peer (+2 more)
 
 ### Community 345 - "Professional Web Application & Web UI Skill"
 Cohesion: 0.15
@@ -1544,41 +1533,29 @@ Nodes (14): AppConfig, backendBaseUrl, backendUrl, cloudDataUrl, groupByIdUrl, g
 Cohesion: 0.22
 Nodes (9): 4. Human-Computer Interaction (HCI) Principles, Data tables and lists, Feedback patterns: which one when, Forms (completeness), Interaction states (all required), Keyboard and accessibility (WCAG 2.2 AA), Motion, Navigation (+1 more)
 
-### Community 348 - "2. Colour System"
-Cohesion: 0.29
-Nodes (7): 2.1 Brand core (same in both themes), 2.2 Light theme (warm, yellow-tinted), 2.3 Dark theme (night navy, yellow stays the hero), 2.4 Severity scale (incidents, map pins, dashboard), 2.5 Connectivity and message status, 2.6 Map layer colours, 2. Colour System
-
-### Community 349 - "4. Spacing, Sizing and Shape"
-Cohesion: 0.29
-Nodes (7): 4.1 Spacing scale (4-point grid), 4.2 Radii (different per role, not one radius for everything), 4.3 Touch targets and component sizes (dp), 4.4 Icon sizes, 4.5 Elevation, 4.6 Breakpoints (dashboard), 4. Spacing, Sizing and Shape
-
-### Community 351 - "16. Design Skill (for AI agents and contributors)"
-Cohesion: 0.33
-Nodes (6): 16. Design Skill (for AI agents and contributors), Always, Component recipe (React Native example), Never, Screen checklist, When to apply
+### Community 352 - "VoidCallback?"
+Cohesion: 0.20
+Nodes (7): build, height, icon, isDanger, label, onPressed, PrimaryButton
 
 ### Community 353 - "MapControlBar.tsx"
 Cohesion: 0.67
 Nodes (3): MapControlBar(), MapControlBarProps, MapFilterState
 
-### Community 354 - "🎯 Problem Statement"
-Cohesion: 0.50
-Nodes (4): Ground-Truth Evidence: Nepal–Tibet Glacier-Collapse Floods (26 August 2026), 🎯 Problem Statement, The Indian Context, The Real-World Crisis
-
-### Community 358 - "MessageDeliveryStatus"
-Cohesion: 0.67
-Nodes (3): MessageDeliveryStatus, MessageDeliveryStatusExtension, MessageStatus
-
-### Community 359 - "zero_prefilled_inputs_and_features_test.dart"
-Cohesion: 0.04
-Nodes (25): _buildTestApp, main, mesh, telemetry, theme, main, main, _buildTestApp (+17 more)
-
-### Community 360 - "ThemeContext.tsx"
+### Community 359 - "splash_onboarding_routing_test.dart"
 Cohesion: 0.12
-Nodes (21): ThemeSwitcherProps, applyThemeToDOM(), getInitialTheme(), ThemeStoreState, useThemeStore, ThemeContext, ThemeContextType, ThemeTokens (+13 more)
+Nodes (7): main, _buildSplashApp, chatService, main, mesh, telemetry, main
+
+### Community 360 - "tokens.ts"
+Cohesion: 0.11
+Nodes (16): createOfflineGridLayer(), OfflineGridLayer, OfflineGridLayerOptions, brandTokens, dark, darkTokens, fontTokens, light (+8 more)
 
 ### Community 361 - "anomalous-matter-hero.tsx"
 Cohesion: 0.33
 Nodes (6): three, AnomalousMatterHero(), AnomalousMatterHeroProps, GenerativeArtScene(), GenerativeArtSceneProps, three
+
+### Community 363 - "📑 Feature Taxonomy & Table of Contents"
+Cohesion: 0.29
+Nodes (7): 📑 Feature Taxonomy & Table of Contents, I. Core Offline Communication & Mesh Protocol, II. Offline Localization & Geospatial Mapping, III. On-Device & Cloud AI Intelligence, IV. Rescue Coordination & Operational Command, V. Resilience, Civilian Modes & System Hardening, VI. System Architecture & Distinct Value
 
 ### Community 364 - "Web Accessibility (WCAG 2.1 & 2.2 AA) Audit Checklist"
 Cohesion: 0.33
@@ -1588,25 +1565,33 @@ Nodes (6): 1. Semantic Markup & Document Structure, 2. Keyboard Navigation & Foc
 Cohesion: 0.50
 Nodes (4): 8. Error Handling (when errors still happen), Error message formula, Error taxonomy and handling, Implementation requirements
 
+### Community 373 - "🚀 Installation & Reproduction"
+Cohesion: 0.50
+Nodes (4): 1. Clone the Repository, 2. Set Up a Virtual Environment (Recommended), 3. Install Document & Chart Dependencies, 🚀 Installation & Reproduction
+
+### Community 374 - "🗺️ Roadmap"
+Cohesion: 0.50
+Nodes (4): Completed `[x]`, In Progress `[~]`, Planned `[ ]`, 🗺️ Roadmap
+
 ## Knowledge Gaps
-- **4534 isolated node(s):** `run-checks.sh script`, `$schema`, `plugins`, `react/rules-of-hooks`, `react/only-export-components` (+4529 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 5223 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **66 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **4540 isolated node(s):** `run-checks.sh script`, `$schema`, `plugins`, `react/rules-of-hooks`, `react/only-export-components` (+4535 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 5235 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **67 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `SignalRescue AI — design.md` connect `SignalRescue AI — design.md` to `RakshaNet: Problem Statement, Latest Incident and Impact Case`, `7. Screen Specs (10 screens)`, `2. Colour System`, `4. Spacing, Sizing and Shape`, `16. Design Skill (for AI agents and contributors)`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `9. Core Components` connect `SignalRescue AI — design.md` to `incident.ts`, `lucide-react`, `RecentIncidentsCard.tsx`?**
+- **Why does `ThemeProvider` connect `ThemeProvider` to `live_map_screen.dart`, `profile_screen.dart`, `settings_screen.dart`, `offline_call_overlay.dart`, `package:flutter/material.dart`, `main_shell.dart`, `ai_assistant_screen.dart`, `signal_rescue_bottom_nav.dart`, `profile/profile_setup_screen.dart`, `global_sos_overlay.dart`, `chat_screen.dart`, `safety_tools_screen.dart`, `zero_prefilled_inputs_and_features_test.dart`, `emergency_report_screen.dart`, `missing_persons_screen.dart`, `shelters_screen.dart`, `splash_onboarding_routing_test.dart`, `StatelessWidget`, `ai_help_tab.dart`, `dart:io`, `State`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `lucide-react`, `IncidentsPage.tsx`, `types/index.ts`, `gateway-flow.tsx`, `LiveMapPage.tsx`, `RescueOpsPage.tsx`, `client.ts`, `map/index.ts`, `MessagesTrendChart.tsx`, `MessagesPage.tsx`, `MissingPersonsPage.tsx`, `PeoplePage.tsx`, `ResourcesPage.tsx`, `DevicesPage.tsx`, `RecentIncidentsCard.tsx`, `MapControlBar.tsx`, `anomalous-matter-hero.tsx`, `MapView.tsx`, `MapCanvas.tsx`, `frontend/package.json`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Why does `react` connect `react` to `incident.ts`, `types/index.ts`, `gateway-flow.tsx`, `LiveMapPage.tsx`, `RescueOpsPage.tsx`, `client.ts`, `map/index.ts`, `MessagesTrendChart.tsx`, `MessagesPage.tsx`, `MissingPersonsPage.tsx`, `ResourcesPage.tsx`, `lucide-react`, `RecentIncidentsCard.tsx`, `App.tsx`, `MapControlBar.tsx`, `ThemeContext.tsx`, `anomalous-matter-hero.tsx`, `MapView.tsx`, `CommunicationGapsPage.tsx`, `MapCanvas.tsx`, `frontend/package.json`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `SignalRescue AI — design.md` connect `SignalRescue AI — design.md` to `DevicesPage.tsx`, `RakshaNet: Problem Statement, Latest Incident and Impact Case`?**
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **What connects `run-checks.sh script`, `$schema`, `plugins` to the rest of the system?**
-  _4534 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _4540 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `SignalRescue AI (RakshaNet) — Complete Feature Set` be split into smaller, more focused modules?**
-  _Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05555555555555555 - nodes in this community are weakly interconnected._
 - **Should `RakshaNet — Offline Disaster Communication and AI Rescue System` be split into smaller, more focused modules?**
   _Cohesion score 0.07407407407407407 - nodes in this community are weakly interconnected._
 - **Should `SignalRescue AI — design.md` be split into smaller, more focused modules?**
-  _Cohesion score 0.125 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

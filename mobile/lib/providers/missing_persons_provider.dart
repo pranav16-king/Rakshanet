@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../config/app_config.dart';
 import '../database/repositories/missing_person_repository.dart';
 import '../models/message_envelope.dart';
@@ -198,12 +199,70 @@ class MissingPersonsProvider extends ChangeNotifier {
             final List<dynamic> matches = rawMatches is List ? rawMatches : [];
             final dynamic topMatch = decoded['top_match'] ?? (matches.isNotEmpty ? matches.first : null);
 
+            final localReports = _reports.isNotEmpty ? _reports : await _repository.getMissingPersons();
+
+            // Enrich all matches with local photoPath and standardized full photoUrl
+            final List<Map<String, dynamic>> enrichedMatches = [];
+            for (final m in matches) {
+              if (m is Map<String, dynamic>) {
+                final enriched = Map<String, dynamic>.from(m);
+                final pid = (enriched['person_id'] ?? enriched['id'])?.toString();
+                final pname = enriched['name']?.toString();
+                final localMatch = localReports.cast<MissingPerson?>().firstWhere(
+                  (r) => (pid != null && pid.isNotEmpty && r?.id == pid) ||
+                         (pname != null && pname.isNotEmpty && r?.name.toLowerCase() == pname.toLowerCase()),
+                  orElse: () => null,
+                );
+                if (localMatch != null) {
+                  if ((enriched['photo_path'] == null || enriched['photo_path'].toString().isEmpty) && localMatch.photoPath != null) {
+                    enriched['photo_path'] = localMatch.photoPath;
+                  }
+                  if ((enriched['photo_url'] == null || enriched['photo_url'].toString().isEmpty) && localMatch.photoUrl != null) {
+                    enriched['photo_url'] = localMatch.photoUrl;
+                  }
+                }
+                final pUrl = enriched['photo_url']?.toString();
+                if (pUrl != null && pUrl.startsWith('/')) {
+                  enriched['photo_url'] = '${AppConfig.backendBaseUrl}$pUrl';
+                } else if ((pUrl == null || pUrl.isEmpty) && pid != null && pid.isNotEmpty) {
+                  enriched['photo_url'] = '${AppConfig.backendBaseUrl}/api/v1/missing-persons/$pid/photo';
+                }
+                enrichedMatches.add(enriched);
+              }
+            }
+
+            Map<String, dynamic>? enrichedTopMatch;
+            if (topMatch is Map<String, dynamic>) {
+              enrichedTopMatch = Map<String, dynamic>.from(topMatch);
+              final pid = (enrichedTopMatch['person_id'] ?? enrichedTopMatch['id'])?.toString();
+              final pname = enrichedTopMatch['name']?.toString();
+              final localMatch = localReports.cast<MissingPerson?>().firstWhere(
+                (r) => (pid != null && pid.isNotEmpty && r?.id == pid) ||
+                       (pname != null && pname.isNotEmpty && r?.name.toLowerCase() == pname.toLowerCase()),
+                orElse: () => null,
+              );
+              if (localMatch != null) {
+                if ((enrichedTopMatch['photo_path'] == null || enrichedTopMatch['photo_path'].toString().isEmpty) && localMatch.photoPath != null) {
+                  enrichedTopMatch['photo_path'] = localMatch.photoPath;
+                }
+                if ((enrichedTopMatch['photo_url'] == null || enrichedTopMatch['photo_url'].toString().isEmpty) && localMatch.photoUrl != null) {
+                  enrichedTopMatch['photo_url'] = localMatch.photoUrl;
+                }
+              }
+              final pUrl = enrichedTopMatch['photo_url']?.toString();
+              if (pUrl != null && pUrl.startsWith('/')) {
+                enrichedTopMatch['photo_url'] = '${AppConfig.backendBaseUrl}$pUrl';
+              } else if ((pUrl == null || pUrl.isEmpty) && pid != null && pid.isNotEmpty) {
+                enrichedTopMatch['photo_url'] = '${AppConfig.backendBaseUrl}/api/v1/missing-persons/$pid/photo';
+              }
+            }
+
             return {
               'offline': false,
               'queued_for_mesh': false,
               'match_found': matchFound,
-              'matches': matches,
-              'top_match': topMatch,
+              'matches': enrichedMatches.isNotEmpty ? enrichedMatches : matches,
+              'top_match': enrichedTopMatch ?? topMatch,
               ...decoded,
             };
           }
@@ -478,6 +537,32 @@ class MissingPersonsProvider extends ChangeNotifier {
     final now = DateTime.now();
     final id = 'mp_${now.millisecondsSinceEpoch}_${myDeviceId.substring(0, myDeviceId.length > 4 ? 4 : myDeviceId.length)}';
 
+    // Persist photo to permanent application documents directory so Android cache purge won't delete it
+    String? permanentPhotoPath = photoPath;
+    if (photoPath != null && photoPath.isNotEmpty) {
+      try {
+        final src = File(photoPath);
+        if (await src.exists()) {
+          Directory docsDir;
+          try {
+            docsDir = await getApplicationDocumentsDirectory();
+          } catch (_) {
+            docsDir = Directory.systemTemp;
+          }
+          final photosDir = Directory('${docsDir.path}/missing_persons_photos');
+          if (!await photosDir.exists()) {
+            await photosDir.create(recursive: true);
+          }
+          final ext = photoPath.contains('.') ? photoPath.split('.').last : 'jpg';
+          final destPath = '${photosDir.path}/$id.$ext';
+          final dest = await src.copy(destPath);
+          permanentPhotoPath = dest.path;
+        }
+      } catch (e) {
+        debugPrint('[MissingPersonsProvider] Error caching photo permanently: $e');
+      }
+    }
+
     final report = MissingPerson(
       id: id,
       name: name.trim(),
@@ -489,7 +574,8 @@ class MissingPersonsProvider extends ChangeNotifier {
       lng: lng,
       lastSeenTime: now,
       reportedAt: now,
-      photoPath: photoPath,
+      photoUrl: '/api/v1/missing-persons/$id/photo',
+      photoPath: permanentPhotoPath,
       status: 'MISSING',
       contactPhone: contactPhone?.trim(),
       reportedBy: myName,
@@ -524,6 +610,7 @@ class MissingPersonsProvider extends ChangeNotifier {
       final baseUrl = _getGatewayBaseUrl();
       final uri = Uri.parse('$baseUrl/api/v1/missing-persons');
       final map = report.toMap();
+      map['photo_url'] = '/api/v1/missing-persons/${report.id}/photo';
 
       if (report.photoPath != null && report.photoPath!.isNotEmpty) {
         final f = File(report.photoPath!);

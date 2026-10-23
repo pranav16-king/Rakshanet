@@ -30,6 +30,7 @@ import type {
   MapLayersState,
 } from '../../types/map';
 import { isValidCoordinate } from '../../utils/geoNavigation';
+import { useEmergencyAlertStore } from '../../store/emergencyAlertStore';
 
 export const LiveMapPage: React.FC = () => {
   const navigate = useNavigate();
@@ -111,17 +112,80 @@ export const LiveMapPage: React.FC = () => {
     refetchInterval: 15000,
   });
 
+  const latestSos = useEmergencyAlertStore((state) => state.latestSos);
+  const emergencyAlerts = useEmergencyAlertStore((state) => state.alerts);
+
+  // Real-time instant SOS integration: merge active emergency alerts immediately into incidents
+  const liveIncidents = useMemo(() => {
+    const list = [...incidents];
+    const seenIds = new Set(list.map((i) => i.id));
+
+    const activeAlerts = latestSos
+      ? [latestSos, ...emergencyAlerts.filter((a) => a.id !== latestSos.id)]
+      : emergencyAlerts;
+
+    for (const alert of activeAlerts) {
+      if (!alert.coordinates || !isValidCoordinate(alert.coordinates.lat, alert.coordinates.lng)) {
+        continue;
+      }
+      const alertId = alert.id || alert.senderId || 'live-sos';
+      if (seenIds.has(alertId) || (alert.senderId && seenIds.has(alert.senderId))) {
+        continue;
+      }
+      const isDuplicateCoord = list.some(
+        (i) =>
+          Math.abs(i.lat - alert.coordinates!.lat) < 0.00015 &&
+          Math.abs(i.lng - alert.coordinates!.lng) < 0.00015
+      );
+      if (isDuplicateCoord) continue;
+
+      seenIds.add(alertId);
+      list.unshift({
+        id: alertId,
+        title: `Distress SOS Beacon · ${alert.senderName || alert.senderId || 'Survivor'}`,
+        description: alert.payload || 'Live SOS beacon received via mesh recovery uplink',
+        lat: alert.coordinates.lat,
+        lng: alert.coordinates.lng,
+        severity: 'CRITICAL',
+        type: 'sos',
+        badgeLabel: 'ACTIVE SOS',
+        countLabel: '1 Survivor',
+        reportedAgo: 'Just now (Live)',
+      });
+    }
+
+    return list;
+  }, [incidents, latestSos, emergencyAlerts]);
+
   // Focus node synchronization if specified in URL query
   useEffect(() => {
-    if (queryFocus && incidents.length > 0) {
-      const match = incidents.find((i) => i.id === queryFocus);
+    if (queryFocus && liveIncidents.length > 0) {
+      const match = liveIncidents.find((i) => i.id === queryFocus);
       if (match) {
         setSelectedIncident(match);
         setSelectedDevice(null);
         setSelectedRescueTeam(null);
       }
     }
-  }, [queryFocus, incidents]);
+  }, [queryFocus, liveIncidents]);
+
+  // Auto-focus latest SOS beacon on live map in real time
+  useEffect(() => {
+    if (
+      latestSos &&
+      latestSos.coordinates &&
+      isValidCoordinate(latestSos.coordinates.lat, latestSos.coordinates.lng)
+    ) {
+      const match = liveIncidents.find(
+        (i) => i.id === latestSos.id || (latestSos.senderId && i.id === latestSos.senderId)
+      );
+      if (match) {
+        setSelectedIncident(match);
+        setSelectedDevice(null);
+        setSelectedRescueTeam(null);
+      }
+    }
+  }, [latestSos, liveIncidents]);
 
   const handleRefreshAll = () => {
     refetchIncidents();
@@ -152,9 +216,9 @@ export const LiveMapPage: React.FC = () => {
     });
   }, [devices, searchQuery, statusFilter]);
 
-  // Filtered Incidents
+  // Filtered Incidents (using real-time live incidents)
   const filteredIncidents = useMemo(() => {
-    return incidents.filter((inc) => {
+    return liveIncidents.filter((inc) => {
       const query = searchQuery.trim().toLowerCase();
       const matchesSearch =
         !query ||
@@ -168,23 +232,23 @@ export const LiveMapPage: React.FC = () => {
 
       return matchesSearch && matchesSeverity;
     });
-  }, [incidents, searchQuery, severityFilter]);
+  }, [liveIncidents, searchQuery, severityFilter]);
 
   // Active SOS Beacon count
   const activeSosCount = useMemo(() => {
-    return incidents.filter(
+    return liveIncidents.filter(
       (inc) =>
         inc.type === 'sos' ||
         inc.severity === 'CRITICAL' ||
         inc.badgeLabel.toLowerCase().includes('sos') ||
         inc.title.toLowerCase().includes('sos')
     ).length;
-  }, [incidents]);
+  }, [liveIncidents]);
 
   // Dynamic Sector Centroid Readout
   const sectorCoordinates = useMemo(() => {
     const validCoords: [number, number][] = [];
-    incidents.forEach((i) => {
+    liveIncidents.forEach((i) => {
       if (isValidCoordinate(i.lat, i.lng)) validCoords.push([i.lat, i.lng]);
     });
     devices.forEach((d) => {
@@ -195,7 +259,7 @@ export const LiveMapPage: React.FC = () => {
     const avgLat = validCoords.reduce((a, b) => a + b[0], 0) / validCoords.length;
     const avgLng = validCoords.reduce((a, b) => a + b[1], 0) / validCoords.length;
     return `${avgLat.toFixed(4)}° N, ${avgLng.toFixed(4)}° E · WGS84`;
-  }, [incidents, devices]);
+  }, [liveIncidents, devices]);
 
   const layerDefinitions: Array<{
     key: keyof MapLayersState;
@@ -205,7 +269,7 @@ export const LiveMapPage: React.FC = () => {
   }> = [
     { key: 'users', label: 'Users & Civilians', dotColor: 'bg-emerald-500', count: deviceStats.total },
     { key: 'nearbyDevices', label: 'Mesh Devices', dotColor: 'bg-blue-500', count: devices.length },
-    { key: 'incidents', label: 'Distress Incidents', dotColor: 'bg-red-500', count: incidents.length },
+    { key: 'incidents', label: 'Distress Incidents', dotColor: 'bg-red-500', count: liveIncidents.length },
     { key: 'rescueTeams', label: 'Rescue Teams', dotColor: 'bg-teal-500', count: rescueTeams.length },
     { key: 'meshConnections', label: 'Mesh Radio Links', dotColor: 'bg-cyan-400' },
     { key: 'hazardZones', label: 'Hazard & Inundation Zones', dotColor: 'bg-amber-500' },
@@ -332,7 +396,7 @@ export const LiveMapPage: React.FC = () => {
             />
 
             {/* Empty State Banner if 0 active incidents */}
-            {incidents.length === 0 && !isIncidentsLoading && (
+            {liveIncidents.length === 0 && !isIncidentsLoading && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] px-4 py-2 rounded-xl bg-[#0B1220]/90 backdrop-blur-md border border-[#26344F] text-white shadow-lg flex items-center gap-2.5 text-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>No active distress beacons in sector · Mesh radio scanning active (DBSCAN ε=120m)</span>

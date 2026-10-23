@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -47,8 +48,8 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     _captureSubscription = _audio.capturedFrames.listen(_sendCapturedFrame);
   }
 
-  static const Duration invitationTimeout = Duration(seconds: 45);
-  static const Duration connectionTimeout = Duration(seconds: 20);
+  static const Duration invitationTimeout = Duration(seconds: 60);
+  static const Duration connectionTimeout = Duration(seconds: 30);
 
   final BluetoothRadioService _radio;
   final OfflineAudioBridge _audio;
@@ -62,8 +63,8 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _timeoutTimer;
   NearbyCallSession? _session;
   bool _captureActive = false;
-  bool _sendingFrame = false;
-  Uint8List? _latestCapturedFrame;
+  bool _sendingAudio = false;
+  final Queue<Uint8List> _outboundAudioQueue = Queue<Uint8List>();
 
   NearbyCallSession? get session => _session;
   bool get hasVisibleCall => _session != null;
@@ -409,7 +410,8 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
           );
         }
       case 'audio_received':
-        if (active.state == NearbyCallState.connecting) {
+        if (active.state == NearbyCallState.connecting ||
+            active.state == NearbyCallState.ringing) {
           _transition(
             NearbyCallState.active,
             message:
@@ -467,25 +469,36 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     final targetId = payload['target_device_id']?.toString() ?? '';
     final callerName = payload['sender_name']?.toString().trim() ?? '';
     final callId = payload['call_id']?.toString() ?? '';
-    final expiry = int.tryParse(payload['expires_at']?.toString() ?? '');
-    final connectedPeer = _radio.deviceForEndpoint(frame.endpointId);
+    final isTargetMe = targetId.isEmpty ||
+        targetId == DatabaseService.myDeviceId ||
+        targetId == frame.endpointId ||
+        targetId.startsWith('SR-PEER-');
     if (!_isValidCallId(callId) ||
         callerId.isEmpty ||
         callerName.isEmpty ||
-        targetId != DatabaseService.myDeviceId ||
-        connectedPeer?.deviceId != callerId ||
-        expiry == null) {
+        !isTargetMe ||
+        !_radio.isEndpointConnected(frame.endpointId)) {
       return;
     }
-    final expiresAt = DateTime.fromMillisecondsSinceEpoch(expiry);
-    if (_now().isAfter(expiresAt) ||
-        expiresAt.difference(_now()) > invitationTimeout) {
+
+    // Synchronize peer identity if the endpoint was connected with a fallback ID (e.g. SR-PEER-xxxx)
+    _radio.syncPeerIdentity(frame.endpointId, callerId, callerName);
+
+    final createdAtEpoch = int.tryParse(payload['created_at']?.toString() ?? '');
+    final remoteCreatedAt = createdAtEpoch != null
+        ? DateTime.fromMillisecondsSinceEpoch(createdAtEpoch)
+        : null;
+
+    // Offline devices lack internet NTP clock synchronization and may drift.
+    // Accept invites created recently without strict future clock rejection.
+    if (remoteCreatedAt != null && _now().difference(remoteCreatedAt).inSeconds > 60) {
       await _radio.sendCallControl(frame.endpointId, {
         'action': 'timeout',
         'call_id': callId,
       });
       return;
     }
+
     if (isBusy) {
       await _radio.sendCallControl(frame.endpointId, {
         'action': 'busy',
@@ -493,6 +506,11 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
       });
       return;
     }
+
+    // Use a clean local invitation expiration window so clock drift between
+    // devices does not cause immediate or erratic timeouts.
+    final localExpiresAt = _now().add(invitationTimeout);
+
     _session = NearbyCallSession(
       callId: callId,
       peerDeviceId: callerId,
@@ -501,12 +519,12 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
       direction: CallDirection.incoming,
       state: NearbyCallState.incoming,
       createdAt: _now(),
-      expiresAt: expiresAt,
+      expiresAt: localExpiresAt,
       message: 'Incoming nearby voice call',
     );
     notifyListeners();
     _armTimeout(
-      expiresAt.difference(_now()),
+      invitationTimeout,
       CallFinalStatus.missed,
       'You missed this nearby call.',
     );
@@ -522,11 +540,17 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
       );
       return;
     }
-    _armTimeout(
-      connectionTimeout,
-      CallFinalStatus.failed,
-      'Audio connection could not be established.',
-    );
+    // Start audio immediately and transition smoothly to active.
+    final active = _session;
+    if (active != null) {
+      _transition(
+        NearbyCallState.active,
+        message: 'Connected over nearby ${_transportLabel(active.endpointId)}',
+      );
+    }
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
+    await _sendControl('audio_received');
   }
 
   void _handleAudioFrame(NearbyAudioFrame frame) {
@@ -535,8 +559,8 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
         active.isTerminal ||
         active.callId != frame.callId ||
         active.endpointId != frame.endpointId ||
-        active.state != NearbyCallState.connecting &&
-            active.state != NearbyCallState.active) {
+        (active.state != NearbyCallState.connecting &&
+            active.state != NearbyCallState.active)) {
       return;
     }
     unawaited(_audio.playFrame(frame.pcm, codec: frame.codec.nativeCodec));
@@ -559,36 +583,41 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
         frame.isEmpty) {
       return;
     }
-    // Keep only the newest captured frame while Nearby accepts a previous
-    // payload. Sending old speech later is worse than dropping it.
-    _latestCapturedFrame = frame;
-    if (_sendingFrame) return;
-    unawaited(_drainCapturedFrames());
+    // Real-time bounded voice queue:
+    // 40ms per frame. Discard oldest frame if queue exceeds 4 frames (160ms)
+    // so voice packets stream continuously without 75% frame drops,
+    // while keeping speech latency strictly under 200ms.
+    if (_outboundAudioQueue.length >= 4) {
+      _outboundAudioQueue.removeFirst();
+    }
+    _outboundAudioQueue.add(frame);
+    if (!_sendingAudio) {
+      unawaited(_pumpOutboundAudio());
+    }
   }
 
-  Future<void> _drainCapturedFrames() async {
-    if (_sendingFrame) return;
-    _sendingFrame = true;
+  Future<void> _pumpOutboundAudio() async {
+    if (_sendingAudio) return;
+    _sendingAudio = true;
     try {
-      while (true) {
+      while (_outboundAudioQueue.isNotEmpty) {
         final active = _session;
-        final frame = _latestCapturedFrame;
-        _latestCapturedFrame = null;
         if (active == null ||
-            frame == null ||
             active.isTerminal ||
             !_captureActive ||
             active.isMuted ||
             (active.state != NearbyCallState.connecting &&
                 active.state != NearbyCallState.active)) {
+          _outboundAudioQueue.clear();
           return;
         }
+        final frame = _outboundAudioQueue.removeFirst();
         await _radio.sendCallAudio(active.endpointId, active.callId, frame);
       }
     } finally {
-      _sendingFrame = false;
-      if (_latestCapturedFrame != null) {
-        unawaited(_drainCapturedFrames());
+      _sendingAudio = false;
+      if (_outboundAudioQueue.isNotEmpty) {
+        unawaited(_pumpOutboundAudio());
       }
     }
   }
@@ -645,6 +674,10 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     if (active == null || !CallStateMachine.canTransition(active.state, next)) {
       return;
     }
+    if (next == NearbyCallState.active) {
+      _timeoutTimer?.cancel();
+      _timeoutTimer = null;
+    }
     _session = active.copyWith(
       state: next,
       connectedAt: next == NearbyCallState.active && active.connectedAt == null
@@ -676,7 +709,7 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     _timeoutTimer?.cancel();
     await _stopLocalRecording(notifyPeer: true);
     active = _session ?? active;
-    _latestCapturedFrame = null;
+    _outboundAudioQueue.clear();
     _captureActive = false;
     await _audio.stop();
     final finalState = status == CallFinalStatus.failed

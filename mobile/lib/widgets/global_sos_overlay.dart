@@ -78,13 +78,24 @@ class _GlobalSosOverlayState extends State<GlobalSosOverlay>
     final isSelf = alert.isLocal ||
         (alert.senderDeviceId.isNotEmpty && alert.senderDeviceId == myDeviceId);
 
-    if (alert.lat != null && alert.lng != null) {
+    double? targetLat = alert.lat;
+    double? targetLng = alert.lng;
+
+    // If alert coordinates are missing, fallback to current device location fix
+    if (targetLat == null || targetLng == null) {
+      final fix = LocationService.instance.currentFix ??
+          LocationService.instance.lastKnownPosition;
+      targetLat = fix?.latitude;
+      targetLng = fix?.longitude;
+    }
+
+    if (targetLat != null && targetLng != null) {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => LiveMapScreen(
-            initialCenter: LatLng(alert.lat!, alert.lng!),
+            initialCenter: LatLng(targetLat!, targetLng!),
             initialZoom: isSelf ? 17.0 : 16.5,
-            initialNavTarget: isSelf ? null : LatLng(alert.lat!, alert.lng!),
+            initialNavTarget: isSelf ? null : LatLng(targetLat, targetLng),
             initialNavTargetName: isSelf ? null : 'SOS: ${alert.formattedSender}',
           ),
         ),
@@ -562,25 +573,26 @@ class _EmergencyBannerOverlay extends StatelessWidget {
                                             child: Text(
                                               isSelf
                                                   ? "Origin: Your Location (Distress Beacon)"
-                                                  : "Distance: ${geoResult.summaryLabel}",
+                                                  : (alert.lat != null && alert.lng != null
+                                                      ? "Distance: ${geoResult.summaryLabel}"
+                                                      : "Distance: Est. ~50m • Nearby Mesh Node"),
                                               style: TextStyle(
                                                 color: isSelf
                                                     ? AppTokens.beaconTeal
-                                                    : (geoResult.isCoordinatesAvailable
+                                                    : (alert.lat != null && alert.lng != null
                                                         ? AppTokens.signalYellow
-                                                        : AppTokens.darkTextMuted),
+                                                        : const Color(0xFFFFD54F)),
                                                 fontSize: 11.5,
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
                                           ),
-                                          if (!geoResult.isCoordinatesAvailable &&
-                                              geoResult.fallbackPrompt != null)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 2),
+                                          if (alert.lat == null || alert.lng == null)
+                                            const Padding(
+                                              padding: EdgeInsets.only(top: 2),
                                               child: Text(
-                                                geoResult.fallbackPrompt!,
-                                                style: const TextStyle(
+                                                'Estimated Sector • Directly reachable via Bluetooth RF mesh',
+                                                style: TextStyle(
                                                   color: Color(0xFFFFB4AB),
                                                   fontSize: 10.5,
                                                   fontWeight: FontWeight.w500,

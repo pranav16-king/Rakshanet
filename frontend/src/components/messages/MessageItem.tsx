@@ -3,6 +3,7 @@ import { MapPin, Clock, Radio, CheckCheck, MoreVertical, ShieldAlert } from 'luc
 import type { FieldMessage } from '../../types/messages';
 import { DeliveryTicks } from '../common/DeliveryTicks';
 import { StatusBadge } from '../common/StatusBadge';
+import { HumanReadablePayload } from '../incidents/HumanReadablePayload';
 
 interface MessageItemProps {
   message: FieldMessage;
@@ -94,10 +95,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           </div>
 
-          {/* Text */}
-          <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed mb-2 font-normal">
-            {message.text}
-          </p>
+          {/* Human-Readable Message Content */}
+          <HumanReadablePayload
+            content={message.text}
+            title={message.statusBadge}
+            category={message.badgeType}
+          />
 
           {/* Metadata Row */}
           <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 flex-wrap">

@@ -6,7 +6,9 @@ import 'package:nearby_connections/nearby_connections.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../models/mesh_device.dart';
+import '../models/message_envelope.dart';
 import 'database_service.dart';
+import 'sos_alert_service.dart';
 
 /// A completed file payload paired with the mesh envelope that describes it.
 class IncomingMediaPayload {
@@ -572,6 +574,56 @@ class BluetoothRadioService extends ChangeNotifier {
       if (_consumeMediaManifest(endpointId, rawBytes)) return;
       if (_consumeCallControl(endpointId, rawBytes)) return;
 
+      // Immediate fast-path check for incoming SOS distress beacon so high-visibility overlay surfaces without delay
+      try {
+        final decoded = jsonDecode(utf8.decode(rawBytes));
+        if (decoded is Map<String, dynamic>) {
+          final isSos = decoded['type'] == 'SOS' ||
+              decoded['category'] == 'SOS' ||
+              decoded['frame'] == 'SOS' ||
+              (decoded['meta'] is Map && decoded['meta']['category'] == 'SOS') ||
+              (decoded['metadata'] is Map && decoded['metadata']['category'] == 'SOS');
+          if (isSos) {
+            try {
+              final envelope = MessageEnvelope.fromJson(decoded);
+              SosAlertService.instance.triggerIncomingAlert(envelope);
+            } catch (err) {
+              debugPrint('[BluetoothRadioService] Fast-path SOS parsing fallback: $err');
+              final fallbackEnvelope = MessageEnvelope(
+                uuid: decoded['msg_id']?.toString() ??
+                    decoded['message_id']?.toString() ??
+                    decoded['uuid']?.toString() ??
+                    'SOS-${DateTime.now().millisecondsSinceEpoch}',
+                senderId: decoded['sender_id']?.toString() ??
+                    decoded['senderId']?.toString() ??
+                    endpointId,
+                senderName: decoded['sender_name']?.toString() ??
+                    decoded['senderName']?.toString() ??
+                    'Nearby Peer',
+                conversationId: decoded['conv_id']?.toString() ??
+                    decoded['conversationId']?.toString() ??
+                    'CONV_COMMUNITY',
+                timestamp: decoded['ts'] is num
+                    ? (decoded['ts'] as num).toInt()
+                    : (decoded['timestamp'] is num
+                        ? (decoded['timestamp'] as num).toInt()
+                        : DateTime.now().millisecondsSinceEpoch),
+                ttl: decoded['ttl'] is num ? (decoded['ttl'] as num).toInt() : 7,
+                hops: decoded['hops'] is num ? (decoded['hops'] as num).toInt() : 0,
+                type: 'SOS',
+                payload: decoded['payload']?.toString() ?? 'Emergency SOS distress beacon received',
+                metadata: decoded['metadata'] is Map<String, dynamic>
+                    ? decoded['metadata'] as Map<String, dynamic>
+                    : (decoded['meta'] is Map<String, dynamic>
+                        ? decoded['meta'] as Map<String, dynamic>
+                        : decoded),
+              );
+              SosAlertService.instance.triggerIncomingAlert(fallbackEnvelope);
+            }
+          }
+        }
+      } catch (_) {}
+
       // Stream message/control frames to MeshEngine for durable processing.
       _payloadController.add(rawBytes);
     } else if (payload.type == PayloadType.FILE && payload.uri != null) {
@@ -752,6 +804,26 @@ class BluetoothRadioService extends ChangeNotifier {
 
   bool isEndpointConnected(String endpointId) =>
       _connectedPeers.containsKey(endpointId);
+
+  /// Synchronizes peer identity if the peer had an initial fallback alias
+  /// (e.g. SR-PEER-xxxx) or the HELLO frame arrived out-of-order.
+  void syncPeerIdentity(
+    String endpointId,
+    String deviceId,
+    String displayName,
+  ) {
+    final existing = _connectedPeers[endpointId];
+    if (existing != null && existing.deviceId != deviceId) {
+      _connectedPeers[endpointId] = existing.copyWith(
+        deviceId: deviceId,
+        displayName: displayName.trim().isNotEmpty
+            ? displayName.trim()
+            : existing.displayName,
+      );
+      _peerUpdateController.add(peerList);
+      notifyListeners();
+    }
+  }
 
   /// Send a non-relayable, direct call-control message to one verified
   /// Nearby connection. Call control is never broadcast to other mesh nodes.

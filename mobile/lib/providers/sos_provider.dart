@@ -10,6 +10,7 @@ import '../models/chat_message.dart';
 import '../models/emergency_report.dart';
 import '../services/database_service.dart';
 import '../services/device_identity_service.dart';
+import '../services/incident_dispatch_service.dart';
 import '../services/location/location_service.dart';
 import '../services/mesh_engine.dart';
 import '../services/network/network_state_service.dart';
@@ -65,20 +66,11 @@ class SosProvider extends ChangeNotifier {
     _isSosActive = true;
     notifyListeners();
 
-    // 0. Ensure audio siren and reactive alert are active
-    SosAlertService.instance.triggerLocalAlert(
-      category: category,
-      peopleCount: peopleCount,
-      lat: latitude,
-      lng: longitude,
-      notes: notes,
-      messageId: messageId,
-    );
-
-    // Acquire GPS fix if missing with multi-tier fallback
+    // 0. Acquire GPS fix if missing with multi-tier fallback (LocationService, lastKnownPosition, IncidentDispatchService, SQLite history)
     DeviceLocationFix? fix = LocationService.instance.currentLocation ??
         LocationService.instance.currentFix ??
-        LocationService.instance.lastKnownPosition;
+        LocationService.instance.lastKnownPosition ??
+        IncidentDispatchService.instance.currentLocation;
     double? lat = latitude ?? fix?.latitude;
     double? lng = longitude ?? fix?.longitude;
     double? acc = accuracy ?? fix?.horizontalAccuracyMeters;
@@ -127,6 +119,16 @@ class SosProvider extends ChangeNotifier {
     final myDisplayName = DeviceIdentityService.instance.displayName;
     final now = DateTime.now();
 
+    // Ensure audio siren and reactive alert are active with best acquired coordinates
+    SosAlertService.instance.triggerLocalAlert(
+      category: category,
+      peopleCount: peopleCount,
+      lat: lat,
+      lng: lng,
+      notes: notes,
+      messageId: id,
+    );
+
     // 1. First: commit SOS to local SQLite emergency_reports and sos_events (100% offline-first)
     final report = EmergencyReport.create(
       id: id,
@@ -135,7 +137,7 @@ class SosProvider extends ChangeNotifier {
       notes: notes ?? 'Emergency SOS Distress Beacon',
       latitude: lat,
       longitude: lng,
-      location: lat != null && lng != null ? '$lat, $lng' : 'Location unavailable',
+      location: lat != null && lng != null ? '$lat, $lng' : 'Estimated Sector • ±50m',
       status: 'QUEUED',
       timestamp: now,
       syncPending: true,
@@ -245,11 +247,16 @@ class SosProvider extends ChangeNotifier {
             'urgency': 'CRITICAL',
             'category': category,
             'peopleCount': peopleCount,
+            'people_count': peopleCount,
+            'casualties': peopleCount,
             'synced_via': 'immediate_sos_uplink',
           },
         };
 
         if (lat != null && lng != null) {
+          packet['lat'] = lat;
+          packet['lng'] = lng;
+          if (acc != null) packet['accuracy'] = acc;
           packet['location'] = {
             'lat': lat,
             'lng': lng,
@@ -330,12 +337,21 @@ class SosProvider extends ChangeNotifier {
     double? longitude,
     double? accuracy,
   }) async {
+    // Obtain best available GPS coordinates before delegating
+    final fix = LocationService.instance.currentLocation ??
+        LocationService.instance.currentFix ??
+        LocationService.instance.lastKnownPosition ??
+        IncidentDispatchService.instance.currentLocation;
+    final lat = latitude ?? fix?.latitude;
+    final lng = longitude ?? fix?.longitude;
+    final acc = accuracy ?? fix?.horizontalAccuracyMeters;
+
     await triggerSos(
       category: category,
       peopleCount: 1,
-      latitude: latitude,
-      longitude: longitude,
-      accuracy: accuracy,
+      latitude: lat,
+      longitude: lng,
+      accuracy: acc,
       notes: 'Quick SOS distress beacon triggered',
     );
   }
@@ -365,6 +381,7 @@ class SosProvider extends ChangeNotifier {
   void cancelLocalSos() {
     _isSosActive = false;
     SosAlertService.instance.dismissAlert();
+    MeshEngine.instance.clearActiveSos();
     notifyListeners();
   }
 

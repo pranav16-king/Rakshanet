@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -6,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/app_config.dart';
+import '../../models/missing_person.dart';
 import '../../providers/missing_persons_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/location/location_service.dart';
@@ -661,6 +664,7 @@ class _MatchFoundPersonDialogState extends State<MatchFoundPersonDialog>
     bool isOffline,
     ThemeProvider theme,
   ) {
+    final personId = (topMatch['person_id'] ?? topMatch['id'] ?? '').toString();
     final name = (topMatch['name'] ?? 'Identified Person').toString();
     final age = topMatch['age']?.toString() ?? 'Unknown';
     final gender = topMatch['gender']?.toString() ?? 'Unspecified';
@@ -669,8 +673,60 @@ class _MatchFoundPersonDialogState extends State<MatchFoundPersonDialog>
         topMatch['medical_notes']?.toString() ??
         topMatch['description']?.toString() ??
         'No critical alerts noted';
-    final regPhotoPath = topMatch['photo_path']?.toString();
-    final regPhotoUrl = topMatch['photo_url']?.toString();
+
+    // Retrieve local report if present to fetch local photoPath or cached details
+    final mpProvider = context.read<MissingPersonsProvider>();
+    MissingPerson? localReport;
+    try {
+      localReport = mpProvider.reports.cast<MissingPerson?>().firstWhere(
+        (r) => (r != null && personId.isNotEmpty && r.id == personId) ||
+               (r != null && r.name.trim().toLowerCase() == name.trim().toLowerCase()),
+        orElse: () => null,
+      );
+    } catch (_) {}
+
+    String? regPhotoPath = topMatch['photo_path']?.toString();
+    if ((regPhotoPath == null || regPhotoPath.isEmpty) && localReport?.photoPath != null) {
+      regPhotoPath = localReport!.photoPath;
+    }
+
+    String? regPhotoUrl = topMatch['photo_url']?.toString();
+    if ((regPhotoUrl == null || regPhotoUrl.isEmpty) && localReport?.photoUrl != null) {
+      regPhotoUrl = localReport!.photoUrl;
+    }
+
+    final String? photoBase64 = topMatch['photo_base64']?.toString();
+
+    // Construct full URL if relative
+    String? fullPhotoUrl;
+    if (regPhotoUrl != null && regPhotoUrl.isNotEmpty) {
+      if (regPhotoUrl.startsWith('http://') || regPhotoUrl.startsWith('https://')) {
+        fullPhotoUrl = regPhotoUrl;
+      } else {
+        final base = AppConfig.backendBaseUrl.replaceAll(RegExp(r'/+$'), '');
+        final path = regPhotoUrl.startsWith('/') ? regPhotoUrl : '/$regPhotoUrl';
+        fullPhotoUrl = '$base$path';
+      }
+    } else if (personId.isNotEmpty) {
+      final base = AppConfig.backendBaseUrl.replaceAll(RegExp(r'/+$'), '');
+      fullPhotoUrl = '$base/api/v1/missing-persons/$personId/photo';
+    }
+
+    ImageProvider? registeredImageProvider;
+    if (regPhotoPath != null && regPhotoPath.isNotEmpty && File(regPhotoPath).existsSync()) {
+      registeredImageProvider = FileImage(File(regPhotoPath));
+    } else if (photoBase64 != null && photoBase64.isNotEmpty) {
+      try {
+        final cleanBase64 = photoBase64.contains(',') ? photoBase64.split(',').last : photoBase64;
+        registeredImageProvider = MemoryImage(base64Decode(cleanBase64));
+      } catch (e) {
+        debugPrint('[MatchFoundPerson] Error decoding base64 photo: $e');
+      }
+    }
+
+    if (registeredImageProvider == null && fullPhotoUrl != null && fullPhotoUrl.isNotEmpty) {
+      registeredImageProvider = NetworkImage(fullPhotoUrl);
+    }
 
     final sim = (topMatch['similarity_percent'] as num?) ??
         (topMatch['confidence_score'] as num?) ??
@@ -765,11 +821,7 @@ class _MatchFoundPersonDialogState extends State<MatchFoundPersonDialog>
               Expanded(
                 child: _buildComparisonPhoto(
                   label: 'Registered Record',
-                  imageProvider: (regPhotoPath != null && File(regPhotoPath).existsSync())
-                      ? FileImage(File(regPhotoPath))
-                      : (regPhotoUrl != null && regPhotoUrl.startsWith('http'))
-                          ? NetworkImage(regPhotoUrl) as ImageProvider
-                          : null,
+                  imageProvider: registeredImageProvider,
                   theme: theme,
                 ),
               ),
@@ -916,8 +968,35 @@ class _MatchFoundPersonDialogState extends State<MatchFoundPersonDialog>
               ? Image(
                   image: imageProvider,
                   fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    final total = loadingProgress.expectedTotalBytes;
+                    final loaded = loadingProgress.cumulativeBytesLoaded;
+                    final progress = (total != null && total > 0) ? loaded / total : null;
+                    return Center(
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          value: progress,
+                          strokeWidth: 2,
+                          color: const Color(0xFF10B981),
+                        ),
+                      ),
+                    );
+                  },
                   errorBuilder: (context, error, stackTrace) => Center(
-                    child: Icon(Icons.person_rounded, size: 40, color: theme.textMuted),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.person_rounded, size: 36, color: theme.textMuted),
+                        const SizedBox(height: 2),
+                        Text(
+                          'No Photo',
+                          style: TextStyle(color: theme.textMuted, fontSize: 10),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               : Center(

@@ -12,6 +12,7 @@ import sqlite3
 import json
 import time
 import os
+from datetime import datetime
 import hashlib
 import secrets
 import hmac
@@ -390,6 +391,15 @@ class GatewayStorage:
         if lng is None and mule_lng is not None:
             lng = mule_lng
 
+        if lat is not None and lng is not None:
+            packet_data["lat"] = lat
+            packet_data["lng"] = lng
+            if not packet_data.get("location") or not isinstance(packet_data.get("location"), dict):
+                packet_data["location"] = {"lat": lat, "lng": lng, "accuracy": acc}
+            else:
+                packet_data["location"]["lat"] = lat
+                packet_data["location"]["lng"] = lng
+
         now = int(time.time() * 1000)
         sender_id = str(packet_data.get("sender_id") or "").strip()
         if not sender_id:
@@ -461,7 +471,7 @@ class GatewayStorage:
 
                     # An SOS packet is recorded as an observed single-origin incident
                     if str(packet_type).upper() in {"SOS", "EMERGENCY_SOS", "DISTRESS"}:
-                        people_count = meta.get("people_count", meta.get("peopleCount"))
+                        people_count = meta.get("people_count", meta.get("peopleCount", meta.get("casualties")))
                         if not isinstance(people_count, int) or people_count < 1:
                             people_count = 1
                         category = meta.get("category") or "Emergency SOS"
@@ -475,6 +485,8 @@ class GatewayStorage:
                             "status": "REPORTED",
                             "lat": lat,
                             "lng": lng,
+                            "centroid_lat": lat,
+                            "centroid_lng": lng,
                             "affected_area": affected_area_str,
                             "people_count": people_count,
                             "devices_count": 1,
@@ -878,6 +890,15 @@ class GatewayStorage:
             else:
                 d[key] = [] if "s" in key else {}
 
+        if d.get("centroid_lat") is None and d.get("lat") is not None:
+            d["centroid_lat"] = d["lat"]
+        if d.get("centroid_lng") is None and d.get("lng") is not None:
+            d["centroid_lng"] = d["lng"]
+        if d.get("lat") is None and d.get("centroid_lat") is not None:
+            d["lat"] = d["centroid_lat"]
+        if d.get("lng") is None and d.get("centroid_lng") is not None:
+            d["lng"] = d["centroid_lng"]
+
     def upsert_incident(self, incident: Dict[str, Any]) -> Dict[str, Any]:
         now = int(time.time() * 1000)
         inc_id = incident.get("incident_id") or incident.get("id")
@@ -887,6 +908,8 @@ class GatewayStorage:
         ai_exp_json = json.dumps(incident.get("ai_explainability") or {})
         msg_json = json.dumps(incident.get("associated_messages") or [])
         dev_json = json.dumps(incident.get("associated_devices") or [])
+        inc_lat = incident.get("lat") if incident.get("lat") is not None else incident.get("centroid_lat")
+        inc_lng = incident.get("lng") if incident.get("lng") is not None else incident.get("centroid_lng")
 
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
@@ -921,7 +944,7 @@ class GatewayStorage:
                 incident.get("disaster_type") or incident.get("category") or "UNSPECIFIED",
                 incident.get("severity") or incident.get("urgency") or "UNKNOWN",
                 incident.get("status") or "UNCLASSIFIED",
-                incident.get("lat"), incident.get("lng"), incident.get("affected_area"),
+                inc_lat, inc_lng, incident.get("affected_area"),
                 incident.get("casualty_estimate"), incident.get("people_count"),
                 incident.get("devices_count"), incident.get("assigned_team"),
                 res_json, incident.get("ai_confidence"), ai_exp_json, msg_json,
@@ -1040,6 +1063,12 @@ class GatewayStorage:
             }
         associated = set(inc.get("associated_devices") or [])
         with self._get_sqlite_conn() as conn:
+            dev_rows = conn.execute("SELECT device_id, name, owner_name FROM devices").fetchall()
+            device_lookup = {r["device_id"]: (r["owner_name"] or r["name"]) for r in dev_rows if r["device_id"]}
+
+            user_rows = conn.execute("SELECT phone, name FROM users WHERE phone IS NOT NULL").fetchall()
+            user_lookup = {r["phone"]: r["name"] for r in user_rows if r["phone"]}
+
             rows = conn.execute(
                 "SELECT msg_id, sender_id, sender_name, conv_id, packet_type, payload, lat, lng, timestamp, hops, meta_json FROM ingested_packets WHERE conv_id = ? OR sender_id IN ({}) ORDER BY timestamp DESC".format(
                     ",".join("?" for _ in associated) or "NULL"
@@ -1057,36 +1086,77 @@ class GatewayStorage:
             except (TypeError, json.JSONDecodeError):
                 metadata = {}
             packet_type = str(packet.get("packet_type") or "UNKNOWN").upper()
+
+            # Resolve Human-Readable Sender Name and Device IMEI
+            sender_id = str(packet.get("sender_id") or "")
+            is_imei = sender_id.isdigit() and len(sender_id) in (14, 15, 16)
+            imei_num = sender_id if is_imei else (metadata.get("imei") or None)
+
+            resolved_name = packet.get("sender_name")
+            if (not resolved_name or resolved_name.startswith("User ")) and sender_id in device_lookup:
+                d_name = device_lookup[sender_id]
+                if d_name and not d_name.startswith("SURVIVOR-"):
+                    resolved_name = d_name
+            if (not resolved_name or resolved_name.startswith("User ")) and sender_id in user_lookup:
+                resolved_name = user_lookup[sender_id]
+            if not resolved_name:
+                resolved_name = f"Node {sender_id[-4:]}" if len(sender_id) >= 4 else (sender_id or "Mesh Device")
+
+            # Calculate Human-Readable Timestamp
+            ts = packet.get("timestamp")
+            ts_display = None
+            if ts:
+                try:
+                    if isinstance(ts, (int, float)):
+                        sec = ts / 1000.0 if ts > 1e11 else float(ts)
+                        ts_display = datetime.fromtimestamp(sec).strftime("%d %b %Y, %I:%M %p")
+                    elif isinstance(ts, str):
+                        ts_display = ts
+                except Exception:
+                    ts_display = str(ts)
+
             common = {
-                "id": packet["msg_id"], "sender": packet.get("sender_name") or packet["sender_id"], "sender_id": packet["sender_id"],
-                "timestamp": packet["timestamp"], "timestamp_display": None, "priority": metadata.get("priority") or metadata.get("urgency") or "UNSPECIFIED",
-                "hops": packet.get("hops"), "lat": packet.get("lat"), "lng": packet.get("lng"), "meta": metadata,
+                "id": packet["msg_id"],
+                "sender": resolved_name,
+                "sender_name": resolved_name,
+                "sender_id": packet["sender_id"],
+                "imei": imei_num,
+                "timestamp": packet["timestamp"],
+                "timestamp_display": ts_display,
+                "priority": metadata.get("priority") or metadata.get("urgency") or "UNSPECIFIED",
+                "hops": packet.get("hops") if packet.get("hops") is not None else 0,
+                "lat": packet.get("lat"),
+                "lng": packet.get("lng"),
+                "meta": metadata,
             }
             if packet_type in ("SOS", "EMERGENCY_SOS", "DISTRESS"):
                 sos = {
                     "id": packet["msg_id"], "incident_id": incident_id, "type": "SOS", "priority": common["priority"],
-                    "sender_id": packet["sender_id"], "sender_name": common["sender"], "payload": packet.get("payload") or "",
-                    "timestamp": packet["timestamp"], "timestamp_display": None, "lat": packet.get("lat"), "lng": packet.get("lng"),
+                    "sender_id": packet["sender_id"], "sender_name": resolved_name, "imei": imei_num, "payload": packet.get("payload") or "",
+                    "timestamp": packet["timestamp"], "timestamp_display": ts_display, "lat": packet.get("lat"), "lng": packet.get("lng"),
                     "battery_pct": metadata.get("battery_percent") if isinstance(metadata.get("battery_percent"), (int, float)) else None,
                     "siren_active": metadata.get("siren_active") if isinstance(metadata.get("siren_active"), bool) else None,
                     "casualties": metadata.get("people_count") if isinstance(metadata.get("people_count"), int) else None,
-                    "hops": packet.get("hops"), "relay_path": [],
+                    "hops": packet.get("hops") if packet.get("hops") is not None else 0, "relay_path": [],
                 }
                 sos_alerts.append(sos)
                 all_comms.append({**common, "category": "SOS", "title": packet_type, "content": sos["payload"]})
             elif packet_type in ("SITREP", "FIELD_REPORT", "HAZARD"):
                 sit = {
-                    "id": packet["msg_id"], "type": "SITREP", "reporter": common["sender"], "category": metadata.get("hazard_type") or packet_type,
+                    "id": packet["msg_id"], "type": "SITREP", "reporter": resolved_name, "sender_name": resolved_name, "sender_id": packet["sender_id"], "imei": imei_num,
+                    "category": metadata.get("hazard_type") or packet_type,
                     "location": metadata.get("location_name"), "lat": packet.get("lat"), "lng": packet.get("lng"), "notes": packet.get("payload") or "",
-                    "timestamp": packet["timestamp"], "timestamp_display": None, "actionable": metadata.get("actionable"),
+                    "timestamp": packet["timestamp"], "timestamp_display": ts_display, "actionable": metadata.get("actionable"),
                 }
                 sitreps.append(sit)
                 all_comms.append({**common, "category": "SITREP", "title": packet_type, "content": sit["notes"]})
             elif packet_type in ("VOICE", "AUDIO", "VOICE_MEMO"):
                 voice = {
-                    "id": packet["msg_id"], "speaker": common["sender"], "duration_seconds": metadata.get("duration") if isinstance(metadata.get("duration"), (int, float)) else None,
+                    "id": packet["msg_id"], "speaker": resolved_name, "sender_name": resolved_name, "sender_id": packet["sender_id"], "imei": imei_num,
+                    "duration_seconds": metadata.get("duration") if isinstance(metadata.get("duration"), (int, float)) else None,
                     "transcription": packet.get("payload") or "", "nlp_extracted_entities": metadata.get("entities") if isinstance(metadata.get("entities"), list) else [],
                     "urgency_score": metadata.get("urgency_score") if isinstance(metadata.get("urgency_score"), (int, float)) else None, "timestamp": packet["timestamp"],
+                    "timestamp_display": ts_display,
                 }
                 voices.append(voice)
                 all_comms.append({**common, "category": "VOICE_TRANSCRIPTION", "title": packet_type, "content": voice["transcription"]})
@@ -1095,16 +1165,29 @@ class GatewayStorage:
 
         with self._get_sqlite_conn() as conn:
             commands = conn.execute("SELECT command_id, recipient_device_id, payload, priority, channel, status, created_at FROM field_command_queue WHERE incident_id = ? ORDER BY created_at DESC", (incident_id,)).fetchall()
-        team_comms = [{
-            "id": command["command_id"], "sender": "Command center", "recipient": command["recipient_device_id"],
-            "type": command["channel"], "message": command["payload"], "timestamp": command["created_at"],
-            "timestamp_display": None, "status": command["status"],
-        } for command in commands]
+        team_comms = []
         for command in commands:
+            cmd_ts = command["created_at"]
+            cmd_ts_display = None
+            if cmd_ts:
+                try:
+                    if isinstance(cmd_ts, (int, float)):
+                        sec = cmd_ts / 1000.0 if cmd_ts > 1e11 else float(cmd_ts)
+                        cmd_ts_display = datetime.fromtimestamp(sec).strftime("%d %b %Y, %I:%M %p")
+                    elif isinstance(cmd_ts, str):
+                        cmd_ts_display = cmd_ts
+                except Exception:
+                    cmd_ts_display = str(cmd_ts)
+            team_comms.append({
+                "id": command["command_id"], "sender": "Command center", "recipient": command["recipient_device_id"],
+                "type": command["channel"], "message": command["payload"], "timestamp": command["created_at"],
+                "timestamp_display": cmd_ts_display, "status": command["status"],
+            })
             all_comms.append({
                 "id": command["command_id"], "category": "RESCUE_COMMS", "title": command["channel"], "content": command["payload"],
-                "sender": "Command center", "sender_id": None, "timestamp": command["created_at"], "timestamp_display": None,
-                "priority": command["priority"], "hops": None, "lat": None, "lng": None, "meta": {"status": command["status"], "recipient_device_id": command["recipient_device_id"]},
+                "sender": "Command center", "sender_name": "Command center", "sender_id": None, "imei": None,
+                "timestamp": command["created_at"], "timestamp_display": cmd_ts_display,
+                "priority": command["priority"], "hops": 0, "lat": None, "lng": None, "meta": {"status": command["status"], "recipient_device_id": command["recipient_device_id"]},
             })
         return {
             "incident_id": incident_id, "title": inc.get("title"),

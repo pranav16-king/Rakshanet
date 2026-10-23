@@ -38,6 +38,8 @@ class IncidentDispatchResult {
 /// merely carries this record; it must never manufacture a location for a
 /// different phone.
 class IncidentDispatchService {
+  static final IncidentDispatchService instance = IncidentDispatchService();
+
   IncidentDispatchService({
     AppDatabase? database,
     ChatService? chatService,
@@ -58,6 +60,8 @@ class IncidentDispatchService {
   final ChatService _chatService;
   final PlatformTelemetryService _telemetry;
   final LocationService _locationService;
+
+  DeviceLocationFix? get currentLocation => _locationService.currentLocation;
   final DeviceIdentityService _identity;
   final CryptoService _crypto;
   final Uuid _uuid;

@@ -268,6 +268,7 @@ export interface IncidentSosAlert {
   priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   sender_id: string;
   sender_name: string;
+  imei?: string | null;
   payload: string;
   timestamp: number;
   timestamp_display: string;
@@ -340,7 +341,9 @@ export interface IncidentCategorizedCommunication {
   title: string;
   content: string;
   sender: string;
+  sender_name?: string;
   sender_id: string;
+  imei?: string | null;
   timestamp: number;
   timestamp_display: string;
   priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | string;

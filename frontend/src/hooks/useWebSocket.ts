@@ -55,33 +55,22 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           switch (parsed.event) {
             case 'NEW_PACKET_INGESTED': {
               const packet = parsed.packet;
+              const rawMeta = (packet?.meta as Record<string, unknown> | undefined) || {};
               const isSos =
                 packet?.type === 'SOS' ||
-                (packet?.meta as Record<string, unknown> | undefined)?.category === 'SOS' ||
+                rawMeta?.category === 'SOS' ||
                 (packet as Record<string, unknown> | undefined)?.category === 'SOS';
 
               if (isSos) {
                 const senderName = packet?.sender_name || packet?.sender_id || 'Survivor / Distress Node';
                 const senderId = packet?.sender_id;
-                const rawMeta = (packet?.meta as Record<string, unknown> | undefined) || {};
                 const urgency = String(rawMeta.urgency || rawMeta.priority || 'CRITICAL');
 
                 let coordinates: { lat: number; lng: number } | null = null;
-                if (
-                  packet?.location &&
-                  typeof packet.location.lat === 'number' &&
-                  typeof packet.location.lng === 'number' &&
-                  Number.isFinite(packet.location.lat) &&
-                  Number.isFinite(packet.location.lng)
-                ) {
-                  coordinates = { lat: packet.location.lat, lng: packet.location.lng };
-                } else if (
-                  typeof rawMeta.lat === 'number' &&
-                  typeof rawMeta.lng === 'number' &&
-                  Number.isFinite(rawMeta.lat) &&
-                  Number.isFinite(rawMeta.lng)
-                ) {
-                  coordinates = { lat: rawMeta.lat, lng: rawMeta.lng };
+                const pLat = (packet as any)?.lat ?? packet?.location?.lat ?? (rawMeta as any)?.lat ?? (rawMeta as any)?.latitude;
+                const pLng = (packet as any)?.lng ?? packet?.location?.lng ?? (rawMeta as any)?.lng ?? (rawMeta as any)?.longitude;
+                if (typeof pLat === 'number' && typeof pLng === 'number' && Number.isFinite(pLat) && Number.isFinite(pLng)) {
+                  coordinates = { lat: pLat, lng: pLng };
                 }
 
                 // Trigger high-visibility emergency dispatch notification / toast on the command center console
@@ -126,15 +115,54 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               break;
             }
 
-            case 'INCIDENTS_UPDATED':
-              queryClient.invalidateQueries({ queryKey: ['incidents'] });
+            case 'INCIDENTS_UPDATED': {
+              const packet = (parsed as any).sos_packet || parsed.packet;
+              const incident = (parsed as any).incident;
+              const rawMeta = (packet?.meta as Record<string, unknown> | undefined) || {};
+              const isSos =
+                Boolean(packet?.type === 'SOS' ||
+                rawMeta?.category === 'SOS' ||
+                (packet as Record<string, unknown> | undefined)?.category === 'SOS' ||
+                incident?.type === 'SOS' ||
+                incident?.category === 'SOS' ||
+                incident?.severity === 'CRITICAL');
+
+              let coordinates: { lat: number; lng: number } | null = null;
+              const pLat = (packet as any)?.lat ?? packet?.location?.lat ?? incident?.lat ?? incident?.centroid_lat ?? (rawMeta as any)?.lat ?? (rawMeta as any)?.latitude;
+              const pLng = (packet as any)?.lng ?? packet?.location?.lng ?? incident?.lng ?? incident?.centroid_lng ?? (rawMeta as any)?.lng ?? (rawMeta as any)?.longitude;
+              if (typeof pLat === 'number' && typeof pLng === 'number' && Number.isFinite(pLat) && Number.isFinite(pLng)) {
+                coordinates = { lat: pLat, lng: pLng };
+              }
+
+              if (isSos) {
+                const senderName = packet?.sender_name || packet?.sender_id || incident?.title || 'Survivor / Distress Node';
+                const senderId = packet?.sender_id || incident?.id;
+                const urgency = String(rawMeta.urgency || rawMeta.priority || incident?.severity || 'CRITICAL');
+
+                useEmergencyAlertStore.getState().addAlert({
+                  senderName,
+                  senderId,
+                  coordinates,
+                  urgency,
+                  hops: packet?.hops,
+                  payload: packet?.payload || incident?.title,
+                });
+              }
+
+              // Invalidate query caches as required by Task 1 & 2
               queryClient.invalidateQueries({ queryKey: ['mapIncidents'] });
               queryClient.invalidateQueries({ queryKey: ['liveDevices'] });
+              queryClient.invalidateQueries({ queryKey: ['deviceStats'] });
+              queryClient.invalidateQueries({ queryKey: ['incidents'] });
+              queryClient.invalidateQueries({ queryKey: ['telemetryStats'] });
               queryClient.invalidateQueries({ queryKey: ['analytics'] });
               // Also sync kebab-case queries
               queryClient.invalidateQueries({ queryKey: ['map-incidents'] });
               queryClient.invalidateQueries({ queryKey: ['live-devices'] });
+              queryClient.invalidateQueries({ queryKey: ['device-stats'] });
+              queryClient.invalidateQueries({ queryKey: ['rescue-teams'] });
               break;
+            }
 
             case 'BLACK_HOLE_ALERT':
               queryClient.invalidateQueries({ queryKey: ['blackHoles'] });

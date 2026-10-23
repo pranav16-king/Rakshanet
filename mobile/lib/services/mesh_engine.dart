@@ -106,6 +106,18 @@ class MeshEngine extends ChangeNotifier {
   final Set<String> _queuedMessageIds = <String>{};
   bool _isProcessingOutbox = false;
 
+  // Active in-memory SOS envelopes to immediately push to newly discovered peers
+  final Map<String, MessageEnvelope> _activeSosEnvelopes = <String, MessageEnvelope>{};
+
+  /// Clears active SOS envelopes from the broadcast cache
+  void clearActiveSos([String? messageId]) {
+    if (messageId != null) {
+      _activeSosEnvelopes.remove(messageId);
+    } else {
+      _activeSosEnvelopes.clear();
+    }
+  }
+
   // Stream controller for real-time mesh events
   final _envelopeController = StreamController<MessageEnvelope>.broadcast();
   Stream<MessageEnvelope> get incomingEnvelopes => _envelopeController.stream;
@@ -168,6 +180,8 @@ class MeshEngine extends ChangeNotifier {
       }
 
       if (peers.isNotEmpty) {
+        // Immediately push any active SOS distress signals to newly connected peers
+        await _pushActiveSosToPeers(peers);
         syncAllPendingMessages();
         unawaited(uploadQueuedPacketsToGateway());
       }
@@ -877,9 +891,29 @@ class MeshEngine extends ChangeNotifier {
 
   Future<void> _persistIncomingSos(MessageEnvelope envelope) async {
     final metadata = envelope.metadata ?? const <String, dynamic>{};
-    final latitude = _toDouble(metadata['latitude']);
-    final longitude = _toDouble(metadata['longitude']);
-    final peopleCount = _toInt(metadata['peopleCount']) ?? 1;
+    double? latitude = _toDouble(metadata['latitude']) ?? _toDouble(metadata['lat']);
+    double? longitude = _toDouble(metadata['longitude']) ?? _toDouble(metadata['lng']);
+    if ((latitude == null || longitude == null) && metadata['location'] is Map) {
+      final loc = metadata['location'] as Map;
+      latitude ??= _toDouble(loc['latitude']) ?? _toDouble(loc['lat']);
+      longitude ??= _toDouble(loc['longitude']) ?? _toDouble(loc['lng']);
+    }
+    if ((latitude == null || longitude == null) && envelope.payload.trim().startsWith('{')) {
+      try {
+        final parsed = jsonDecode(envelope.payload);
+        if (parsed is Map) {
+          latitude ??= _toDouble(parsed['latitude']) ?? _toDouble(parsed['lat']);
+          longitude ??= _toDouble(parsed['longitude']) ?? _toDouble(parsed['lng']);
+          if ((latitude == null || longitude == null) && parsed['location'] is Map) {
+            final loc = parsed['location'] as Map;
+            latitude ??= _toDouble(loc['latitude']) ?? _toDouble(loc['lat']);
+            longitude ??= _toDouble(loc['longitude']) ?? _toDouble(loc['lng']);
+          }
+        }
+      } catch (_) {}
+    }
+
+    final peopleCount = _toInt(metadata['peopleCount']) ?? _toInt(metadata['people_count']) ?? 1;
     final report = EmergencyReport.create(
       id: envelope.uuid,
       category: metadata['category']?.toString() ?? 'Other',
@@ -890,11 +924,32 @@ class MeshEngine extends ChangeNotifier {
       latitude: latitude,
       longitude: longitude,
       location: latitude != null && longitude != null
-          ? 'Shared GPS location'
-          : 'No shared GPS coordinate',
+          ? '$latitude, $longitude'
+          : 'Estimated Sector • ±50m',
       severity: 'CRITICAL',
     );
     await AppDatabase.instance.saveEmergencyReport(report);
+
+    try {
+      await AppDatabase.instance.insert('sos_events', {
+        'id': envelope.uuid,
+        'message_id': envelope.uuid,
+        'sender_device_id': envelope.senderId,
+        'sender_name': envelope.senderName,
+        'latitude': latitude,
+        'longitude': longitude,
+        'category': metadata['category']?.toString() ?? 'SOS',
+        'people_count': peopleCount,
+        'notes': envelope.payload,
+        'location_accuracy': 50.0,
+        'location_source': 'MESH_PEER',
+        'location_is_stale': 0,
+        'urgency': 'CRITICAL',
+        'status': 'RECEIVED',
+        'synced_to_server': 0,
+        'created_at': envelope.timestamp,
+      });
+    } catch (_) {}
   }
 
   Future<void> _persistIncomingMissingPerson(MessageEnvelope envelope) async {
@@ -989,10 +1044,42 @@ class MeshEngine extends ChangeNotifier {
       'urgency': 'CRITICAL',
       'category': sosCat,
       'peopleCount': count,
+      'people_count': count,
       'synced_via': 'mesh_broadcast',
       'latitude': ?lat,
       'longitude': ?lng,
+      'lat': ?lat,
+      'lng': ?lng,
       'accuracy_m': ?accuracy,
+      'accuracy': ?accuracy,
+      if (lat != null && lng != null)
+        'location': {
+          'latitude': lat,
+          'longitude': lng,
+          'lat': lat,
+          'lng': lng,
+          'title': 'Emergency SOS Location',
+          'distance': '0 m',
+        },
+    };
+
+    final payloadMap = <String, dynamic>{
+      'category': sosCat,
+      'people_count': count,
+      'notes': desc,
+      'urgency': 'CRITICAL',
+      'latitude': ?lat,
+      'longitude': ?lng,
+      'lat': ?lat,
+      'lng': ?lng,
+      'accuracy': ?accuracy,
+      if (lat != null && lng != null)
+        'location': {
+          'latitude': lat,
+          'longitude': lng,
+          'lat': lat,
+          'lng': lng,
+        },
     };
 
     final envelope = MessageEnvelope(
@@ -1004,15 +1091,158 @@ class MeshEngine extends ChangeNotifier {
       ttl: 7,
       hops: 0,
       type: 'SOS',
-      payload: jsonEncode({
-        'category': sosCat,
-        'people_count': count,
-        'notes': desc,
-      }),
+      payload: jsonEncode(payloadMap),
       metadata: metadata,
     );
 
+    // 1. Insert/persist the SOS envelope into SQLite messages table
+    try {
+      final chatMessage = ChatMessage(
+        messageId: id,
+        conversationId: 'CONV_COMMUNITY',
+        senderId: myDeviceId,
+        senderName: DatabaseService.myDisplayName,
+        isMine: true,
+        content:
+            'SOS: $sosCat. People needing help: $count.${desc.isNotEmpty ? " Notes: $desc" : ""}',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(now),
+        status: MessageDeliveryStatus.queued,
+        hopCount: 0,
+        ttl: 7,
+        messageType: 'SOS',
+        recipientTarget: 'BROADCAST',
+        category: sosCat,
+        latitude: lat,
+        longitude: lng,
+        location: lat != null && lng != null
+            ? LocationPreview(
+                title: 'Emergency SOS Location',
+                distance: '0 m',
+                latitude: lat,
+                longitude: lng,
+              )
+            : null,
+      );
+      await _dbService.insertMessage(chatMessage.toDbMap());
+    } catch (e) {
+      debugPrint('[MeshEngine] Error inserting SOS message: $e');
+    }
+
+    // 2. Insert/persist into encrypted_mesh_packets table
+    try {
+      await AppDatabase.instance.saveEncryptedMeshPacket(
+        EncryptedMeshPacket(
+          messageId: id,
+          senderDeviceId: myDeviceId,
+          recipientUserId: null,
+          recipientDeviceId: null,
+          routingHeaderJson: jsonEncode(envelope.toJson()),
+          encryptedPayloadJson: envelope.payload,
+          status: MeshDeliveryState.queued,
+          hopCount: 0,
+          ttl: 7,
+          createdAt: now,
+          expiresAt: now + 86400000,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[MeshEngine] Error saving SOS mesh packet: $e');
+    }
+
+    // 3. Immediately broadcast to all connected radio peers via _radioService.broadcastJson
+    try {
+      final peersReached = await _radioService.broadcastJson(envelope.toJson());
+      debugPrint('[MeshEngine] Immediate SOS RF broadcast reached $peersReached peer(s)');
+    } catch (e) {
+      debugPrint('[MeshEngine] Error in immediate SOS RF broadcast: $e');
+    }
+
+    // 4. Cache active SOS envelope to push to any newly discovered peers
+    _activeSosEnvelopes[id] = envelope;
+
+    // 5. Queue in outbox queue for store-and-forward relay
     queueOutboxMessage(envelope);
+  }
+
+  /// Immediately pushes any active or pending SOS distress envelopes to connected peers
+  Future<void> _pushActiveSosToPeers(List<dynamic> peers) async {
+    try {
+      final List<MessageEnvelope> toSend = [];
+      toSend.addAll(_activeSosEnvelopes.values);
+
+      try {
+        final pendingPackets = await AppDatabase.instance.query(
+          'encrypted_mesh_packets',
+          where: "routingHeaderJson LIKE '%\"type\":\"SOS\"%' AND status != 'deliveredToRecipient'",
+        );
+        for (final row in pendingPackets) {
+          final headerJson = row['routing_header_json']?.toString();
+          if (headerJson != null && headerJson.isNotEmpty) {
+            final env = MessageEnvelope.fromJson(
+              jsonDecode(headerJson) as Map<String, dynamic>,
+            );
+            if (!toSend.any((e) => e.uuid == env.uuid)) {
+              toSend.add(env);
+            }
+          }
+        }
+      } catch (_) {}
+
+      try {
+        final activeEvents = await AppDatabase.instance.query(
+          'sos_events',
+          where: "status != 'RESOLVED' AND status != 'CANCELLED'",
+          orderBy: 'created_at DESC',
+          limit: 3,
+        );
+        for (final row in activeEvents) {
+          final sosId = row['message_id']?.toString() ?? row['id']?.toString();
+          if (sosId != null && !toSend.any((e) => e.uuid == sosId)) {
+            final lat = (row['latitude'] as num?)?.toDouble();
+            final lng = (row['longitude'] as num?)?.toDouble();
+            final cat = row['category']?.toString() ?? 'SOS';
+            final count = (row['people_count'] as num?)?.toInt() ?? 1;
+            final notes = row['notes']?.toString() ?? 'Emergency SOS';
+            final env = MessageEnvelope(
+              uuid: sosId,
+              senderId: row['sender_device_id']?.toString() ?? DatabaseService.myDeviceId,
+              senderName: row['sender_name']?.toString() ?? DatabaseService.myDisplayName,
+              conversationId: 'CONV_COMMUNITY',
+              timestamp: (row['created_at'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
+              ttl: 7,
+              hops: 0,
+              type: 'SOS',
+              payload: jsonEncode({
+                'category': cat,
+                'people_count': count,
+                'notes': notes,
+                'latitude': ?lat,
+                'longitude': ?lng,
+                'lat': ?lat,
+                'lng': ?lng,
+              }),
+              metadata: {
+                'urgency': 'CRITICAL',
+                'category': cat,
+                'peopleCount': count,
+                'latitude': ?lat,
+                'longitude': ?lng,
+                'lat': ?lat,
+                'lng': ?lng,
+              },
+            );
+            toSend.add(env);
+          }
+        }
+      } catch (_) {}
+
+      for (final env in toSend) {
+        debugPrint('[MeshEngine] Pushing active SOS ${env.uuid} to ${peers.length} peer(s)');
+        await _radioService.broadcastJson(env.toJson());
+      }
+    } catch (e) {
+      debugPrint('[MeshEngine] Error pushing active SOS to peers: $e');
+    }
   }
 
   /// Broadcast a Missing Person report to all nearby mesh peers
@@ -1274,6 +1504,12 @@ class MeshEngine extends ChangeNotifier {
 
   /// Trigger manual synchronization of all pending outbox items
   Future<void> syncAllPendingMessages() async {
+    // 1. Include active in-memory SOS envelopes so newly paired peers always receive the distress signal immediately
+    for (final env in _activeSosEnvelopes.values) {
+      queueOutboxMessage(env);
+      unawaited(_radioService.broadcastJson(env.toJson()));
+    }
+
     final pending = await _dbService.getPendingOutboxMessages();
     for (final p in pending) {
       final env = MessageEnvelope(

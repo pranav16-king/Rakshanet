@@ -3,6 +3,7 @@ import { MessageSquare, Radio, CheckCheck, Clock, ShieldAlert } from 'lucide-rea
 import type { IncidentMessage } from '../../types/incident.ts';
 import { useTheme } from '../../theme/ThemeContext.tsx';
 import { SeverityBadge } from '../common/SeverityBadge.tsx';
+import { HumanReadablePayload } from './HumanReadablePayload';
 
 interface IncidentMessagesTabProps {
   messages: IncidentMessage[];
@@ -96,13 +97,11 @@ export const IncidentMessagesTab: React.FC<IncidentMessagesTabProps> = ({ messag
                   <SeverityBadge severity={msg.severity} size="sm" />
                 </div>
 
-                <p
-                  className={`text-xs mt-1.5 leading-relaxed ${
-                    isDark ? 'text-[#CBD5E1]' : 'text-[#334155]'
-                  }`}
-                >
-                  "{msg.text}"
-                </p>
+                <HumanReadablePayload
+                  content={msg.text}
+                  title={msg.type}
+                  category={msg.type}
+                />
               </div>
             </div>
 
