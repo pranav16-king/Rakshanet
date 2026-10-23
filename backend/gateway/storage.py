@@ -267,6 +267,16 @@ class GatewayStorage:
                 ("reported_at", "INTEGER DEFAULT 0"),
                 ("reported_by", "TEXT DEFAULT 'Anonymous'"),
                 ("sightings_json", "TEXT DEFAULT '[]'"),
+                ("incident_id", "TEXT"),
+                ("incident_title", "TEXT"),
+                ("clothing_last_seen", "TEXT"),
+                ("height_cm", "INTEGER DEFAULT 0"),
+                ("identifying_marks", "TEXT"),
+                ("medical_needs", "TEXT"),
+                ("blood_group", "TEXT"),
+                ("priority", "TEXT DEFAULT 'HIGH'"),
+                ("assigned_team", "TEXT"),
+                ("biometric_indexed", "INTEGER DEFAULT 0"),
             ]:
                 try:
                     cursor.execute(f"ALTER TABLE missing_persons ADD COLUMN {col} {col_type}")
@@ -1351,7 +1361,7 @@ class GatewayStorage:
     # MISSING PERSONS REGISTRY & SIGHTINGS
     # =========================================================================
 
-    def get_missing_persons(self, status: Optional[str] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_missing_persons(self, status: Optional[str] = None, search: Optional[str] = None, incident_id: Optional[str] = None) -> List[Dict[str, Any]]:
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
             query = "SELECT * FROM missing_persons WHERE 1=1"
@@ -1359,10 +1369,13 @@ class GatewayStorage:
             if status and status.upper() != "ALL":
                 query += " AND UPPER(status) = ?"
                 params.append(status.upper())
+            if incident_id and incident_id.strip() and incident_id.upper() != "ALL":
+                query += " AND incident_id = ?"
+                params.append(incident_id.strip())
             if search and search.strip():
-                query += " AND (name LIKE ? OR last_seen_location LIKE ? OR description LIKE ?)"
+                query += " AND (name LIKE ? OR last_seen_location LIKE ? OR description LIKE ? OR clothing_last_seen LIKE ? OR identifying_marks LIKE ? OR incident_title LIKE ?)"
                 term = f"%{search.strip()}%"
-                params.extend([term, term, term])
+                params.extend([term, term, term, term, term, term])
             query += " ORDER BY reported_at DESC"
             cursor.execute(query, params)
             rows = cursor.fetchall()
@@ -1397,14 +1410,32 @@ class GatewayStorage:
         sightings = data.get("sightings") or []
         sightings_json = json.dumps(sightings)
 
+        # Auto-link to nearest incident if incident_id not provided but GPS coords available
+        incident_id = data.get("incident_id")
+        incident_title = data.get("incident_title")
+        lat = data.get("lat")
+        lng = data.get("lng")
+        if not incident_id and lat is not None and lng is not None:
+            # find closest incident
+            incidents = self.get_incidents()
+            if incidents:
+                best_inc = min(
+                    incidents,
+                    key=lambda inc: (inc.get("lat", 0) - lat)**2 + (inc.get("lng", 0) - lng)**2
+                )
+                incident_id = best_inc.get("incident_id")
+                incident_title = best_inc.get("title")
+
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO missing_persons (
                     id, name, age, gender, last_seen_location, lat, lng,
                     description, photo_url, contact_phone, status, reported_at,
-                    reported_by, sightings_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    reported_by, sightings_json, incident_id, incident_title,
+                    clothing_last_seen, height_cm, identifying_marks, medical_needs,
+                    blood_group, priority, assigned_team, biometric_indexed
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     name = excluded.name,
                     age = excluded.age,
@@ -1418,22 +1449,42 @@ class GatewayStorage:
                     status = excluded.status,
                     reported_at = excluded.reported_at,
                     reported_by = excluded.reported_by,
-                    sightings_json = excluded.sightings_json
+                    sightings_json = excluded.sightings_json,
+                    incident_id = COALESCE(excluded.incident_id, missing_persons.incident_id),
+                    incident_title = COALESCE(excluded.incident_title, missing_persons.incident_title),
+                    clothing_last_seen = excluded.clothing_last_seen,
+                    height_cm = excluded.height_cm,
+                    identifying_marks = excluded.identifying_marks,
+                    medical_needs = excluded.medical_needs,
+                    blood_group = excluded.blood_group,
+                    priority = excluded.priority,
+                    assigned_team = excluded.assigned_team,
+                    biometric_indexed = excluded.biometric_indexed
             """, (
                 person_id,
                 data.get("name", "Unknown"),
                 data.get("age", 0),
                 data.get("gender", "Unspecified"),
                 data.get("last_seen_location", "Disaster Zone"),
-                data.get("lat"),
-                data.get("lng"),
+                lat,
+                lng,
                 data.get("description", ""),
                 data.get("photo_url", ""),
                 data.get("contact_phone", ""),
                 data.get("status", "MISSING").upper(),
                 reported_at,
                 data.get("reported_by", "Anonymous"),
-                sightings_json
+                sightings_json,
+                incident_id,
+                incident_title,
+                data.get("clothing_last_seen", ""),
+                data.get("height_cm", 0),
+                data.get("identifying_marks", ""),
+                data.get("medical_needs", ""),
+                data.get("blood_group", ""),
+                data.get("priority", "HIGH"),
+                data.get("assigned_team", ""),
+                1 if data.get("biometric_indexed") else 0
             ))
             conn.commit()
 

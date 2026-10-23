@@ -8,7 +8,8 @@ import type {
 
 export async function getMissingPersons(
   status?: string,
-  search?: string
+  search?: string,
+  incidentId?: string
 ): Promise<MissingPerson[]> {
   const params: Record<string, string> = {};
   if (status && status !== 'ALL') {
@@ -16,6 +17,9 @@ export async function getMissingPersons(
   }
   if (search && search.trim()) {
     params.search = search.trim();
+  }
+  if (incidentId && incidentId !== 'ALL') {
+    params.incident_id = incidentId;
   }
 
   const response = await apiClient.get<MissingPerson[]>('/api/v1/missing-persons', {

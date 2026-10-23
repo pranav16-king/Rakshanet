@@ -463,6 +463,15 @@ class MissingPersonsProvider extends ChangeNotifier {
     required String description,
     String? contactPhone,
     String? photoPath,
+    String? incidentId,
+    String? incidentTitle,
+    String? clothingLastSeen,
+    double? heightCm,
+    String? identifyingMarks,
+    String? medicalNeeds,
+    String? bloodGroup,
+    String priority = 'HIGH',
+    String? assignedTeam,
   }) async {
     final myDeviceId = DeviceIdentityService.instance.deviceId;
     final myName = DeviceIdentityService.instance.displayName;
@@ -485,6 +494,16 @@ class MissingPersonsProvider extends ChangeNotifier {
       contactPhone: contactPhone?.trim(),
       reportedBy: myName,
       sightings: const [],
+      incidentId: incidentId,
+      incidentTitle: incidentTitle,
+      clothingLastSeen: clothingLastSeen,
+      heightCm: heightCm,
+      identifyingMarks: identifyingMarks,
+      medicalNeeds: medicalNeeds,
+      bloodGroup: bloodGroup,
+      priority: priority,
+      assignedTeam: assignedTeam,
+      biometricIndexed: false,
     );
 
     // 1. Transactional SQLite persistence

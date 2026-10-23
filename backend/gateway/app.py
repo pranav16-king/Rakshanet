@@ -58,7 +58,9 @@ from .models import (
     MissingPersonStatusUpdate,
     PhotoSearchRequest,
     PhotoSearchResponse,
-    PhotoUploadRequest
+    PhotoUploadRequest,
+    IncidentStatusUpdate,
+    IncidentBroadcastMessage
 )
 from .storage import (
     gateway_storage,
@@ -493,6 +495,95 @@ async def assign_incident_rescue_team(incident_id: str, assign_req: AssignTeamRe
     return updated
 
 
+@app.patch("/api/v1/incidents/{incident_id}/status")
+async def update_incident_status(incident_id: str, req: IncidentStatusUpdate):
+    """
+    Updates the operational lifecycle status of a Master Incident.
+    Broadcasts INCIDENTS_UPDATED to all connected command center consoles.
+    """
+    updated = gateway_storage.update_incident_status(incident_id, req.status)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Master Incident '{incident_id}' not found."
+        )
+
+    await ws_manager.broadcast({
+        "event": "INCIDENTS_UPDATED",
+        "incident_id": incident_id,
+        "status": req.status,
+        "notes": req.notes,
+        "timestamp": int(time.time() * 1000)
+    })
+    return updated
+
+
+@app.get("/api/v1/incidents/{incident_id}/communications")
+def get_incident_communications(incident_id: str):
+    """
+    Returns segregated multi-channel mesh communications for a specific incident:
+    - 🚨 Emergency SOS distress transmissions
+    - 📡 Mesh relay & DTN hop topology (hop count, RSSI, latency)
+    - 📋 Citizen field SITREPs & hazards
+    - 🚒 Rescue team dispatch orders & tactical acknowledgments
+    - 🎙️ NLP-transcribed audio/voice memos
+    """
+    return gateway_storage.get_incident_communications(incident_id)
+
+
+@app.get("/api/v1/incidents/{incident_id}/mesh-topology")
+def get_incident_mesh_topology(incident_id: str):
+    """
+    Returns spatial mesh network topology for the incident area:
+    - Incident centroid & affected cluster radius
+    - Active SOS beacons with individual GPS fixes, casualties, battery
+    - Nearby store-and-forward mesh relay nodes
+    - Deployed rescue units (Zodiac boats, 4WDs, ambulances)
+    """
+    return gateway_storage.get_incident_mesh_topology(incident_id)
+
+
+@app.post("/api/v1/incidents/{incident_id}/messages")
+async def broadcast_incident_mesh_message(incident_id: str, req: IncidentBroadcastMessage):
+    """
+    Broadcasts an incident command center tactical instruction or warning
+    directly into the local BLE/WiFi mesh network of that incident.
+    """
+    import secrets
+    now = int(time.time() * 1000)
+    msg_id = f"CMD-MSG-{secrets.token_hex(4).upper()}"
+    packet = {
+        "ver": 1,
+        "msg_id": msg_id,
+        "sender_id": "COMMAND-CENTER",
+        "sender_name": "Command Center Incident Commander",
+        "conv_id": f"INCIDENT_{incident_id}",
+        "ts": now,
+        "ttl": 5,
+        "hops": 0,
+        "type": "BROADCAST",
+        "payload": req.message,
+        "meta": {"priority": req.priority, "channel": req.channel, "incident_id": incident_id}
+    }
+    gateway_storage.ingest_packet(packet, mule_id="COMMAND-CONSOLE")
+
+    await ws_manager.broadcast({
+        "event": "NEW_PACKET_INGESTED",
+        "incident_id": incident_id,
+        "packet": packet,
+        "timestamp": now
+    })
+
+    return {
+        "success": True,
+        "message_id": msg_id,
+        "incident_id": incident_id,
+        "status": "TRANSMITTING_OVER_MESH",
+        "broadcast_timestamp": now
+    }
+
+
+
 @app.post("/api/v1/incidents/cluster")
 async def trigger_incident_clustering(eps_meters: float = 120.0, min_samples: int = 2):
     """
@@ -626,15 +717,17 @@ def get_rescue_teams():
 @app.get("/api/v1/missing-persons")
 def get_missing_persons(
     status: Optional[str] = None,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    incident_id: Optional[str] = None
 ):
     """
     Retrieve missing person registry records.
     Filters:
       - status: ALL, MISSING, FOUND
-      - search: matches name, location, or description text
+      - search: matches name, location, clothing, identifying marks, or description text
+      - incident_id: filter by specific master disaster incident
     """
-    return gateway_storage.get_missing_persons(status=status, search=search)
+    return gateway_storage.get_missing_persons(status=status, search=search, incident_id=incident_id)
 
 
 @app.get("/api/v1/missing-persons/{person_id}")

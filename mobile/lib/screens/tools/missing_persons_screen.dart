@@ -617,6 +617,42 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
     );
   }
 
+
+  Widget _buildAttributeChip(
+    IconData icon,
+    String label,
+    Color color,
+    ThemeProvider theme,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState(ThemeProvider theme) {
     return Center(
       child: Padding(
@@ -771,6 +807,58 @@ class _MissingPersonsScreenState extends State<MissingPersonsScreen> {
                 ),
               ],
             ),
+            if (person.incidentTitle != null && person.incidentTitle!.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTokens.signalYellow.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+                  border: Border.all(color: AppTokens.signalYellow.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.emergency_outlined, size: 13, color: AppTokens.signalYellow),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        '${person.incidentId != null ? "${person.incidentId} • " : ""}${person.incidentTitle}',
+                        style: const TextStyle(
+                          color: AppTokens.signalYellow,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if ((person.clothingLastSeen != null && person.clothingLastSeen!.trim().isNotEmpty) ||
+                (person.medicalNeeds != null && person.medicalNeeds!.trim().isNotEmpty) ||
+                (person.identifyingMarks != null && person.identifyingMarks!.trim().isNotEmpty) ||
+                (person.bloodGroup != null && person.bloodGroup!.trim().isNotEmpty) ||
+                (person.heightCm != null && person.heightCm! > 0)) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (person.clothingLastSeen != null && person.clothingLastSeen!.trim().isNotEmpty)
+                    _buildAttributeChip(Icons.checkroom_rounded, person.clothingLastSeen!, const Color(0xFF38BDF8), theme),
+                  if (person.medicalNeeds != null && person.medicalNeeds!.trim().isNotEmpty)
+                    _buildAttributeChip(Icons.medical_services_outlined, person.medicalNeeds!, const Color(0xFFF43F5E), theme),
+                  if (person.identifyingMarks != null && person.identifyingMarks!.trim().isNotEmpty)
+                    _buildAttributeChip(Icons.fingerprint_rounded, person.identifyingMarks!, const Color(0xFFA78BFA), theme),
+                  if (person.bloodGroup != null && person.bloodGroup!.trim().isNotEmpty)
+                    _buildAttributeChip(Icons.water_drop_outlined, 'Blood: ${person.bloodGroup}', const Color(0xFFFB7185), theme),
+                  if (person.heightCm != null && person.heightCm! > 0)
+                    _buildAttributeChip(Icons.height_rounded, '${person.heightCm!.round()} cm', const Color(0xFF94A3B8), theme),
+                ],
+              ),
+            ],
             const SizedBox(height: 10),
 
             // Last Seen Location with pin icon and relative time
@@ -2228,6 +2316,101 @@ class _PersonDetailsSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
+
+            // Incident Banner if affiliated
+            if (person.incidentTitle != null && person.incidentTitle!.trim().isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTokens.signalYellow.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                  border: Border.all(color: AppTokens.signalYellow.withValues(alpha: 0.35)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.emergency_outlined, size: 24, color: AppTokens.signalYellow),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            person.incidentTitle!,
+                            style: const TextStyle(
+                              color: AppTokens.signalYellow,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (person.incidentId != null)
+                            Text(
+                              'Incident Code: ${person.incidentId}',
+                              style: TextStyle(color: theme.textMuted, fontSize: 11.5),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Physical Identification & Biometric Profile
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: theme.surfaceSunken,
+                borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                border: Border.all(color: theme.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.person_search_rounded, size: 16, color: AppTokens.signalYellow),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Physical Identification Profile',
+                        style: TextStyle(
+                          color: theme.text,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (person.clothingLastSeen != null && person.clothingLastSeen!.isNotEmpty) ...[
+                    _infoRow('Clothing Last Seen', person.clothingLastSeen!, theme),
+                    const Divider(height: 14),
+                  ],
+                  if (person.heightCm != null && person.heightCm! > 0) ...[
+                    _infoRow('Height', '${person.heightCm!.round()} cm', theme),
+                    const Divider(height: 14),
+                  ],
+                  if (person.identifyingMarks != null && person.identifyingMarks!.isNotEmpty) ...[
+                    _infoRow('Marks / Scars', person.identifyingMarks!, theme),
+                    const Divider(height: 14),
+                  ],
+                  if (person.medicalNeeds != null && person.medicalNeeds!.isNotEmpty) ...[
+                    _infoRow('Medical Alerts', person.medicalNeeds!, theme),
+                    const Divider(height: 14),
+                  ],
+                  if (person.bloodGroup != null && person.bloodGroup!.isNotEmpty) ...[
+                    _infoRow('Blood Group', person.bloodGroup!, theme),
+                    const Divider(height: 14),
+                  ],
+                  if (person.assignedTeam != null && person.assignedTeam!.isNotEmpty) ...[
+                    _infoRow('Search Team', person.assignedTeam!, theme),
+                    const Divider(height: 14),
+                  ],
+                  _infoRow('Biometric AI', person.biometricIndexed ? 'Indexed in Qdrant AI' : 'Local Registry', theme),
+                ],
+              ),
+            ),
 
             // Key info card
             Container(

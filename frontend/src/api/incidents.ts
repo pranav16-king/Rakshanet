@@ -11,7 +11,10 @@ import type {
   IncidentMessage,
   IncidentDevice,
   IncidentTimelineEvent,
+  IncidentCommunicationsResponse,
+  IncidentMeshTopologyResponse,
 } from '../types/incident.ts';
+
 
 // Master Incident Ticket INC-2025-001 exactly matching media_1791015140209.jpg
 export const INC_PRIMARY: Incident = {
@@ -1013,3 +1016,51 @@ export function getIncidentTimeline(): IncidentTimelineEvent[] {
     },
   ];
 }
+
+export async function fetchIncidentCommunications(
+  incidentId: string
+): Promise<IncidentCommunicationsResponse> {
+  const res = await apiClient.get<IncidentCommunicationsResponse>(
+    `/api/v1/incidents/${incidentId}/communications`
+  );
+  return res.data;
+}
+
+export async function fetchIncidentMeshTopology(
+  incidentId: string
+): Promise<IncidentMeshTopologyResponse> {
+  const res = await apiClient.get<IncidentMeshTopologyResponse>(
+    `/api/v1/incidents/${incidentId}/mesh-topology`
+  );
+  return res.data;
+}
+
+export async function updateIncidentStatus(
+  incidentId: string,
+  status: string,
+  notes?: string
+): Promise<{ success: boolean; incident: any }> {
+  const res = await apiClient.patch(`/api/v1/incidents/${incidentId}/status`, {
+    status,
+    notes,
+  });
+  return {
+    success: true,
+    incident: res.data,
+  };
+}
+
+export async function broadcastIncidentMessage(
+  incidentId: string,
+  message: string,
+  priority: string = 'HIGH',
+  channel: string = 'ALL_CHANNELS'
+): Promise<{ success: boolean; message_id: string }> {
+  const res = await apiClient.post(`/api/v1/incidents/${incidentId}/messages`, {
+    message,
+    priority,
+    channel,
+  });
+  return res.data;
+}
+

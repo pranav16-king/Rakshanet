@@ -79,6 +79,16 @@ class MissingPerson {
   final String? contactPhone;
   final String reportedBy;
   final List<MissingPersonSighting> sightings;
+  final String? incidentId;
+  final String? incidentTitle;
+  final String? clothingLastSeen;
+  final double? heightCm;
+  final String? identifyingMarks;
+  final String? medicalNeeds;
+  final String? bloodGroup;
+  final String priority;
+  final String? assignedTeam;
+  final bool biometricIndexed;
 
   MissingPerson({
     required this.id,
@@ -97,6 +107,16 @@ class MissingPerson {
     this.contactPhone,
     this.reportedBy = 'Anonymous',
     this.sightings = const [],
+    this.incidentId,
+    this.incidentTitle,
+    this.clothingLastSeen,
+    this.heightCm,
+    this.identifyingMarks,
+    this.medicalNeeds,
+    this.bloodGroup,
+    this.priority = 'HIGH',
+    this.assignedTeam,
+    this.biometricIndexed = false,
   })  : lastSeenTime = lastSeenTime ?? (reportedAt ?? DateTime.fromMillisecondsSinceEpoch(0)),
         reportedAt = reportedAt ?? (lastSeenTime ?? DateTime.fromMillisecondsSinceEpoch(0));
 
@@ -120,6 +140,16 @@ class MissingPerson {
     String? contactPhone,
     String? reportedBy,
     List<MissingPersonSighting>? sightings,
+    String? incidentId,
+    String? incidentTitle,
+    String? clothingLastSeen,
+    double? heightCm,
+    String? identifyingMarks,
+    String? medicalNeeds,
+    String? bloodGroup,
+    String? priority,
+    String? assignedTeam,
+    bool? biometricIndexed,
   }) {
     return MissingPerson(
       id: id ?? this.id,
@@ -138,6 +168,16 @@ class MissingPerson {
       contactPhone: contactPhone ?? this.contactPhone,
       reportedBy: reportedBy ?? this.reportedBy,
       sightings: sightings ?? this.sightings,
+      incidentId: incidentId ?? this.incidentId,
+      incidentTitle: incidentTitle ?? this.incidentTitle,
+      clothingLastSeen: clothingLastSeen ?? this.clothingLastSeen,
+      heightCm: heightCm ?? this.heightCm,
+      identifyingMarks: identifyingMarks ?? this.identifyingMarks,
+      medicalNeeds: medicalNeeds ?? this.medicalNeeds,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      priority: priority ?? this.priority,
+      assignedTeam: assignedTeam ?? this.assignedTeam,
+      biometricIndexed: biometricIndexed ?? this.biometricIndexed,
     );
   }
 
@@ -159,6 +199,16 @@ class MissingPerson {
       'contact_phone': contactPhone,
       'reported_by': reportedBy,
       'sightings_json': jsonEncode(sightings.map((s) => s.toMap()).toList()),
+      'incident_id': incidentId,
+      'incident_title': incidentTitle,
+      'clothing_last_seen': clothingLastSeen,
+      'height_cm': heightCm,
+      'identifying_marks': identifyingMarks,
+      'medical_needs': medicalNeeds,
+      'blood_group': bloodGroup,
+      'priority': priority,
+      'assigned_team': assignedTeam,
+      'biometric_indexed': biometricIndexed ? 1 : 0,
     };
   }
 
@@ -197,6 +247,11 @@ class MissingPerson {
       return null;
     }
 
+    bool parseBool(dynamic val) {
+      if (val == true || val == 1 || val == '1' || val == 'true') return true;
+      return false;
+    }
+
     return MissingPerson(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
@@ -214,6 +269,16 @@ class MissingPerson {
       contactPhone: map['contact_phone']?.toString() ?? map['contactPhone']?.toString(),
       reportedBy: map['reported_by']?.toString() ?? map['reportedBy']?.toString() ?? 'Anonymous',
       sightings: parsedSightings,
+      incidentId: map['incident_id']?.toString() ?? map['incidentId']?.toString(),
+      incidentTitle: map['incident_title']?.toString() ?? map['incidentTitle']?.toString(),
+      clothingLastSeen: map['clothing_last_seen']?.toString() ?? map['clothingLastSeen']?.toString(),
+      heightCm: parseCoord(map['height_cm'] ?? map['heightCm']),
+      identifyingMarks: map['identifying_marks']?.toString() ?? map['identifyingMarks']?.toString(),
+      medicalNeeds: map['medical_needs']?.toString() ?? map['medicalNeeds']?.toString(),
+      bloodGroup: map['blood_group']?.toString() ?? map['bloodGroup']?.toString(),
+      priority: map['priority']?.toString() ?? 'HIGH',
+      assignedTeam: map['assigned_team']?.toString() ?? map['assignedTeam']?.toString(),
+      biometricIndexed: parseBool(map['biometric_indexed'] ?? map['biometricIndexed']),
     );
   }
 

@@ -260,3 +260,156 @@ export interface DispatchPlan {
   solver_status: string;
   assignments: UnitAssignment[];
 }
+
+export interface IncidentSosAlert {
+  id: string;
+  incident_id: string;
+  type: 'SOS';
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  sender_id: string;
+  sender_name: string;
+  payload: string;
+  timestamp: number;
+  timestamp_display: string;
+  lat: number;
+  lng: number;
+  battery_pct: number;
+  siren_active: boolean;
+  casualties: number;
+  hops: number;
+  relay_path: { node: string; rssi: string; hop: number; battery: string }[];
+}
+
+export interface MeshRelayHopNode {
+  hop_number: number;
+  device_id: string;
+  role: string;
+  signal_dbm: number;
+  delay_ms: number;
+  battery: number;
+}
+
+export interface RelayTopologyRoute {
+  route_id: string;
+  origin_device: string;
+  target_incident: string;
+  total_hops: number;
+  estimated_latency_ms: number;
+  status: 'DELIVERED' | 'IN_TRANSIT' | 'DROPPED';
+  hops: MeshRelayHopNode[];
+}
+
+export interface IncidentFieldSitrep {
+  id: string;
+  type: 'SITREP';
+  reporter: string;
+  category: string;
+  location: string;
+  lat: number;
+  lng: number;
+  notes: string;
+  timestamp: number;
+  timestamp_display: string;
+  actionable: string;
+}
+
+export interface IncidentTeamComm {
+  id: string;
+  sender: string;
+  recipient: string;
+  type: string;
+  message: string;
+  timestamp: number;
+  timestamp_display: string;
+  status: string;
+}
+
+export interface IncidentVoiceTranscription {
+  id: string;
+  speaker: string;
+  duration_seconds: number;
+  transcription: string;
+  nlp_extracted_entities: string[];
+  urgency_score: number;
+  timestamp: number;
+}
+
+export interface IncidentCategorizedCommunication {
+  id: string;
+  category: 'SOS' | 'SITREP' | 'RESCUE_COMMS' | 'VOICE_TRANSCRIPTION' | string;
+  title: string;
+  content: string;
+  sender: string;
+  sender_id: string;
+  timestamp: number;
+  timestamp_display: string;
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | string;
+  hops: number;
+  lat?: number;
+  lng?: number;
+  meta?: Record<string, any>;
+}
+
+export interface IncidentCommunicationsResponse {
+  incident_id: string;
+  title: string;
+  summary: {
+    total: number;
+    sos_count: number;
+    sitreps_count: number;
+    team_comms_count: number;
+    voice_count: number;
+    active_devices: number;
+  };
+  sos_alerts: IncidentSosAlert[];
+  relay_topology: RelayTopologyRoute[];
+  field_sitreps: IncidentFieldSitrep[];
+  team_comms: IncidentTeamComm[];
+  voice_transcriptions: IncidentVoiceTranscription[];
+  all_communications: IncidentCategorizedCommunication[];
+}
+
+export interface IncidentBeaconPoint {
+  beacon_id: string;
+  device_id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  status: string;
+  casualties: number;
+  battery: number;
+  last_ping_seconds_ago: number;
+}
+
+export interface IncidentMeshRelayNode {
+  relay_id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  hops_to_gateway: number;
+  status: string;
+  battery: number;
+  packets_forwarded: number;
+}
+
+export interface IncidentRescueUnitLocation {
+  unit_id: string;
+  name: string;
+  type: string;
+  lat: number;
+  lng: number;
+  status: string;
+  eta_minutes?: number | null;
+}
+
+export interface IncidentMeshTopologyResponse {
+  incident_id: string;
+  title: string;
+  centroid: { lat: number; lng: number };
+  radius_meters: number;
+  affected_area: string;
+  sos_beacons: IncidentBeaconPoint[];
+  mesh_relays: IncidentMeshRelayNode[];
+  rescue_units: IncidentRescueUnitLocation[];
+}
+

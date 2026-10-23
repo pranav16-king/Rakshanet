@@ -304,6 +304,16 @@ class AppDatabase {
       'reported_at INTEGER',
       "reported_by TEXT DEFAULT 'Anonymous'",
       "sightings_json TEXT DEFAULT '[]'",
+      'incident_id TEXT',
+      'incident_title TEXT',
+      'clothing_last_seen TEXT',
+      'height_cm REAL',
+      'identifying_marks TEXT',
+      'medical_needs TEXT',
+      'blood_group TEXT',
+      "priority TEXT DEFAULT 'HIGH'",
+      'assigned_team TEXT',
+      'biometric_indexed INTEGER DEFAULT 0',
     ];
     for (final col in mpCols) {
       try {
@@ -520,7 +530,17 @@ class AppDatabase {
         status TEXT NOT NULL,
         contact_phone TEXT,
         reported_by TEXT DEFAULT 'Anonymous',
-        sightings_json TEXT DEFAULT '[]'
+        sightings_json TEXT DEFAULT '[]',
+        incident_id TEXT,
+        incident_title TEXT,
+        clothing_last_seen TEXT,
+        height_cm REAL,
+        identifying_marks TEXT,
+        medical_needs TEXT,
+        blood_group TEXT,
+        priority TEXT DEFAULT 'HIGH',
+        assigned_team TEXT,
+        biometric_indexed INTEGER DEFAULT 0
       )
     ''');
 

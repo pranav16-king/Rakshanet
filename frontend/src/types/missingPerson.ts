@@ -22,6 +22,17 @@ export interface MissingPerson {
   reported_at: number;
   reported_by: string;
   sightings: MissingPersonSighting[];
+  // Disaster incident correlation & physical detection attributes
+  incident_id?: string;
+  incident_title?: string;
+  clothing_last_seen?: string;
+  height_cm?: number;
+  identifying_marks?: string;
+  medical_needs?: string;
+  blood_group?: string;
+  priority?: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  assigned_team?: string;
+  biometric_indexed?: boolean;
 }
 
 export type MissingPersonStatusFilter = 'ALL' | 'MISSING' | 'FOUND';
@@ -38,6 +49,16 @@ export interface CreateMissingPersonPayload {
   contact_phone?: string;
   status?: string;
   reported_by?: string;
+  incident_id?: string;
+  incident_title?: string;
+  clothing_last_seen?: string;
+  height_cm?: number;
+  identifying_marks?: string;
+  medical_needs?: string;
+  blood_group?: string;
+  priority?: string;
+  assigned_team?: string;
+  biometric_indexed?: boolean;
 }
 
 export interface CreateSightingPayload {
@@ -61,8 +82,11 @@ export interface VisualMatch {
 export interface VisualSearchResult {
   success: boolean;
   query_photo_preview?: string;
+  match_found?: boolean;
+  top_match?: VisualMatch;
   matches: VisualMatch[];
   total_candidates_scanned?: number;
+  total_matches?: number;
   engine?: string;
   search_latency_ms?: number;
 }

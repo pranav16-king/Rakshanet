@@ -143,6 +143,17 @@ class MissingPersonCreate(BaseModel):
     contact_phone: Optional[str] = None
     status: Optional[str] = "MISSING"
     reported_by: Optional[str] = "Anonymous"
+    # Extended disaster incident & identification attributes
+    incident_id: Optional[str] = None
+    incident_title: Optional[str] = None
+    clothing_last_seen: Optional[str] = None
+    height_cm: Optional[int] = 0
+    identifying_marks: Optional[str] = None
+    medical_needs: Optional[str] = None
+    blood_group: Optional[str] = None
+    priority: Optional[str] = "HIGH"
+    assigned_team: Optional[str] = None
+    biometric_indexed: Optional[bool] = False
 
 
 class MissingPersonStatusUpdate(BaseModel):
@@ -165,4 +176,16 @@ class PhotoSearchResponse(BaseModel):
 class PhotoUploadRequest(BaseModel):
     photo_base64: Optional[str] = None
     photo_url: Optional[str] = None
+
+
+class IncidentStatusUpdate(BaseModel):
+    status: str = Field(..., description="OPEN, INVESTIGATING, DISPATCHED, CONTAINED, or RESOLVED")
+    notes: Optional[str] = Field(None, description="Optional transition notes")
+
+
+class IncidentBroadcastMessage(BaseModel):
+    message: str = Field(..., description="Message content to broadcast to the incident mesh area")
+    priority: str = Field(default="HIGH", description="CRITICAL, HIGH, MEDIUM, LOW")
+    channel: str = Field(default="ALL_CHANNELS", description="BLE_MESH, SATELLITE, LORA")
+
 
