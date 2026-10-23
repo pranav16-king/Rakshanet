@@ -267,7 +267,7 @@ class SpatialClusterEngine:
         meta = self._get_packet_meta(packet)
 
         msg_id = packet.get("msg_id", "")
-        short_id = msg_id.replace("SOS-", "").replace("MSG-", "")[:6].upper()
+        short_id = msg_id.replace("SOS-", "").replace("MSG-", "")[:12].upper()
         incident_id = f"INC-NODE-{short_id}"
 
         casualties = meta.get("casualties") or meta.get("people") or 1

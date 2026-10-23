@@ -2585,6 +2585,7 @@ class GatewayStorage:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM ingested_packets")
             cursor.execute("DELETE FROM data_mules")
+            cursor.execute("DELETE FROM incidents")
             conn.commit()
 
 

@@ -27,6 +27,33 @@ class IncomingMediaPayload {
   final int byteLength;
 }
 
+/// A control message addressed to a single directly connected Nearby endpoint.
+/// It is intentionally kept out of the mesh-envelope stream so a call invite
+/// can never be persisted or relayed as a community chat message.
+class NearbyCallControlFrame {
+  const NearbyCallControlFrame({
+    required this.endpointId,
+    required this.payload,
+  });
+
+  final String endpointId;
+  final Map<String, dynamic> payload;
+}
+
+/// A short PCM audio frame. The frame is carried only on the established
+/// direct Nearby connection and is never forwarded over the mesh.
+class NearbyAudioFrame {
+  const NearbyAudioFrame({
+    required this.endpointId,
+    required this.callId,
+    required this.pcm,
+  });
+
+  final String endpointId;
+  final String callId;
+  final Uint8List pcm;
+}
+
 /// BluetoothRadioService: Hardware-Level Peer-to-Peer Radio Controller
 /// Implements zero-internet offline mesh transport using Nearby Connections (BLE + Wi-Fi Direct).
 ///
@@ -84,6 +111,19 @@ class BluetoothRadioService extends ChangeNotifier {
   final Map<int, Map<String, dynamic>> _pendingMediaManifests =
       <int, Map<String, dynamic>>{};
   final Set<int> _completedFilePayloads = <int>{};
+
+  final StreamController<NearbyCallControlFrame> _callControlController =
+      StreamController<NearbyCallControlFrame>.broadcast();
+  Stream<NearbyCallControlFrame> get incomingCallControlStream =>
+      _callControlController.stream;
+
+  final StreamController<NearbyAudioFrame> _audioFrameController =
+      StreamController<NearbyAudioFrame>.broadcast();
+  Stream<NearbyAudioFrame> get incomingAudioFrameStream =>
+      _audioFrameController.stream;
+
+  static final Uint8List _audioPrefix =
+      Uint8List.fromList(ascii.encode('RKAUD1|'));
 
   final StreamController<List<MeshDevice>> _peerUpdateController =
       StreamController<List<MeshDevice>>.broadcast();
@@ -484,6 +524,8 @@ class BluetoothRadioService extends ChangeNotifier {
       }
 
       if (_consumeMediaManifest(endpointId, rawBytes)) return;
+      if (_consumeCallControl(endpointId, rawBytes)) return;
+      if (_consumeAudioFrame(endpointId, rawBytes)) return;
 
       // Stream message/control frames to MeshEngine for durable processing.
       _payloadController.add(rawBytes);
@@ -527,6 +569,44 @@ class BluetoothRadioService extends ChangeNotifier {
     } catch (_) {
       return false;
     }
+  }
+
+  bool _consumeCallControl(String endpointId, Uint8List rawBytes) {
+    try {
+      final decoded = jsonDecode(utf8.decode(rawBytes));
+      if (decoded is! Map || decoded['frame'] != 'RAKSHANET_NEARBY_CALL_V1') {
+        return false;
+      }
+      _callControlController.add(
+        NearbyCallControlFrame(
+          endpointId: endpointId,
+          payload: Map<String, dynamic>.from(decoded),
+        ),
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _consumeAudioFrame(String endpointId, Uint8List rawBytes) {
+    const callIdLength = 36;
+    final headerLength = 7 + callIdLength + 1;
+    if (rawBytes.length <= headerLength) return false;
+    for (var index = 0; index < _audioPrefix.length; index++) {
+      if (rawBytes[index] != _audioPrefix[index]) return false;
+    }
+    if (rawBytes[headerLength - 1] != 0x7c) return false; // | delimiter
+    final callId = ascii.decode(rawBytes.sublist(7, 7 + callIdLength));
+    if (!RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(callId)) return false;
+    _audioFrameController.add(
+      NearbyAudioFrame(
+        endpointId: endpointId,
+        callId: callId,
+        pcm: Uint8List.fromList(rawBytes.sublist(headerLength)),
+      ),
+    );
+    return true;
   }
 
   void _emitMediaIfReady(String endpointId, int payloadId) {
@@ -592,6 +672,58 @@ class BluetoothRadioService extends ChangeNotifier {
       debugPrint('[BluetoothRadioService] sendBytesPayload failed for $endpointId: $e');
       return false;
     }
+  }
+
+  /// Returns the current physical endpoint for a stable mesh-device ID.
+  String? endpointForDevice(String deviceId) {
+    for (final entry in _connectedPeers.entries) {
+      if (entry.value.deviceId == deviceId) return entry.key;
+    }
+    return null;
+  }
+
+  bool isEndpointConnected(String endpointId) =>
+      _connectedPeers.containsKey(endpointId);
+
+  /// Send a non-relayable, direct call-control message to one verified
+  /// Nearby connection. Call control is never broadcast to other mesh nodes.
+  Future<bool> sendCallControl(
+    String endpointId,
+    Map<String, dynamic> payload,
+  ) {
+    if (!isEndpointConnected(endpointId)) return Future.value(false);
+    final frame = <String, dynamic>{
+      'frame': 'RAKSHANET_NEARBY_CALL_V1',
+      ...payload,
+    };
+    return sendBytesToEndpoint(
+      endpointId,
+      Uint8List.fromList(utf8.encode(jsonEncode(frame))),
+    );
+  }
+
+  /// Send one bounded PCM frame for an active direct call. Nearby Connections
+  /// selects Bluetooth or Wi-Fi transport; this method does not use internet
+  /// routing and intentionally drops oversized frames rather than blocking
+  /// the radio queue.
+  Future<bool> sendCallAudio(
+    String endpointId,
+    String callId,
+    Uint8List pcm,
+  ) {
+    if (!isEndpointConnected(endpointId) ||
+        !RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(callId) ||
+        pcm.isEmpty ||
+        pcm.length > 2048) {
+      return Future.value(false);
+    }
+    final header = Uint8List.fromList(
+      <int>[..._audioPrefix, ...ascii.encode(callId), 0x7c],
+    );
+    final frame = Uint8List(header.length + pcm.length)
+      ..setRange(0, header.length, header)
+      ..setRange(header.length, header.length + pcm.length, pcm);
+    return sendBytesToEndpoint(endpointId, frame);
   }
 
   /// Alias for broadcastPayload (send to all connected radio peers)

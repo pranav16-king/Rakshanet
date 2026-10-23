@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rakshanet_mobile/database/app_database.dart';
 import 'package:rakshanet_mobile/database/repositories/profile_repository.dart';
 import 'package:rakshanet_mobile/database/repositories/missing_person_repository.dart';
-import 'package:rakshanet_mobile/models/missing_person.dart';
 import 'package:rakshanet_mobile/providers/chat_provider.dart';
 import 'package:rakshanet_mobile/providers/device_status_provider.dart';
 import 'package:rakshanet_mobile/providers/emergency_report_provider.dart';
