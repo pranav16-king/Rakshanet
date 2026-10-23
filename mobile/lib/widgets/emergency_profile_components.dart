@@ -143,7 +143,7 @@ class EmergencyHeader extends StatelessWidget {
   }
 }
 
-/// 3. Thin progress indicator below header (e.g., STEP 1 OF 2 ━━━━━━━━━━━━━━○).
+/// 3. Compact horizontal progress indicator below header.
 class StepIndicator extends StatelessWidget {
   final int currentStep;
   final int totalSteps;
@@ -158,72 +158,50 @@ class StepIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = (currentStep / totalSteps).clamp(0.0, 1.0);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 2),
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'STEP $currentStep OF $totalSteps',
-                style: const TextStyle(
-                  color: AppColors.cyan,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              Text(
-                currentStep == 1 ? 'Profile Details' : 'Verification',
-                style: AppTypography.helper,
-              ),
-            ],
+          Text(
+            'STEP $currentStep OF $totalSteps',
+            style: const TextStyle(
+              color: AppColors.cyan,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: SizedBox(
-                    height: 4,
-                    child: Stack(
-                      children: [
-                        Container(color: AppColors.elevatedSurface),
-                        FractionallySizedBox(
-                          widthFactor: progress,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [AppColors.blue, AppColors.cyan],
-                              ),
-                            ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: SizedBox(
+                height: 3,
+                child: Stack(
+                  children: [
+                    Container(color: AppColors.elevatedSurface),
+                    FractionallySizedBox(
+                      widthFactor: progress,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.blue, AppColors.cyan],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: currentStep >= totalSteps
-                      ? AppColors.cyan
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: currentStep >= totalSteps
-                        ? AppColors.cyan
-                        : AppColors.textMuted,
-                    width: 2,
-                  ),
-                ),
-              ),
-            ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            currentStep == 1 ? 'Profile Details' : 'Verification',
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -238,21 +216,21 @@ class OfflineStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.secondarySurface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(
           color: AppColors.success.withValues(alpha: 0.35),
           width: 1,
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: AppColors.success.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -263,24 +241,23 @@ class OfflineStatusCard extends StatelessWidget {
             child: const Icon(
               Icons.verified_user_outlined,
               color: AppColors.success,
-              size: 22,
+              size: 20,
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: const [
                     Text(
                       'Offline Ready',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 15,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -290,32 +267,30 @@ class OfflineStatusCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 2),
                 const Text(
                   'Your emergency information is stored securely on this device.',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 13.5,
-                    height: 1.35,
+                    fontSize: 11.5,
+                    height: 1.3,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Row(
                   children: const [
                     Icon(
                       Icons.cloud_off_outlined,
-                      size: 13,
+                      size: 11,
                       color: AppColors.cyan,
                     ),
-                    SizedBox(width: 5),
-                    Expanded(
-                      child: Text(
-                        'No cloud connection required',
-                        style: TextStyle(
-                          color: AppColors.cyan,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    SizedBox(width: 4),
+                    Text(
+                      'No cloud connection required',
+                      style: TextStyle(
+                        color: AppColors.cyan,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -1129,7 +1104,7 @@ class _MedicalFieldState extends State<MedicalField> {
   }
 }
 
-/// 10. Dominant Primary CTA Button (58px height, Emergency Amber #FFB800, dark text, right arrow).
+/// 10. Dominant Primary CTA Button (48px height, Emergency Amber #FFB800, dark text, right arrow).
 class PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -1148,7 +1123,7 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 58,
+      height: 48,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
@@ -1158,15 +1133,15 @@ class PrimaryButton extends StatelessWidget {
               AppColors.primaryAmber.withValues(alpha: 0.5),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
         ),
         child: isLoading
             ? const SizedBox(
-                width: 24,
-                height: 24,
+                width: 22,
+                height: 22,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
+                  strokeWidth: 2.2,
                   color: AppColors.textOnAmber,
                 ),
               )
@@ -1177,15 +1152,15 @@ class PrimaryButton extends StatelessWidget {
                     label,
                     style: const TextStyle(
                       color: AppColors.textOnAmber,
-                      fontSize: 16.5,
+                      fontSize: 15.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.2,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Icon(
                     trailingIcon,
-                    size: 20,
+                    size: 18,
                     color: AppColors.textOnAmber,
                   ),
                 ],
@@ -1202,41 +1177,24 @@ class SecurityNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      padding: const EdgeInsets.only(top: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: const [
-          Padding(
-            padding: EdgeInsets.only(top: 2),
-            child: Icon(
-              Icons.lock_outline_rounded,
-              size: 15,
-              color: AppColors.textMuted,
-            ),
+          Icon(
+            Icons.lock_outline_rounded,
+            size: 13,
+            color: AppColors.textMuted,
           ),
-          SizedBox(width: 8),
+          SizedBox(width: 6),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your emergency profile is stored locally on this device.',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Information is available offline and does not require continuous internet access.',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11.5,
-                    height: 1.3,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Your emergency profile is stored locally on this device. Available offline without internet.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 11,
+                height: 1.25,
+              ),
             ),
           ),
         ],
