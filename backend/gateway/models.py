@@ -191,3 +191,24 @@ class IncidentBroadcastMessage(BaseModel):
     channel: str = Field(default="ALL_CHANNELS", description="BLE_MESH, SATELLITE, LORA")
 
 
+class AiChatRequest(BaseModel):
+    query: str = Field(..., description="Emergency survival query or message")
+    conversation_history: Optional[List[Dict[str, str]]] = Field(default_factory=list, description="Prior conversational context")
+    category: Optional[str] = Field(None, description="Disaster category (Medical, Hazards, Rescue, CBRN, Survival)")
+    telemetry: Optional[Dict[str, Any]] = Field(None, description="Anonymized device telemetry (battery, mesh peers)")
+
+
+class AiChatResponse(BaseModel):
+    request_id: str
+    answer: str
+    engine: str
+    status: str
+    sources: List[Dict[str, str]] = Field(default_factory=list)
+    warnings: Optional[str] = None
+    steps: List[str] = Field(default_factory=list)
+    category: str
+    urgency: str
+    created_at: int
+    error_detail: Optional[str] = None
+
+

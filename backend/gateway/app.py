@@ -60,7 +60,9 @@ from .models import (
     PhotoSearchResponse,
     PhotoUploadRequest,
     IncidentStatusUpdate,
-    IncidentBroadcastMessage
+    IncidentBroadcastMessage,
+    AiChatRequest,
+    AiChatResponse
 )
 from .storage import (
     gateway_storage,
@@ -73,6 +75,7 @@ from .qdrant_service import (
     extract_image_features,
     decode_image_bytes
 )
+from .ai_service import BackendAiService
 
 # JWT Configuration
 JWT_SECRET = os.getenv("JWT_SECRET", "rakshanet-disaster-resilience-command-center-jwt-secret-2026")
@@ -125,6 +128,24 @@ def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depen
             detail=f"Token validation failed: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+
+def get_optional_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[Dict[str, Any]]:
+    """Dependency: Extracts user profile if Bearer token present, else returns None (allowing emergency access)."""
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        email = payload.get("sub")
+        if email:
+            user = gateway_storage.get_user_by_email(email)
+            if user:
+                u = dict(user)
+                u.pop("password_hash", None)
+                return u
+    except Exception:
+        pass
+    return None
 
 
 app = FastAPI(
@@ -292,6 +313,30 @@ def get_current_user_profile(user: Dict[str, Any] = Depends(get_current_user)):
 def logout():
     """Client-side session termination."""
     return {"status": "SUCCESS", "message": "Successfully logged out"}
+
+
+# =============================================================================
+# HYBRID AI ASSISTANT (SECURE GROQ CLOUD PROXY)
+# =============================================================================
+
+@app.post("/api/v1/ai/chat", response_model=AiChatResponse)
+@app.post("/ai/chat", response_model=AiChatResponse)
+def ai_chat_completion(
+    req: AiChatRequest,
+    current_user: Optional[Dict[str, Any]] = Depends(get_optional_user)
+):
+    """
+    Secure backend proxy to Groq Cloud LLM (Llama 3.3 70B).
+    Keeps API keys strictly server-side, validates input, applies authoritative
+    NDMA/WHO grounding system prompts, and handles cloud timeouts with safe fallback.
+    """
+    result = BackendAiService.query(
+        query=req.query,
+        conversation_history=req.conversation_history,
+        category=req.category,
+        telemetry=req.telemetry
+    )
+    return AiChatResponse(**result)
 
 
 # =============================================================================

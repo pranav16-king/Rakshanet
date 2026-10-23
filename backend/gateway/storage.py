@@ -1846,6 +1846,12 @@ class GatewayStorage:
             if not self.get_user_by_email(u["email"]):
                 self.create_user(u)
 
+        # Check if operational data pre-seeding is allowed (default: false to respect purged state)
+        seed_operational = os.getenv("SEED_INITIAL_DATA", "false").lower() in ("true", "1", "yes")
+        if not seed_operational:
+            logger.info("Operational pre-seeding is disabled (SEED_INITIAL_DATA=false). Storage remains clean.")
+            return
+
         # 2. Seed Rescue Fleet
         with self._get_sqlite_conn() as conn:
             cursor = conn.cursor()
