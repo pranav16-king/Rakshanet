@@ -224,42 +224,22 @@ private fun linearToMuLaw(sample: Short): Byte {
 }
 ```
 
-### 5.3 Frame Header & Wire Protocol
-Incoming audio frames bypass JSON parsers entirely to avoid heap allocation overhead and garbage collection pauses.
+### 5.3 Frame Header & Wire Protocol (8-Byte Compact Binary Header)
+Incoming audio frames bypass string and JSON parsers entirely to avoid heap allocation overhead and garbage collection pauses. We use an ultra-compact 8-byte binary header with monotonic sequence numbering and millisecond capture timestamps:
 
 ```
-┌───────────────┬──────────────────────────────────────┬──────┬───────────────────────────┐
-│ Prefix (7 B)  │          Call UUID (36 B)            │ Pipe │    Payload (320 Bytes)    │
-│   "RKAUD2|"   │ e.g. "3a85b88a-d99a-4e1e-b101-..."   │ "|"  │  G.711 u-law 8kHz audio   │
-└───────────────┴──────────────────────────────────────┴──────┴───────────────────────────┘
-Total Frame Length: 7 + 36 + 1 + 320 = 364 bytes.
+┌───────────────┬───────────────────┬─────────────────────┬──────────────────────────┬───────────────────────────┐
+│  Magic (1 B)  │ Call Hash (1 B)   │  Sequence (2 Bytes) │  Capture Timestamp (4 B) │    Payload (320 Bytes)    │
+│     0xA2      │ callId.hashCode   │   uint16 (Big-End)  │      uint32 ms (Big-End) │  G.711 u-law 8kHz audio   │
+└───────────────┴───────────────────┴─────────────────────┴──────────────────────────┴───────────────────────────┘
+Total Frame Length: 1 + 1 + 2 + 4 + 320 = 328 bytes (82% header reduction over 44-byte string UUID).
 ```
 
-In `BluetoothRadioService.dart`:
-```dart
-bool _consumeAudioFrame(String endpointId, Uint8List rawBytes) {
-  const callIdLength = 36;
-  final headerLength = 7 + callIdLength + 1;
-  if (rawBytes.length <= headerLength) return false;
+* **Stale Frame Drop on Receive**: If `DateTime.now().millisecondsSinceEpoch - captureTimestampMs > 150`, the incoming frame is dropped immediately at the receiver to prevent delayed speech backlogs.
+* **In-Flight Radio Cap (Source Drop)**: `CallSessionController` caps in-flight radio payloads at 2 (`_inFlightSends >= 2`). If the radio link throttles, frames are dropped at the source before entering the radio stack, strictly preventing latency accumulation.
+* **Low-Latency Wi-Fi & Wake Locks**: The Android native layer acquires `WIFI_MODE_FULL_LOW_LATENCY` (`WifiLock`) and `PARTIAL_WAKE_LOCK` to prevent OS power-saving radio sleep cycles during calls.
+* **Hardware Echo Cancellation & Noise Suppression**: Native `AudioRecord` attaches Android platform `AcousticEchoCanceler` and `NoiseSuppressor` where supported.
 
-  final matchesCompressed = _startsWith(rawBytes, _compressedAudioPrefix);
-  final matchesLegacy = _startsWith(rawBytes, _legacyAudioPrefix);
-  if (!matchesCompressed && !matchesLegacy) return false;
-
-  final callId = ascii.decode(rawBytes.sublist(7, 7 + callIdLength));
-  final pcm = rawBytes.sublist(headerLength);
-
-  _audioFrameController.add(
-    NearbyAudioFrame(
-      endpointId: endpointId,
-      callId: callId,
-      pcm: pcm,
-      codec: matchesCompressed ? NearbyAudioCodec.g711Ulaw8Khz : NearbyAudioCodec.pcm1616Khz,
-    ),
-  );
-  return true;
-}
-```
 
 ---
 
@@ -343,7 +323,8 @@ private fun startOfflinePlayback(): Boolean {
                     .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                     .build()
             )
-            .setBufferSizeInBytes(maxOf(minBuffer, pcmFrameBytes * 4))
+            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+            .setBufferSizeInBytes(minBuffer)
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
         if (track.state != AudioTrack.STATE_INITIALIZED) {

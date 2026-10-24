@@ -14,6 +14,11 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.NoiseSuppressor
+import android.net.wifi.WifiManager
+import android.os.PowerManager
+import android.os.SystemClock
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
@@ -49,6 +54,8 @@ class MainActivity : FlutterActivity(), LocationListener {
     private var audioTrack: AudioTrack? = null
     private var captureThread: Thread? = null
     private var playbackThread: Thread? = null
+    private var wifiLock: WifiManager.WifiLock? = null
+    private var wakeLock: PowerManager.WakeLock? = null
     @Volatile private var captureRunning = false
     @Volatile private var playbackRunning = false
     private var captureEventSink: EventChannel.EventSink? = null
@@ -195,6 +202,16 @@ class MainActivity : FlutterActivity(), LocationListener {
                 return false
             }
             recorder.startRecording()
+            if (AcousticEchoCanceler.isAvailable()) {
+                try {
+                    AcousticEchoCanceler.create(recorder.audioSessionId)?.apply { enabled = true }
+                } catch (_: Exception) {}
+            }
+            if (NoiseSuppressor.isAvailable()) {
+                try {
+                    NoiseSuppressor.create(recorder.audioSessionId)?.apply { enabled = true }
+                } catch (_: Exception) {}
+            }
             audioRecord = recorder
             captureRunning = true
             captureThread = Thread {
@@ -262,7 +279,12 @@ class MainActivity : FlutterActivity(), LocationListener {
                 )
                 // Keep the local queue short. Excess frames are dropped rather
                 // than extending end-to-end delay.
-                .setBufferSizeInBytes(maxOf(minBuffer, pcmFrameBytes * 3))
+                .apply {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+                    }
+                }
+                .setBufferSizeInBytes(minBuffer)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
             if (track.state != AudioTrack.STATE_INITIALIZED) {
@@ -337,6 +359,25 @@ class MainActivity : FlutterActivity(), LocationListener {
             AudioManager.STREAM_VOICE_CALL,
             AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
         )
+        try {
+            if (wifiLock == null) {
+                val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+                wifiLock = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    wifiManager?.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "rakshanet:voice_call")
+                } else {
+                    @Suppress("DEPRECATION")
+                    wifiManager?.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "rakshanet:voice_call")
+                }
+                wifiLock?.acquire()
+            }
+        } catch (_: Exception) {}
+        try {
+            if (wakeLock == null) {
+                val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+                wakeLock = powerManager?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "rakshanet:voice_call")
+                wakeLock?.acquire(15 * 60 * 1000L)
+            }
+        } catch (_: Exception) {}
     }
 
     @Suppress("DEPRECATION")
@@ -351,6 +392,14 @@ class MainActivity : FlutterActivity(), LocationListener {
         stopCallRecording()
         stopOfflineCapture()
         stopOfflinePlayback()
+        try {
+            wifiLock?.let { if (it.isHeld) it.release() }
+            wifiLock = null
+        } catch (_: Exception) {}
+        try {
+            wakeLock?.let { if (it.isHeld) it.release() }
+            wakeLock = null
+        } catch (_: Exception) {}
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         try {
             audioManager?.isSpeakerphoneOn = false

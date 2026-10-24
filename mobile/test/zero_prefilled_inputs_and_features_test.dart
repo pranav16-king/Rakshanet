@@ -470,23 +470,30 @@ void main() {
           final groupService = GroupService();
           final meshProvider = MeshProvider()..stopScan();
 
-          await tester.pumpWidget(
-            MultiProvider(
-              providers: [
-                ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
-                ChangeNotifierProvider<GroupService>.value(value: groupService),
-                ChangeNotifierProvider<MeshProvider>.value(value: meshProvider),
-                // ChatService intentionally omitted to verify exception prevention
-              ],
-              child: const MaterialApp(
-                home: ChatScreen(),
+          FlutterErrorDetails? caughtError;
+          final originalOnError = FlutterError.onError;
+          FlutterError.onError = (details) {
+            caughtError = details;
+          };
+          try {
+            await tester.pumpWidget(
+              MultiProvider(
+                providers: [
+                  ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
+                  ChangeNotifierProvider<GroupService>.value(value: groupService),
+                  ChangeNotifierProvider<MeshProvider>.value(value: meshProvider),
+                  // ChatService intentionally omitted to verify exception prevention
+                ],
+                child: const MaterialApp(
+                  home: ChatScreen(),
+                ),
               ),
-            ),
-          );
+            );
+          } finally {
+            FlutterError.onError = originalOnError;
+          }
 
-          final dynamic error = tester.takeException();
-          expect(error, isNotNull);
-          expect(error, isA<ProviderNotFoundException>());
+          expect(caughtError?.exception, isA<ProviderNotFoundException>());
         },
       );
     });

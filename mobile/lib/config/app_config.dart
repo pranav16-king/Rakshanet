@@ -6,7 +6,7 @@ class AppConfig {
   /// Defaults to the local Wi-Fi network IP of the development host.
   static const String backendUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'http://10.130.184.61:8000',
+    defaultValue: 'http://192.168.137.142:8000',
   );
 
   /// Base URL alias for media and API endpoints

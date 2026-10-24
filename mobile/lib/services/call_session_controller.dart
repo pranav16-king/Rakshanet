@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:collection';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -63,8 +63,8 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _timeoutTimer;
   NearbyCallSession? _session;
   bool _captureActive = false;
-  bool _sendingAudio = false;
-  final Queue<Uint8List> _outboundAudioQueue = Queue<Uint8List>();
+  int _inFlightSends = 0;
+  int _seqCounter = 0;
 
   NearbyCallSession? get session => _session;
   bool get hasVisibleCall => _session != null;
@@ -557,8 +557,8 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     final active = _session;
     if (active == null ||
         active.isTerminal ||
-        active.callId != frame.callId ||
         active.endpointId != frame.endpointId ||
+        (frame.callId.isNotEmpty && active.callId != frame.callId) ||
         (active.state != NearbyCallState.connecting &&
             active.state != NearbyCallState.active)) {
       return;
@@ -583,43 +583,28 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
         frame.isEmpty) {
       return;
     }
-    // Real-time bounded voice queue:
-    // 40ms per frame. Discard oldest frame if queue exceeds 4 frames (160ms)
-    // so voice packets stream continuously without 75% frame drops,
-    // while keeping speech latency strictly under 200ms.
-    if (_outboundAudioQueue.length >= 4) {
-      _outboundAudioQueue.removeFirst();
-    }
-    _outboundAudioQueue.add(frame);
-    if (!_sendingAudio) {
-      unawaited(_pumpOutboundAudio());
-    }
-  }
 
-  Future<void> _pumpOutboundAudio() async {
-    if (_sendingAudio) return;
-    _sendingAudio = true;
-    try {
-      while (_outboundAudioQueue.isNotEmpty) {
-        final active = _session;
-        if (active == null ||
-            active.isTerminal ||
-            !_captureActive ||
-            active.isMuted ||
-            (active.state != NearbyCallState.connecting &&
-                active.state != NearbyCallState.active)) {
-          _outboundAudioQueue.clear();
-          return;
-        }
-        final frame = _outboundAudioQueue.removeFirst();
-        await _radio.sendCallAudio(active.endpointId, active.callId, frame);
-      }
-    } finally {
-      _sendingAudio = false;
-      if (_outboundAudioQueue.isNotEmpty) {
-        unawaited(_pumpOutboundAudio());
-      }
+    // Source frame cap: if 2 frames are already in transit over radio,
+    // drop at source! Never queue!
+    // This strictly prevents the radio stack buffer from building up multi-second delay.
+    if (_inFlightSends >= 2) {
+      return;
     }
+
+    _seqCounter = (_seqCounter + 1) & 0xFFFF;
+
+    _inFlightSends++;
+    unawaited(() async {
+      try {
+        await _radio.sendCallAudio(
+          active.endpointId,
+          active.callId,
+          frame,
+        );
+      } finally {
+        _inFlightSends = math.max(0, _inFlightSends - 1);
+      }
+    }());
   }
 
   Future<void> _startApprovedRecording() async {
@@ -709,7 +694,7 @@ class CallSessionController extends ChangeNotifier with WidgetsBindingObserver {
     _timeoutTimer?.cancel();
     await _stopLocalRecording(notifyPeer: true);
     active = _session ?? active;
-    _outboundAudioQueue.clear();
+    _inFlightSends = 0;
     _captureActive = false;
     await _audio.stop();
     final finalState = status == CallFinalStatus.failed
